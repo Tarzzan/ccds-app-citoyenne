@@ -1,0 +1,23 @@
+Options -Indexes
+
+# Activer le moteur de réécriture
+RewriteEngine On
+
+# Autoriser l'accès direct aux fichiers et dossiers existants
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Rediriger toutes les autres requêtes vers index.php
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Sécurité : bloquer l'accès aux fichiers sensibles
+<FilesMatch "\.(sql|log|env|md|json|lock)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Bloquer l'accès au dossier config
+<DirectoryMatch "config">
+    Order allow,deny
+    Deny from all
+</DirectoryMatch>

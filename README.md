@@ -42,25 +42,25 @@ Les signalements sont transmis en temps réel à un serveur central qui les disp
 <tr>
 <td align="center"><b>1</b></td>
 <td>Initialisation &amp; Architecture</td>
-<td align="center">🟢 En cours</td>
+<td align="center">✅ Terminée</td>
 <td align="center">
-<img src="https://progress-bar.xyz/80/?title=80%25&width=120&color=3b82f6" alt="80%"/>
+<img src="https://progress-bar.xyz/100/?title=100%25&width=120&color=22c55e" alt="100%"/>
 </td>
 </tr>
 <tr>
 <td align="center"><b>2</b></td>
 <td>Backend — API REST PHP/MySQL</td>
-<td align="center">⚪ À venir</td>
+<td align="center">✅ Terminée</td>
 <td align="center">
-<img src="https://progress-bar.xyz/0/?title=0%25&width=120&color=6b7280" alt="0%"/>
+<img src="https://progress-bar.xyz/100/?title=100%25&width=120&color=22c55e" alt="100%"/>
 </td>
 </tr>
 <tr>
 <td align="center"><b>3</b></td>
 <td>Application Mobile React Native</td>
-<td align="center">⚪ À venir</td>
+<td align="center">🟢 En cours</td>
 <td align="center">
-<img src="https://progress-bar.xyz/0/?title=0%25&width=120&color=6b7280" alt="0%"/>
+<img src="https://progress-bar.xyz/5/?title=5%25&width=120&color=3b82f6" alt="5%"/>
 </td>
 </tr>
 <tr>
@@ -90,7 +90,7 @@ Les signalements sont transmis en temps réel à un serveur central qui les disp
 </tbody>
 </table>
 
-> **Dernière mise à jour :** 26 Février 2026 — **Phase active :** 1 / 6
+> **Dernière mise à jour :** 26 Février 2026 — **Phase active :** 3 / 6
 
 </div>
 

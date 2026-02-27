@@ -15,16 +15,16 @@ Le projet est découpé en 6 phases principales, chacune avec des objectifs clai
 *   [x] Définir l'architecture technique (Stack PHP/MySQL/Apache, React Native).
 *   [x] Mettre en place la structure de dossiers du projet.
 *   [x] Rédiger ce document `ROADMAP.md`.
-*   [ ] Rédiger le fichier `README.md` avec un design HTML/CSS et un tableau de bord de statut.
+*   [x] Rédiger le fichier `README.md` avec un design HTML/CSS et un tableau de bord de statut.
 
 ### Phase 2 : Développement du Backend (API REST en PHP/MySQL)
-*   [ ] **Base de Données** : Implémenter le schéma SQL complet (tables `users`, `categories`, `incidents`, `photos`, `comments`).
-*   [ ] **Authentification** : Développer les endpoints `POST /api/register` et `POST /api/login` avec un système de tokens JWT.
-*   [ ] **API Incidents** : Créer les endpoints CRUD pour les signalements (`GET /incidents`, `POST /incidents`, `GET /incidents/{id}`, `PUT /incidents/{id}`).
-*   [ ] **Gestion des Photos** : Implémenter la logique d'upload d'images lors de la création d'un signalement.
-*   [ ] **API Commentaires** : Créer les endpoints pour lire et ajouter des commentaires sur un signalement.
-*   [ ] **API Catégories** : Créer l'endpoint pour lister les catégories de signalement.
-*   [ ] **Sécurité** : Mettre en place la validation des données et la protection des endpoints par rôle (citoyen, agent, admin).
+*   [x] **Base de Données** : Implémenter le schéma SQL complet (tables `users`, `categories`, `incidents`, `photos`, `comments`, `status_history`).
+*   [x] **Authentification** : Développer les endpoints `POST /api/register` et `POST /api/login` avec un système de tokens JWT.
+*   [x] **API Incidents** : Créer les endpoints CRUD pour les signalements (`GET /incidents`, `POST /incidents`, `GET /incidents/{id}`, `PUT /incidents/{id}`).
+*   [x] **Gestion des Photos** : Implémenter la logique d'upload d'images lors de la création d'un signalement.
+*   [x] **API Commentaires** : Créer les endpoints pour lire et ajouter des commentaires sur un signalement.
+*   [x] **API Catégories** : Créer l'endpoint pour lister les catégories de signalement.
+*   [x] **Sécurité** : Mettre en place la validation des données et la protection des endpoints par rôle (citoyen, agent, admin).
 
 ### Phase 3 : Développement de l'Application Mobile (React Native)
 *   [ ] **Initialisation** : Mettre en place le projet avec Expo, `react-navigation` et les dépendances (maps, camera, location).
@@ -58,9 +58,9 @@ Le projet est découpé en 6 phases principales, chacune avec des objectifs clai
 
 ##  trạng thái hiện tại (Current State)
 
-*   **ID de la Phase Actuelle** : `1`
+*   **ID de la Phase Actuelle** : `3`
 *   **Statut** : 🟢 En cours
-*   **Prochaine Étape** : Rédiger le fichier `README.md` avec un design HTML/CSS.
+*   **Prochaine Étape** : Initialiser le projet React Native (Expo), configurer la navigation et développer les écrans de l'application mobile.
 
 ## 📓 Journal des Décisions (Decision Log)
 
