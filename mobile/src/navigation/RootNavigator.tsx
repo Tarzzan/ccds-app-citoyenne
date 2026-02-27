@@ -50,7 +50,7 @@ function AppTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#1d4ed8',
+        tabBarActiveTintColor: '#1a7a42',
         tabBarInactiveTintColor: '#6b7280',
         tabBarStyle: { paddingBottom: 4, height: 58 },
         headerShown: false,
@@ -89,7 +89,7 @@ function AppNavigator() {
       <AppStack.Screen
         name="IncidentDetail"
         component={IncidentDetailScreen}
-        options={{ headerShown: true, title: 'Détail du signalement', headerBackTitle: 'Retour' }}
+        options={{ headerShown: true, title: 'Détail du signalement', headerBackTitle: 'Retour', headerStyle: { backgroundColor: '#0f4c2a' }, headerTintColor: '#ffffff', headerTitleStyle: { fontWeight: '700' } }}
       />
     </AppStack.Navigator>
   );
@@ -113,8 +113,8 @@ export default function RootNavigator() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
-        <ActivityIndicator size="large" color="#1d4ed8" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f4c2a' }}>
+        <ActivityIndicator size="large" color="#a7f3d0" />
       </View>
     );
   }

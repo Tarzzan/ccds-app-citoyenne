@@ -47,9 +47,10 @@ export default function LoginScreen({ navigation }: Props) {
 
         {/* En-tête */}
         <View style={styles.header}>
-          <Text style={styles.logo}>🏙️</Text>
-          <Text style={styles.appName}>CCDS</Text>
-          <Text style={styles.tagline}>Signalez. Suivez. Améliorez.</Text>
+          <Text style={styles.logo}>🌿</Text>
+          <Text style={styles.appName}>CCDS Citoyen</Text>
+          <Text style={styles.tagline}>Kourou · Sinnamary · Iracoubo</Text>
+          <Text style={styles.subTagline}>Signalez. Suivez. Améliorez.</Text>
         </View>
 
         {/* Formulaire */}
@@ -103,7 +104,7 @@ export default function LoginScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#0f4c2a',
     justifyContent: 'center',
     padding: 24,
   },
@@ -122,9 +123,16 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   tagline: {
-    fontSize: 14,
-    color: COLORS.gray,
+    fontSize: 15,
+    color: '#a7f3d0',
     marginTop: 4,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
+  subTagline: {
+    fontSize: 13,
+    color: '#6ee7b7',
+    marginTop: 2,
   },
   form: {
     backgroundColor: COLORS.white,

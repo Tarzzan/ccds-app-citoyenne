@@ -35,10 +35,10 @@ try {
   <!-- ===================== SIDEBAR ===================== -->
   <aside class="sidebar">
     <div class="sidebar-brand">
-      <span class="brand-icon">🏛️</span>
+      <span class="brand-icon">🌿</span>
       <div>
-        <div class="brand-name">CCDS</div>
-        <div class="brand-sub">Administration</div>
+        <div class="brand-name">CCDS Citoyen</div>
+        <div class="brand-sub">Guyane — Administration</div>
       </div>
     </div>
 

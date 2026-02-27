@@ -12,22 +12,24 @@ import {
 // Palette de couleurs CCDS
 // ----------------------------------------------------------------
 export const COLORS = {
-  primary:   '#1d4ed8',
-  secondary: '#3b82f6',
-  success:   '#22c55e',
-  warning:   '#f59e0b',
-  danger:    '#ef4444',
-  gray:      '#6b7280',
-  lightGray: '#f3f4f6',
-  white:     '#ffffff',
-  dark:      '#111827',
-  border:    '#e5e7eb',
+  primary:      '#1a7a42',   // Vert forêt CCDS Guyane
+  primaryDark:  '#0f4c2a',   // Vert profond Amazonie
+  primaryLight: '#dcfce7',   // Vert clair
+  secondary:    '#22c55e',   // Vert secondaire
+  success:      '#22c55e',
+  warning:      '#f59e0b',
+  danger:       '#ef4444',
+  gray:         '#6b7280',
+  lightGray:    '#f3f4f6',
+  white:        '#ffffff',
+  dark:         '#111827',
+  border:       '#e5e7eb',
 };
 
 // Couleurs par statut de signalement
 export const STATUS_COLORS: Record<string, string> = {
   submitted:    '#6b7280',
-  acknowledged: '#3b82f6',
+  acknowledged: '#1a7a42',
   in_progress:  '#f59e0b',
   resolved:     '#22c55e',
   rejected:     '#ef4444',

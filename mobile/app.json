@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "CCDS",
+    "name": "CCDS Citoyen",
     "slug": "ccds-app-citoyenne",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1d4ed8"
+      "backgroundColor": "#0f4c2a"
     },
     "ios": {
       "supportsTablet": false,
@@ -23,7 +23,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1d4ed8"
+        "backgroundColor": "#0f4c2a"
       },
       "package": "com.ccds.app",
       "permissions": [
@@ -54,7 +54,9 @@
     ],
     "scheme": "ccds",
     "extra": {
-      "API_BASE_URL": "https://votre-domaine.com/api"
+      "API_BASE_URL": "https://votre-domaine.com/api",
+      "APP_TERRITORY": "Kourou, Sinnamary, Iracoubo, Saint-Élie",
+      "APP_REGION": "Guyane Française"
     }
   }
 }

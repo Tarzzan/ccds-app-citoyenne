@@ -4,13 +4,13 @@
 
 /* --- Variables & Reset ------------------------------------ */
 :root {
-  --primary:     #1d4ed8;
-  --primary-dark:#1e3a8a;
-  --primary-light:#dbeafe;
+  --primary:     #1a7a42;
+  --primary-dark:#0f4c2a;
+  --primary-light:#dcfce7;
   --success:     #22c55e;
   --warning:     #f59e0b;
   --danger:      #ef4444;
-  --info:        #3b82f6;
+  --info:        #22c55e;
   --gray-50:     #f8fafc;
   --gray-100:    #f1f5f9;
   --gray-200:    #e2e8f0;
@@ -37,7 +37,7 @@ img { max-width: 100%; }
 /* Sidebar */
 .sidebar {
   width: var(--sidebar-w);
-  background: var(--gray-800);
+  background: linear-gradient(180deg, #0f4c2a 0%, #1a7a42 100%);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -166,7 +166,7 @@ tbody tr:last-child td { border-bottom: none; }
   font-size: 12px; font-weight: 600; white-space: nowrap;
 }
 .badge-gray   { background: #f1f5f9; color: #475569; }
-.badge-blue   { background: #dbeafe; color: #1d4ed8; }
+.badge-blue   { background: #dcfce7; color: #1a7a42; }
 .badge-green  { background: #dcfce7; color: #15803d; }
 .badge-yellow { background: #fef9c3; color: #a16207; }
 .badge-red    { background: #fee2e2; color: #b91c1c; }

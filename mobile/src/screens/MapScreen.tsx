@@ -20,12 +20,12 @@ import { AppStackParamList } from '../navigation/RootNavigator';
 
 type NavProp = NativeStackNavigationProp<AppStackParamList>;
 
-// Région par défaut : France métropolitaine
+// Région par défaut : Kourou, Guyane Française
 const DEFAULT_REGION: Region = {
-  latitude:      46.603354,
-  longitude:     1.888334,
-  latitudeDelta:  8,
-  longitudeDelta: 8,
+  latitude:      5.1620,
+  longitude:    -52.6493,
+  latitudeDelta:  0.5,
+  longitudeDelta: 0.5,
 };
 
 export default function MapScreen() {

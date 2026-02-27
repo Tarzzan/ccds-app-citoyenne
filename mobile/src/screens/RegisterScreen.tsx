@@ -54,13 +54,14 @@ export default function RegisterScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
 
         <View style={styles.header}>
-          <Text style={styles.logo}>🏙️</Text>
-          <Text style={styles.appName}>CCDS</Text>
+          <Text style={styles.logo}>🌿</Text>
+          <Text style={styles.appName}>CCDS Citoyen</Text>
+          <Text style={{ fontSize: 12, color: '#6ee7b7', marginTop: 2 }}>Guyane Française</Text>
         </View>
 
         <View style={styles.form}>
           <Text style={styles.title}>Créer un compte</Text>
-          <Text style={styles.subtitle}>Rejoignez les citoyens actifs de votre commune.</Text>
+          <Text style={styles.subtitl          Rejoignez les citoyens actifs de Kourou, Sinnamary et Iracoubo.
 
           <Input
             label="Nom complet"
@@ -127,7 +128,7 @@ export default function RegisterScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#0f4c2a',
     justifyContent: 'center',
     padding: 24,
   },
