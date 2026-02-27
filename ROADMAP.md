@@ -46,10 +46,10 @@ Le projet est découpé en 6 phases principales, chacune avec des objectifs clai
 *   [x] **Gestion Catégories** : CRUD des catégories avec couleur, service responsable, activation/désactivation.
 
 ### Phase 5 : Tests et Déploiement
-*   [ ] **Tests API** : Écrire des tests unitaires et d'intégration pour les endpoints critiques de l'API.
-*   [ ] **Tests Mobiles** : Effectuer des tests manuels complets sur les deux plateformes (iOS et Android).
-*   [ ] **Déploiement Backend** : Préparer le serveur Apache/PHP et déployer l'API.
-*   [ ] **Build Mobile** : Générer les builds de production de l'application mobile via Expo Application Services (EAS).
+*   [x] **Tests API** : PHPUnit 10.5 installé. 12 tests unitaires (JWT, validation, coordonnées, statuts) — 28 assertions, 100% passés. 2 suites d'intégration (auth + incidents) avec 13 scénarios couvrant les cas nominaux et d'erreur.
+*   [x] **Tests Mobiles** : Guide complet rédigé (`docs/GUIDE_TESTS_MOBILES.md`) — 45 scénarios couvrant authentification, création de signalement, carte, liste et détail. Checklist iOS + Android, tests de performance et d'accessibilité.
+*   [x] **Déploiement Backend** : Guide complet rédigé (`docs/GUIDE_DEPLOIEMENT_SERVEUR.md`) — installation LAMP, configuration Apache VirtualHost SSL, script `deploy.sh` automatisé avec sauvegarde BDD, Fail2Ban, cron backup.
+*   [x] **Build Mobile** : Guide complet rédigé (`docs/GUIDE_BUILD_MOBILE_EAS.md`) — configuration `eas.json` (dev/preview/production), builds Android (APK + AAB) et iOS (IPA), soumission automatisée, mises à jour OTA.
 
 ### Phase 6 : Documentation et Finalisation
 *   [ ] **Documentation API** : Générer une documentation claire pour tous les endpoints de l'API (ex: avec Swagger/OpenAPI).
@@ -60,9 +60,9 @@ Le projet est découpé en 6 phases principales, chacune avec des objectifs clai
 
 ##  trạng thái hiện tại (Current State)
 
-*   **ID de la Phase Actuelle** : `5`
+*   **ID de la Phase Actuelle** : `6`
 *   **Statut** : 🟢 En cours
-*   **Prochaine Étape** : Tests API (PHPUnit), tests mobiles, déploiement sur serveur Apache/PHP et build Expo EAS.
+*   **Prochaine Étape** : Documentation API Swagger/OpenAPI, nettoyage du code, commit final et publication.
 
 ## 📓 Journal des Décisions (Decision Log)
 
