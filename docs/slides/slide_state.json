@@ -1,0 +1,132 @@
+{
+  "project_info": {
+    "title": "Couverture",
+    "created": 1772159657.472271,
+    "last_updated": 1772159724.4729571,
+    "total_slides": 10
+  },
+  "slides": [
+    {
+      "id": "slide_1",
+      "state": "edited",
+      "pageNum": 1
+    },
+    {
+      "id": "slide_2",
+      "state": "edit_pending",
+      "pageNum": 2
+    },
+    {
+      "id": "slide_3",
+      "state": "edit_pending",
+      "pageNum": 3
+    },
+    {
+      "id": "slide_4",
+      "state": "edit_pending",
+      "pageNum": 4
+    },
+    {
+      "id": "slide_5",
+      "state": "edit_pending",
+      "pageNum": 5
+    },
+    {
+      "id": "slide_6",
+      "state": "edit_pending",
+      "pageNum": 6
+    },
+    {
+      "id": "slide_7",
+      "state": "edit_pending",
+      "pageNum": 7
+    },
+    {
+      "id": "slide_8",
+      "state": "edit_pending",
+      "pageNum": 8
+    },
+    {
+      "id": "slide_9",
+      "state": "edit_pending",
+      "pageNum": 9
+    },
+    {
+      "id": "slide_10",
+      "state": "edit_pending",
+      "pageNum": 10
+    }
+  ],
+  "outline": [
+    {
+      "id": "slide_1",
+      "title": "Couverture",
+      "summary": "Titre, sous-titre, version et visuel d'introduction de l'application mobile CCDS.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_2",
+      "title": "Vue d'ensemble",
+      "summary": "Présentation globale des 5 écrans clés de l'application mobile.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_3",
+      "title": "Connexion",
+      "summary": "Écran de connexion sécurisé et onboarding simplifié.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_4",
+      "title": "Carte Interactive",
+      "summary": "Visualisation des signalements sur la carte avec statuts colorés.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_5",
+      "title": "Création Signalement",
+      "summary": "Formulaire rapide de création de signalement avec photo et GPS.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_6",
+      "title": "Mes Signalements",
+      "summary": "Suivi personnalisé des signalements du citoyen.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_7",
+      "title": "Détail Signalement",
+      "summary": "Transparence totale sur le traitement et l'historique.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_8",
+      "title": "Architecture Technique",
+      "summary": "Stack technologique React Native + Expo + PHP/MySQL.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_9",
+      "title": "Roadmap",
+      "summary": "Évolutions futures et fonctionnalités planifiées.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_10",
+      "title": "Conclusion",
+      "summary": "Synthèse, chiffres clés et appel à l'action GitHub.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    }
+  ]
+}

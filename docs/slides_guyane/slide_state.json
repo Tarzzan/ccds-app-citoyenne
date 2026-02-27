@@ -1,0 +1,132 @@
+{
+  "project_info": {
+    "title": "Couverture",
+    "created": 1772160292.0111473,
+    "last_updated": 1772160527.7967505,
+    "total_slides": 10
+  },
+  "slides": [
+    {
+      "id": "slide_1",
+      "state": "edited",
+      "pageNum": 1
+    },
+    {
+      "id": "slide_2",
+      "state": "edited",
+      "pageNum": 2
+    },
+    {
+      "id": "slide_3",
+      "state": "edited",
+      "pageNum": 3
+    },
+    {
+      "id": "slide_4",
+      "state": "edited",
+      "pageNum": 4
+    },
+    {
+      "id": "slide_5",
+      "state": "edited",
+      "pageNum": 5
+    },
+    {
+      "id": "slide_6",
+      "state": "edited",
+      "pageNum": 6
+    },
+    {
+      "id": "slide_7",
+      "state": "edited",
+      "pageNum": 7
+    },
+    {
+      "id": "slide_8",
+      "state": "edited",
+      "pageNum": 8
+    },
+    {
+      "id": "slide_9",
+      "state": "edited",
+      "pageNum": 9
+    },
+    {
+      "id": "slide_10",
+      "state": "edited",
+      "pageNum": 10
+    }
+  ],
+  "outline": [
+    {
+      "id": "slide_1",
+      "title": "Couverture",
+      "summary": "Titre, sous-titre, version et visuel d'introduction de l'application mobile CCDS Guyane.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_2",
+      "title": "Vue d'ensemble",
+      "summary": "Présentation globale de l'application citoyenne pour le territoire des Savanes.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_3",
+      "title": "Connexion",
+      "summary": "Écran de connexion sécurisé et identité territoriale.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_4",
+      "title": "Carte Interactive",
+      "summary": "Visualisation des signalements de Kourou à Sinnamary.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_5",
+      "title": "Création Signalement",
+      "summary": "Formulaire rapide de création de signalement géolocalisé.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_6",
+      "title": "Mes Signalements",
+      "summary": "Suivi personnalisé des signalements du citoyen.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_7",
+      "title": "Détail Signalement",
+      "summary": "Transparence et dialogue avec les services techniques.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_8",
+      "title": "Back-Office Administration",
+      "summary": "Outil de pilotage pour les mairies de Kourou et Sinnamary.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_9",
+      "title": "Architecture & Sécurité",
+      "summary": "Solution robuste, souveraine et sécurisée.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "slide_10",
+      "title": "Conclusion",
+      "summary": "Synthèse, prochaines étapes et appel à l'action.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    }
+  ]
+}
