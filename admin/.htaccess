@@ -1,0 +1,12 @@
+Options -Indexes
+
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php?page=$1 [QSA,L]
+
+# Bloquer l'accès aux fichiers sensibles
+<FilesMatch "\.(sql|log|env|md|json|lock|inc)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>

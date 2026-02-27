@@ -37,11 +37,13 @@ Le projet est découpé en 6 phases principales, chacune avec des objectifs clai
 *   [x] **Gestion d'état** : Implémenté via React Context (AuthContext) et hooks locaux — architecture légère et suffisante pour la v1.
 
 ### Phase 4 : Développement du Back-Office (Interface Web d'Administration)
-*   [ ] **Framework** : Choisir et mettre en place un micro-framework PHP ou un simple routeur pour le back-office.
-*   [ ] **Tableau de Bord** : Créer une vue listant tous les signalements avec des filtres et des options de tri.
-*   [ ] **Gestion des Signalements** : Permettre aux agents de changer le statut d'un signalement et d'ajouter des commentaires internes.
-*   [ ] **Gestion des Utilisateurs** : Interface pour gérer les comptes des agents municipaux.
-*   [ ] **Statistiques** : Développer une page d'analytiques simples (nombre de signalements par jour, par catégorie, etc.).
+*   [x] **Framework** : Routeur PHP natif (`admin/index.php`) avec dispatch par paramètre GET, sans dépendance externe.
+*   [x] **Tableau de Bord** : KPIs (total, en attente, en cours, résolus), graphiques Chart.js (courbe 14j, donut catégories), tableau des 10 derniers signalements.
+*   [x] **Gestion des Signalements** : Liste paginée avec filtres multi-critères, page détail avec galerie photos, changement de statut + priorité, notes internes, historique timeline.
+*   [x] **Gestion des Utilisateurs** : Liste filtrée, création d'agents, activation/désactivation, changement de rôle (citoyen/agent/admin).
+*   [x] **Statistiques** : 5 KPIs (total, ouverts, résolus, taux résolution, délai moyen), 4 graphiques Chart.js, top 5 zones. Filtre période (7/30/90/365 jours).
+*   [x] **Carte Admin** : Vue cartographique Leaflet.js de tous les signalements avec popups et légende.
+*   [x] **Gestion Catégories** : CRUD des catégories avec couleur, service responsable, activation/désactivation.
 
 ### Phase 5 : Tests et Déploiement
 *   [ ] **Tests API** : Écrire des tests unitaires et d'intégration pour les endpoints critiques de l'API.
@@ -58,9 +60,9 @@ Le projet est découpé en 6 phases principales, chacune avec des objectifs clai
 
 ##  trạng thái hiện tại (Current State)
 
-*   **ID de la Phase Actuelle** : `4`
+*   **ID de la Phase Actuelle** : `5`
 *   **Statut** : 🟢 En cours
-*   **Prochaine Étape** : Développer le back-office web d'administration (tableau de bord, gestion des signalements, agents, statistiques).
+*   **Prochaine Étape** : Tests API (PHPUnit), tests mobiles, déploiement sur serveur Apache/PHP et build Expo EAS.
 
 ## 📓 Journal des Décisions (Decision Log)
 
