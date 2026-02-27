@@ -1,20 +1,24 @@
 /**
  * CCDS — Navigateur racine
- * Gère le basculement entre les stacks authentifié / non-authentifié.
+ * Gère le basculement entre :
+ *   1. L'écran de configuration serveur (premier lancement)
+ *   2. Le stack authentifié / non-authentifié
  */
 
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import React, { useEffect, useState } from 'react';
+import { NavigationContainer }         from '@react-navigation/native';
+import { createNativeStackNavigator }  from '@react-navigation/native-stack';
+import { createBottomTabNavigator }    from '@react-navigation/bottom-tabs';
 import { ActivityIndicator, View, Text } from 'react-native';
 
-import { useAuth } from '../services/AuthContext';
+import { useAuth }       from '../services/AuthContext';
+import { ServerConfig }  from '../services/ServerConfig';
 
 // Écrans
-import LoginScreen     from '../screens/LoginScreen';
-import RegisterScreen  from '../screens/RegisterScreen';
-import MapScreen       from '../screens/MapScreen';
+import ServerConfigScreen   from '../screens/ServerConfigScreen';
+import LoginScreen          from '../screens/LoginScreen';
+import RegisterScreen       from '../screens/RegisterScreen';
+import MapScreen            from '../screens/MapScreen';
 import CreateIncidentScreen from '../screens/CreateIncidentScreen';
 import MyIncidentsScreen    from '../screens/MyIncidentsScreen';
 import IncidentDetailScreen from '../screens/IncidentDetailScreen';
@@ -23,19 +27,20 @@ import IncidentDetailScreen from '../screens/IncidentDetailScreen';
 // Types de navigation
 // ----------------------------------------------------------------
 export type AuthStackParamList = {
-  Login: undefined;
+  Login:    undefined;
   Register: undefined;
 };
 
 export type AppTabParamList = {
-  Map: undefined;
+  Map:         undefined;
   MyIncidents: undefined;
 };
 
 export type AppStackParamList = {
-  Tabs: undefined;
+  Tabs:           undefined;
   CreateIncident: undefined;
   IncidentDetail: { id: number };
+  ServerConfig:   undefined; // Accessible depuis les paramètres
 };
 
 // ----------------------------------------------------------------
@@ -50,7 +55,7 @@ function AppTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#1a7a42',
+        tabBarActiveTintColor:   '#1a7a42',
         tabBarInactiveTintColor: '#6b7280',
         tabBarStyle: { paddingBottom: 4, height: 58 },
         headerShown: false,
@@ -60,7 +65,7 @@ function AppTabs() {
         name="Map"
         component={MapScreen}
         options={{
-          title: 'Carte',
+          title:        'Carte',
           tabBarIcon: ({ color }) => <TabIcon label="🗺️" color={color} />,
         }}
       />
@@ -68,7 +73,7 @@ function AppTabs() {
         name="MyIncidents"
         component={MyIncidentsScreen}
         options={{
-          title: 'Mes signalements',
+          title:        'Mes signalements',
           tabBarIcon: ({ color }) => <TabIcon label="📋" color={color} />,
         }}
       />
@@ -76,7 +81,7 @@ function AppTabs() {
   );
 }
 
-// Stack principal (avec modal CreateIncident et détail)
+// Stack principal (avec modal CreateIncident, détail et config serveur)
 function AppNavigator() {
   return (
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
@@ -89,8 +94,35 @@ function AppNavigator() {
       <AppStack.Screen
         name="IncidentDetail"
         component={IncidentDetailScreen}
-        options={{ headerShown: true, title: 'Détail du signalement', headerBackTitle: 'Retour', headerStyle: { backgroundColor: '#0f4c2a' }, headerTintColor: '#ffffff', headerTitleStyle: { fontWeight: '700' } }}
+        options={{
+          headerShown:      true,
+          title:            'Détail du signalement',
+          headerBackTitle:  'Retour',
+          headerStyle:      { backgroundColor: '#0f4c2a' },
+          headerTintColor:  '#ffffff',
+          headerTitleStyle: { fontWeight: '700' },
+        }}
       />
+      <AppStack.Screen
+        name="ServerConfig"
+        options={{
+          headerShown:      true,
+          title:            'Configuration serveur',
+          headerBackTitle:  'Retour',
+          headerStyle:      { backgroundColor: '#0f4c2a' },
+          headerTintColor:  '#ffffff',
+          headerTitleStyle: { fontWeight: '700' },
+          presentation:     'modal',
+        }}
+      >
+        {(props) => (
+          <ServerConfigScreen
+            {...props}
+            isFirstLaunch={false}
+            onConfigured={() => props.navigation.goBack()}
+          />
+        )}
+      </AppStack.Screen>
     </AppStack.Navigator>
   );
 }
@@ -110,15 +142,39 @@ function AuthNavigator() {
 // ----------------------------------------------------------------
 export default function RootNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [serverConfigured, setServerConfigured] = useState<boolean | null>(null);
 
-  if (isLoading) {
+  // Vérifier si le serveur est déjà configuré au démarrage
+  useEffect(() => {
+    ServerConfig.isConfigured().then((configured) => {
+      setServerConfigured(configured);
+    });
+  }, []);
+
+  // Écran de chargement initial
+  if (isLoading || serverConfigured === null) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f4c2a' }}>
+        <Text style={{ fontSize: 48, marginBottom: 16 }}>🌿</Text>
         <ActivityIndicator size="large" color="#a7f3d0" />
+        <Text style={{ color: '#a7f3d0', marginTop: 12, fontSize: 14 }}>
+          CCDS Citoyen — Chargement...
+        </Text>
       </View>
     );
   }
 
+  // Premier lancement : afficher l'écran de configuration serveur
+  if (!serverConfigured) {
+    return (
+      <ServerConfigScreen
+        isFirstLaunch={true}
+        onConfigured={() => setServerConfigured(true)}
+      />
+    );
+  }
+
+  // Serveur configuré : navigation normale
   return (
     <NavigationContainer>
       {isAuthenticated ? <AppNavigator /> : <AuthNavigator />}

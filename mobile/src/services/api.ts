@@ -4,13 +4,23 @@
  */
 
 import * as SecureStore from 'expo-secure-store';
+import { ServerConfig }  from './ServerConfig';
 
 // ----------------------------------------------------------------
-// Configuration
+// Configuration dynamique
 // ----------------------------------------------------------------
-// Remplacez par l'URL de votre serveur en production
-export const API_BASE_URL = 'https://votre-domaine.com/api';
+// L'URL du serveur est lue depuis AsyncStorage (configurée au 1er lancement).
+// Utiliser getBaseUrl() plutôt que API_BASE_URL directement.
+export const API_BASE_URL = 'https://votre-domaine.com/api'; // Valeur par défaut (fallback)
 const TOKEN_KEY = 'ccds_jwt_token';
+
+/**
+ * Retourne l'URL de base de l'API depuis la configuration persistante.
+ * À utiliser dans tous les appels réseau.
+ */
+export const getBaseUrl = async (): Promise<string> => {
+  return ServerConfig.getServerUrl();
+};
 
 // ----------------------------------------------------------------
 // Gestion du token JWT
@@ -54,7 +64,8 @@ async function request<T>(
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
+  const baseUrl  = await getBaseUrl();
+  const response = await fetch(`${baseUrl}/${endpoint}`, {
     ...options,
     headers,
   });
