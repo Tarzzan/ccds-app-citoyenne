@@ -1,0 +1,31 @@
+# ==============================
+# PHP / Backend
+# ==============================
+backend/config/config.php
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# ==============================
+# React Native / Node.js
+# ==============================
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/npm-debug.*
+mobile/yarn-debug.*
+mobile/yarn-error.*
+
+# ==============================
+# Système d'exploitation
+# ==============================
+.DS_Store
+Thumbs.db
+*.log
+
+# ==============================
+# IDE / Éditeurs
+# ==============================
+.vscode/
+.idea/
+*.swp
+*.swo
