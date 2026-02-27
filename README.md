@@ -2,8 +2,8 @@
 
 <br/>
 
-<img src="https://img.shields.io/badge/version-0.1.0--alpha-blue?style=for-the-badge" alt="Version"/>
-<img src="https://img.shields.io/badge/statut-En%20Développement-orange?style=for-the-badge" alt="Statut"/>
+<img src="https://img.shields.io/badge/version-1.0.0--stable-brightgreen?style=for-the-badge" alt="Version"/>
+<img src="https://img.shields.io/badge/statut-Livré%20v1.0.0-brightgreen?style=for-the-badge" alt="Statut"/>
 <img src="https://img.shields.io/badge/licence-Privé-red?style=for-the-badge" alt="Licence"/>
 <img src="https://img.shields.io/badge/plateforme-iOS%20%7C%20Android-lightgrey?style=for-the-badge&logo=react" alt="Plateforme"/>
 
@@ -82,15 +82,15 @@ Les signalements sont transmis en temps réel à un serveur central qui les disp
 <tr>
 <td align="center"><b>6</b></td>
 <td>Documentation &amp; Finalisation</td>
-<td align="center">🟢 En cours</td>
+<td align="center">✅ Terminée</td>
 <td align="center">
-<img src="https://progress-bar.xyz/10/?title=10%25&width=120&color=3b82f6" alt="10%"/>
+<img src="https://progress-bar.xyz/100/?title=100%25&width=120&color=22c55e" alt="100%"/>
 </td>
 </tr>
 </tbody>
 </table>
 
-> **Dernière mise à jour :** 26 Février 2026 — **Phase active :** 6 / 6
+> **Dernière mise à jour :** 27 Février 2026 — **✅ Projet livré en version 1.0.0 stable**
 
 </div>
 

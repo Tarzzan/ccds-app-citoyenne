@@ -52,17 +52,18 @@ Le projet est découpé en 6 phases principales, chacune avec des objectifs clai
 *   [x] **Build Mobile** : Guide complet rédigé (`docs/GUIDE_BUILD_MOBILE_EAS.md`) — configuration `eas.json` (dev/preview/production), builds Android (APK + AAB) et iOS (IPA), soumission automatisée, mises à jour OTA.
 
 ### Phase 6 : Documentation et Finalisation
-*   [ ] **Documentation API** : Générer une documentation claire pour tous les endpoints de l'API (ex: avec Swagger/OpenAPI).
-*   [ ] **Commit Final** : S'assurer que tout le code est propre, commenté et poussé sur GitHub.
-*   [ ] **Nettoyage** : Supprimer les fichiers et logs inutiles.
+*   [x] **Documentation API** : Spécification OpenAPI 3.0 complète (`docs/api/openapi.yaml`) + page HTML interactive Redoc (`docs/api/index.html`) couvrant tous les endpoints (Auth, Catégories, Incidents, Commentaires) avec schémas, exemples et sécurité JWT.
+*   [x] **Nettoyage** : Suppression des `.gitkeep` inutiles, des logs et fichiers temporaires. Dépôt propre et cohérent.
+*   [x] **Commit Final** : Tag `v1.0.0` créé et poussé sur GitHub. Projet officiellement livré en version stable.
 
 ---
 
 ##  trạng thái hiện tại (Current State)
 
 *   **ID de la Phase Actuelle** : `6`
-*   **Statut** : 🟢 En cours
-*   **Prochaine Étape** : Documentation API Swagger/OpenAPI, nettoyage du code, commit final et publication.
+*   **Statut** : ✅ PROJET TERMINÉ — Version 1.0.0 stable
+*   **Date de livraison** : 27 Février 2026
+*   **Prochaine Étape** : Déploiement en production (voir `docs/deployment/GUIDE_SERVEUR.md`)
 
 ## 📓 Journal des Décisions (Decision Log)
 
