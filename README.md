@@ -201,6 +201,18 @@ npx expo start
 
 ---
 
+## 📦 Documentation de Déploiement
+
+Le projet est livré avec une documentation de déploiement complète, adaptée à chaque acteur du projet :
+
+| Guide | Public Cible | Description |
+|---|---|---|
+| [📡 Guide de Déploiement Serveur](./docs/deployment/GUIDE_SERVEUR.md) | Administrateur Système | Installation LAMP, script `deploy.sh`, VirtualHost Apache, SSL, Fail2Ban, sauvegardes et mises à jour |
+| [📱 Guide de Build & Publication Mobile](./docs/deployment/GUIDE_MOBILE_BUILD.md) | Développeur | Build Android/iOS avec Expo EAS, soumission aux stores, mises à jour OTA |
+| [🙋 Guide d'Installation Utilisateur](./docs/deployment/GUIDE_UTILISATEUR.md) | Citoyen | Téléchargement via QR Code, installation et première connexion |
+
+---
+
 ## 🤖 Note pour l'Agent IA
 
 > Ce dépôt est géré de manière autonome par un agent IA. En cas de reprise de mission, la **première action impérative** est de lire le fichier [`ROADMAP.md`](./ROADMAP.md) pour connaître l'état exact du projet et la prochaine tâche à accomplir. Ce fichier est la seule source de vérité.
