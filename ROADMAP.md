@@ -27,14 +27,14 @@ Le projet est découpé en 6 phases principales, chacune avec des objectifs clai
 *   [x] **Sécurité** : Mettre en place la validation des données et la protection des endpoints par rôle (citoyen, agent, admin).
 
 ### Phase 3 : Développement de l'Application Mobile (React Native)
-*   [ ] **Initialisation** : Mettre en place le projet avec Expo, `react-navigation` et les dépendances (maps, camera, location).
-*   [ ] **Navigation** : Configurer les stacks de navigation pour les utilisateurs authentifiés et non-authentifiés.
-*   [ ] **Écrans d'Authentification** : Créer les composants pour les écrans de connexion et d'inscription.
-*   [ ] **Écran Carte** : Développer la carte interactive affichant les signalements géolocalisés.
-*   [ ] **Écran Création Signalement** : Développer le formulaire complet avec accès à la caméra, géolocalisation, et envoi des données à l'API.
-*   [ ] **Écran Mes Signalements** : Créer la liste des signalements de l'utilisateur avec leur statut.
-*   [ ] **Écran Détail Signalement** : Afficher les informations complètes d'un signalement et la section des commentaires.
-*   [ ] **Gestion d'état** : Intégrer un gestionnaire d'état (ex: Redux Toolkit) pour les données utilisateur et les signalements.
+*   [x] **Initialisation** : Mettre en place le projet avec Expo, `react-navigation` et les dépendances (maps, camera, location).
+*   [x] **Navigation** : Configurer les stacks de navigation pour les utilisateurs authentifiés et non-authentifiés.
+*   [x] **Écrans d'Authentification** : Créer les composants pour les écrans de connexion et d'inscription.
+*   [x] **Écran Carte** : Développer la carte interactive affichant les signalements géolocalisés.
+*   [x] **Écran Création Signalement** : Développer le formulaire complet avec accès à la caméra, géolocalisation, et envoi des données à l'API.
+*   [x] **Écran Mes Signalements** : Créer la liste des signalements de l'utilisateur avec leur statut.
+*   [x] **Écran Détail Signalement** : Afficher les informations complètes d'un signalement et la section des commentaires.
+*   [x] **Gestion d'état** : Implémenté via React Context (AuthContext) et hooks locaux — architecture légère et suffisante pour la v1.
 
 ### Phase 4 : Développement du Back-Office (Interface Web d'Administration)
 *   [ ] **Framework** : Choisir et mettre en place un micro-framework PHP ou un simple routeur pour le back-office.
@@ -58,9 +58,9 @@ Le projet est découpé en 6 phases principales, chacune avec des objectifs clai
 
 ##  trạng thái hiện tại (Current State)
 
-*   **ID de la Phase Actuelle** : `3`
+*   **ID de la Phase Actuelle** : `4`
 *   **Statut** : 🟢 En cours
-*   **Prochaine Étape** : Initialiser le projet React Native (Expo), configurer la navigation et développer les écrans de l'application mobile.
+*   **Prochaine Étape** : Développer le back-office web d'administration (tableau de bord, gestion des signalements, agents, statistiques).
 
 ## 📓 Journal des Décisions (Decision Log)
 
