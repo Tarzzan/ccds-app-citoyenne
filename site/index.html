@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="CCDS Citoyen — Application de signalement des défauts communaux pour Kourou, Sinnamary et Iracoubo en Guyane Française."/>
+  <title>CCDS Citoyen — Guyane Française</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --g900:#0f4c2a; --g700:#1a7a42; --g500:#22c55e; --g200:#bbf7d0; --g100:#dcfce7; --g50:#f0fdf4;
+      --gray900:#111827; --gray700:#374151; --gray500:#6b7280; --gray300:#d1d5db; --gray100:#f3f4f6;
+      --amber:#f59e0b; --red:#ef4444; --blue:#3b82f6; --white:#fff;
+      --radius:14px; --shadow:0 4px 24px rgba(0,0,0,0.08);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{font-family:'Inter',sans-serif;color:var(--gray900);background:var(--white);line-height:1.6;}
+
+    /* NAV */
+    nav{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(255,255,255,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--gray300);padding:0 24px;}
+    .nav-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;height:64px;gap:32px;}
+    .nav-logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;color:var(--g700);text-decoration:none;}
+    .nav-logo span{font-size:24px;}
+    .nav-links{display:flex;gap:24px;margin-left:auto;}
+    .nav-links a{font-size:14px;font-weight:500;color:var(--gray700);text-decoration:none;transition:color .2s;}
+    .nav-links a:hover{color:var(--g700);}
+    .nav-cta{background:var(--g700);color:var(--white)!important;padding:8px 18px;border-radius:8px;font-weight:600!important;}
+    .nav-cta:hover{background:var(--g900)!important;}
+    @media(max-width:640px){.nav-links{display:none;}}
+
+    /* HERO */
+    .hero{min-height:100vh;background:linear-gradient(135deg,var(--g900) 0%,var(--g700) 60%,#16a34a 100%);display:flex;align-items:center;justify-content:center;padding:100px 24px 60px;position:relative;overflow:hidden;}
+    .hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M0 0h40v40H0V0zm40 40h40v40H40V40zm0-40h2l-2 2V0zm0 4l4-4h2l-6 6V4zm0 4l8-8h2L40 10V8zm0 4L52 0h2L40 14v-2zm0 4L56 0h2L40 18v-2zm0 4L60 0h2L40 22v-2zm0 4L64 0h2L40 26v-2zm0 4L68 0h2L40 30v-2zm0 4L72 0h2L40 34v-2zm0 4L76 0h2L40 38v-2zm0 4L80 0v2L42 40h-2zm4 0L80 4v2L46 40h-2zm4 0L80 8v2L50 40h-2zm4 0L80 12v2L54 40h-2zm4 0L80 16v2L58 40h-2zm4 0L80 20v2L62 40h-2zm4 0L80 24v2L66 40h-2zm4 0L80 28v2L70 40h-2zm4 0L80 32v2L74 40h-2zm4 0L80 36v2L78 40h-2z'/%3E%3C/g%3E%3C/svg%3E");}
+    .hero-content{max-width:700px;text-align:center;position:relative;z-index:1;}
+    .hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:999px;padding:8px 20px;font-size:13px;font-weight:600;color:var(--white);margin-bottom:28px;}
+    .hero h1{font-size:clamp(36px,7vw,72px);font-weight:900;color:var(--white);line-height:1.05;letter-spacing:-2px;margin-bottom:20px;}
+    .hero h1 em{font-style:normal;color:var(--g500);}
+    .hero p{font-size:18px;color:rgba(255,255,255,0.8);max-width:540px;margin:0 auto 40px;}
+    .hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+    .btn-primary{background:var(--white);color:var(--g700);padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;transition:all .2s;display:inline-flex;align-items:center;gap:8px;}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.2);}
+    .btn-outline{background:rgba(255,255,255,0.1);color:var(--white);border:2px solid rgba(255,255,255,0.3);padding:14px 28px;border-radius:10px;font-weight:600;font-size:15px;text-decoration:none;transition:all .2s;display:inline-flex;align-items:center;gap:8px;}
+    .btn-outline:hover{background:rgba(255,255,255,0.2);}
+    .hero-stats{display:flex;gap:32px;justify-content:center;margin-top:56px;flex-wrap:wrap;}
+    .stat{text-align:center;}
+    .stat-num{font-size:32px;font-weight:900;color:var(--white);}
+    .stat-label{font-size:12px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1px;}
+
+    /* SECTIONS */
+    section{padding:80px 24px;}
+    .container{max-width:1100px;margin:0 auto;}
+    .section-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--g700);margin-bottom:12px;}
+    .section-title{font-size:clamp(28px,4vw,42px);font-weight:800;color:var(--gray900);line-height:1.15;margin-bottom:16px;letter-spacing:-0.5px;}
+    .section-sub{font-size:16px;color:var(--gray500);max-width:560px;}
+
+    /* FEATURES */
+    .features{background:var(--gray100);}
+    .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin-top:48px;}
+    .feature-card{background:var(--white);border-radius:var(--radius);padding:28px;border:1px solid var(--gray300);transition:all .2s;}
+    .feature-card:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:var(--g200);}
+    .feature-icon{width:52px;height:52px;border-radius:12px;background:var(--g100);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px;}
+    .feature-card h3{font-size:17px;font-weight:700;margin-bottom:8px;}
+    .feature-card p{font-size:14px;color:var(--gray500);line-height:1.6;}
+
+    /* SCREENSHOTS */
+    .screenshots-tabs{display:flex;gap:8px;margin:32px 0 24px;flex-wrap:wrap;}
+    .tab-btn{padding:10px 20px;border-radius:8px;border:2px solid var(--gray300);background:var(--white);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--gray700);}
+    .tab-btn.active{background:var(--g700);color:var(--white);border-color:var(--g700);}
+    .screenshots-grid{display:grid;gap:20px;}
+    .screenshots-grid.mobile-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}
+    .screenshots-grid.admin-grid{grid-template-columns:repeat(auto-fill,minmax(340px,1fr));}
+    .screenshot-item{border-radius:12px;overflow:hidden;border:1px solid var(--gray300);background:var(--gray100);transition:all .2s;cursor:pointer;}
+    .screenshot-item:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,0.15);}
+    .screenshot-item img{width:100%;display:block;}
+    .screenshot-caption{padding:12px 14px;font-size:13px;font-weight:600;color:var(--gray700);}
+    [data-tab]{display:none;}
+    [data-tab].active{display:block;}
+
+    /* HOW IT WORKS */
+    .how-it-works{background:var(--g50);}
+    .steps-timeline{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0;margin-top:48px;position:relative;}
+    .timeline-step{padding:24px;text-align:center;position:relative;}
+    .timeline-step:not(:last-child)::after{content:'→';position:absolute;right:-12px;top:50%;transform:translateY(-50%);font-size:24px;color:var(--g500);}
+    .timeline-num{width:56px;height:56px;border-radius:50%;background:var(--g700);color:var(--white);font-weight:900;font-size:22px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;}
+    .timeline-step h3{font-size:15px;font-weight:700;margin-bottom:6px;}
+    .timeline-step p{font-size:13px;color:var(--gray500);}
+
+    /* TECH STACK */
+    .tech-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:40px;}
+    .tech-card{background:var(--white);border:1px solid var(--gray300);border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;}
+    .tech-icon{font-size:28px;flex-shrink:0;}
+    .tech-name{font-weight:700;font-size:14px;}
+    .tech-desc{font-size:12px;color:var(--gray500);}
+
+    /* CTA */
+    .cta-section{background:linear-gradient(135deg,var(--g900),var(--g700));color:var(--white);text-align:center;}
+    .cta-section h2{font-size:clamp(28px,4vw,42px);font-weight:800;margin-bottom:16px;letter-spacing:-0.5px;}
+    .cta-section p{font-size:16px;opacity:.8;max-width:500px;margin:0 auto 36px;}
+    .cta-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+    .cta-btn-white{background:var(--white);color:var(--g700);padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;transition:all .2s;}
+    .cta-btn-white:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.2);}
+    .cta-btn-ghost{background:rgba(255,255,255,0.1);color:var(--white);border:2px solid rgba(255,255,255,0.3);padding:14px 28px;border-radius:10px;font-weight:600;font-size:15px;text-decoration:none;transition:all .2s;}
+    .cta-btn-ghost:hover{background:rgba(255,255,255,0.2);}
+
+    /* FOOTER */
+    footer{background:var(--gray900);color:rgba(255,255,255,0.6);padding:48px 24px 32px;}
+    .footer-inner{max-width:1100px;margin:0 auto;}
+    .footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:40px;margin-bottom:40px;}
+    .footer-brand{font-size:20px;font-weight:800;color:var(--white);margin-bottom:10px;}
+    .footer-desc{font-size:14px;line-height:1.7;}
+    .footer-col h4{font-size:13px;font-weight:700;color:var(--white);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;}
+    .footer-col a{display:block;font-size:14px;color:rgba(255,255,255,0.5);text-decoration:none;margin-bottom:8px;transition:color .2s;}
+    .footer-col a:hover{color:var(--g500);}
+    .footer-bottom{border-top:1px solid rgba(255,255,255,0.1);padding-top:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;font-size:13px;}
+    .footer-badge{background:var(--g700);color:var(--white);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:600;}
+    @media(max-width:640px){.footer-grid{grid-template-columns:1fr;}.timeline-step:not(:last-child)::after{display:none;}.hero h1{letter-spacing:-1px;}}
+
+    /* LIGHTBOX */
+    .lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;}
+    .lightbox.open{display:flex;}
+    .lightbox img{max-width:90vw;max-height:90vh;border-radius:12px;object-fit:contain;}
+    .lightbox-close{position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.1);border:none;color:var(--white);font-size:24px;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo"><span>🌿</span> CCDS Citoyen</a>
+    <div class="nav-links">
+      <a href="#fonctionnalites">Fonctionnalités</a>
+      <a href="#apercu">Aperçu</a>
+      <a href="#comment">Comment ça marche</a>
+      <a href="#technologie">Technologie</a>
+      <a href="guide/index.html" class="nav-cta">📱 Guide d'installation</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-content">
+    <div class="hero-badge">🏛️ Communauté de Communes des Savanes — Guyane</div>
+    <h1>Signalez, <em>améliorez</em> votre commune.</h1>
+    <p>Une application citoyenne pour signaler les défauts de voirie, d'éclairage, d'espaces verts et bien plus — directement depuis votre smartphone.</p>
+    <div class="hero-btns">
+      <a href="guide/index.html" class="btn-primary">📱 Installer l'application</a>
+      <a href="#apercu" class="btn-outline">🖼️ Voir les captures d'écran</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-num">3</div><div class="stat-label">Communes</div></div>
+      <div class="stat"><div class="stat-num">8</div><div class="stat-label">Catégories</div></div>
+      <div class="stat"><div class="stat-num">iOS & Android</div><div class="stat-label">Plateformes</div></div>
+      <div class="stat"><div class="stat-num">v1.0.0</div><div class="stat-label">Version stable</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="fonctionnalites">
+  <div class="container">
+    <div class="section-label">Fonctionnalités</div>
+    <h2 class="section-title">Tout ce dont les citoyens ont besoin</h2>
+    <p class="section-sub">Une solution complète pour les citoyens, les agents et les administrateurs communaux.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📸</div>
+        <h3>Photo & Géolocalisation</h3>
+        <p>Prenez une photo du problème directement depuis l'app. La position GPS est automatiquement capturée et géocodée.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🗺️</div>
+        <h3>Carte Interactive</h3>
+        <p>Visualisez tous les signalements de votre commune sur une carte. Les marqueurs sont colorés selon le statut de traitement.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔔</div>
+        <h3>Suivi en Temps Réel</h3>
+        <p>Suivez l'avancement de vos signalements : Soumis → En cours → Résolu. Consultez les commentaires des agents.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🖥️</div>
+        <h3>Back-Office Admin</h3>
+        <p>Interface web complète pour les agents : gestion des incidents, statistiques, carte de supervision et notes internes.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Statistiques & Rapports</h3>
+        <p>Tableaux de bord avec graphiques Chart.js : incidents par catégorie, délais de traitement, zones les plus actives.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Sécurisé & Privé</h3>
+        <p>Authentification JWT, données hébergées sur votre serveur, rôles distincts (citoyen, agent, administrateur).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCREENSHOTS -->
+<section id="apercu">
+  <div class="container">
+    <div class="section-label">Aperçu visuel</div>
+    <h2 class="section-title">L'application en images</h2>
+    <p class="section-sub">Captures d'écran réelles de l'application configurée pour Kourou et Sinnamary.</p>
+    <div class="screenshots-tabs">
+      <button class="tab-btn active" onclick="switchTab('mobile', this)">📱 Application Mobile</button>
+      <button class="tab-btn" onclick="switchTab('admin', this)">🖥️ Back-Office Admin</button>
+    </div>
+    <div data-tab="mobile" class="active">
+      <div class="screenshots-grid mobile-grid">
+        <div class="screenshot-item" onclick="openLightbox('assets/img/mockup_01_login.png')">
+          <img src="assets/img/mockup_01_login.png" alt="Écran de connexion" loading="lazy"/>
+          <div class="screenshot-caption">🔑 Connexion</div>
+        </div>
+        <div class="screenshot-item" onclick="openLightbox('assets/img/mockup_02_carte.png')">
+          <img src="assets/img/mockup_02_carte.png" alt="Carte interactive" loading="lazy"/>
+          <div class="screenshot-caption">🗺️ Carte interactive</div>
+        </div>
+        <div class="screenshot-item" onclick="openLightbox('assets/img/mockup_03_creation.png')">
+          <img src="assets/img/mockup_03_creation.png" alt="Créer un signalement" loading="lazy"/>
+          <div class="screenshot-caption">📸 Créer un signalement</div>
+        </div>
+        <div class="screenshot-item" onclick="openLightbox('assets/img/mockup_04_mes_signalements.png')">
+          <img src="assets/img/mockup_04_mes_signalements.png" alt="Mes signalements" loading="lazy"/>
+          <div class="screenshot-caption">📋 Mes signalements</div>
+        </div>
+        <div class="screenshot-item" onclick="openLightbox('assets/img/mockup_05_detail.png')">
+          <img src="assets/img/mockup_05_detail.png" alt="Détail d'un signalement" loading="lazy"/>
+          <div class="screenshot-caption">🔍 Détail & suivi</div>
+        </div>
+      </div>
+    </div>
+    <div data-tab="admin">
+      <div class="screenshots-grid admin-grid">
+        <div class="screenshot-item" onclick="openLightbox('assets/img/admin_01_dashboard.png')">
+          <img src="assets/img/admin_01_dashboard.png" alt="Tableau de bord" loading="lazy"/>
+          <div class="screenshot-caption">📊 Tableau de bord</div>
+        </div>
+        <div class="screenshot-item" onclick="openLightbox('assets/img/admin_02_incidents.png')">
+          <img src="assets/img/admin_02_incidents.png" alt="Liste des signalements" loading="lazy"/>
+          <div class="screenshot-caption">📋 Gestion des signalements</div>
+        </div>
+        <div class="screenshot-item" onclick="openLightbox('assets/img/admin_03_incident_detail.png')">
+          <img src="assets/img/admin_03_incident_detail.png" alt="Détail admin" loading="lazy"/>
+          <div class="screenshot-caption">🔍 Traitement d'un incident</div>
+        </div>
+        <div class="screenshot-item" onclick="openLightbox('assets/img/admin_04_statistiques.png')">
+          <img src="assets/img/admin_04_statistiques.png" alt="Statistiques" loading="lazy"/>
+          <div class="screenshot-caption">📈 Statistiques</div>
+        </div>
+        <div class="screenshot-item" onclick="openLightbox('assets/img/admin_05_carte.png')">
+          <img src="assets/img/admin_05_carte.png" alt="Carte admin" loading="lazy"/>
+          <div class="screenshot-caption">🗺️ Carte de supervision</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-it-works" id="comment">
+  <div class="container">
+    <div class="section-label">Mode d'emploi</div>
+    <h2 class="section-title">Comment ça marche ?</h2>
+    <p class="section-sub">En 4 étapes simples, du signalement à la résolution.</p>
+    <div class="steps-timeline">
+      <div class="timeline-step">
+        <div class="timeline-num">1</div>
+        <h3>Photographiez</h3>
+        <p>Prenez une photo du problème avec votre smartphone depuis l'application.</p>
+      </div>
+      <div class="timeline-step">
+        <div class="timeline-num">2</div>
+        <h3>Signalez</h3>
+        <p>Choisissez la catégorie, ajoutez une description. Le GPS localise automatiquement.</p>
+      </div>
+      <div class="timeline-step">
+        <div class="timeline-num">3</div>
+        <h3>Transmis</h3>
+        <p>Le signalement est envoyé au bon service de la mairie selon la catégorie.</p>
+      </div>
+      <div class="timeline-step">
+        <div class="timeline-num">4</div>
+        <h3>Résolu</h3>
+        <p>Suivez l'avancement et recevez une notification quand le problème est traité.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECH STACK -->
+<section id="technologie">
+  <div class="container">
+    <div class="section-label">Technologie</div>
+    <h2 class="section-title">Stack technique</h2>
+    <p class="section-sub">Des technologies éprouvées, open-source et faciles à maintenir.</p>
+    <div class="tech-grid">
+      <div class="tech-card"><span class="tech-icon">⚛️</span><div><div class="tech-name">React Native</div><div class="tech-desc">Application iOS & Android</div></div></div>
+      <div class="tech-card"><span class="tech-icon">📦</span><div><div class="tech-name">Expo</div><div class="tech-desc">Build & déploiement mobile</div></div></div>
+      <div class="tech-card"><span class="tech-icon">🐘</span><div><div class="tech-name">PHP 8.1</div><div class="tech-desc">API REST backend</div></div></div>
+      <div class="tech-card"><span class="tech-icon">🗄️</span><div><div class="tech-name">MySQL</div><div class="tech-desc">Base de données relationnelle</div></div></div>
+      <div class="tech-card"><span class="tech-icon">🌐</span><div><div class="tech-name">Apache</div><div class="tech-desc">Serveur web</div></div></div>
+      <div class="tech-card"><span class="tech-icon">🔐</span><div><div class="tech-name">JWT</div><div class="tech-desc">Authentification sécurisée</div></div></div>
+      <div class="tech-card"><span class="tech-icon">🗺️</span><div><div class="tech-name">Leaflet.js</div><div class="tech-desc">Cartographie interactive</div></div></div>
+      <div class="tech-card"><span class="tech-icon">📊</span><div><div class="tech-name">Chart.js</div><div class="tech-desc">Graphiques & statistiques</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="container">
+    <h2>Prêt à améliorer votre commune ?</h2>
+    <p>Suivez le guide d'installation pour configurer l'application en 5 minutes.</p>
+    <div class="cta-btns">
+      <a href="guide/index.html" class="cta-btn-white">📱 Guide d'installation</a>
+      <a href="https://github.com/Tarzzan/ccds-app-citoyenne" target="_blank" class="cta-btn-ghost">⭐ Voir sur GitHub</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">🌿 CCDS Citoyen</div>
+        <p class="footer-desc">Application citoyenne de signalement des défauts communaux pour la Communauté de Communes des Savanes — Guyane Française.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Navigation</h4>
+        <a href="#fonctionnalites">Fonctionnalités</a>
+        <a href="#apercu">Aperçu</a>
+        <a href="#comment">Comment ça marche</a>
+        <a href="#technologie">Technologie</a>
+      </div>
+      <div class="footer-col">
+        <h4>Ressources</h4>
+        <a href="guide/index.html">Guide d'installation</a>
+        <a href="https://github.com/Tarzzan/ccds-app-citoyenne" target="_blank">Code source GitHub</a>
+        <a href="https://github.com/Tarzzan/ccds-app-citoyenne/blob/main/docs/api/openapi.yaml" target="_blank">Documentation API</a>
+        <a href="https://github.com/Tarzzan/ccds-app-citoyenne/blob/main/ROADMAP.md" target="_blank">Feuille de route</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 CCDS Citoyen — Kourou · Sinnamary · Iracoubo · Saint-Élie</span>
+      <span class="footer-badge">v1.0.0 Stable</span>
+    </div>
+  </div>
+</footer>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt=""/>
+</div>
+
+<script>
+  function switchTab(tab, btn) {
+    document.querySelectorAll('[data-tab]').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
+    btn.classList.add('active');
+  }
+  function openLightbox(src) {
+    document.getElementById('lightbox-img').src = src;
+    document.getElementById('lightbox').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') closeLightbox(); });
+  // Smooth scroll offset for fixed nav
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if(target){ e.preventDefault(); window.scrollTo({top: target.offsetTop - 70, behavior:'smooth'}); }
+    });
+  });
+</script>
+</body>
+</html>
