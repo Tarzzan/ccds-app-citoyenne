@@ -1,6 +1,7 @@
 /**
  * CCDS — Service API centralisé
  * Gère tous les appels HTTP vers le backend PHP.
+ * v1.1 : ajout votes "Moi aussi", notifications push, mode hors-ligne
  */
 
 import * as SecureStore from 'expo-secure-store';
@@ -9,15 +10,9 @@ import { ServerConfig }  from './ServerConfig';
 // ----------------------------------------------------------------
 // Configuration dynamique
 // ----------------------------------------------------------------
-// L'URL du serveur est lue depuis AsyncStorage (configurée au 1er lancement).
-// Utiliser getBaseUrl() plutôt que API_BASE_URL directement.
 export const API_BASE_URL = 'https://votre-domaine.com/api'; // Valeur par défaut (fallback)
 const TOKEN_KEY = 'ccds_jwt_token';
 
-/**
- * Retourne l'URL de base de l'API depuis la configuration persistante.
- * À utiliser dans tous les appels réseau.
- */
 export const getBaseUrl = async (): Promise<string> => {
   return ServerConfig.getServerUrl();
 };
@@ -122,6 +117,8 @@ export interface Incident {
   thumbnail?: string;
   photos?: Photo[];
   status_history?: StatusHistory[];
+  votes_count?: number;       // v1.1
+  user_has_voted?: boolean;   // v1.1
   created_at: string;
   updated_at: string;
 }
@@ -161,6 +158,28 @@ export interface PaginatedIncidents {
   };
 }
 
+// v1.1 — Notification
+export interface Notification {
+  id: number;
+  type: 'status_change' | 'new_comment' | 'vote_milestone' | 'system';
+  title: string;
+  body: string;
+  is_read: boolean;
+  sent_at: string;
+  incident_reference?: string;
+  incident_title?: string;
+}
+
+export interface NotificationsResponse {
+  notifications: Notification[];
+  unread_count: number;
+  pagination: {
+    total: number;
+    page: number;
+    total_pages: number;
+  };
+}
+
 // ----------------------------------------------------------------
 // Endpoints Auth
 // ----------------------------------------------------------------
@@ -196,8 +215,9 @@ export const incidentsApi = {
     request<Incident>(`incidents/${id}`),
 
   create: async (formData: FormData) => {
-    const token = await getToken();
-    const response = await fetch(`${API_BASE_URL}/incidents`, {
+    const token   = await getToken();
+    const baseUrl = await getBaseUrl();
+    const response = await fetch(`${baseUrl}/incidents`, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
@@ -218,3 +238,81 @@ export const commentsApi = {
   add: (incidentId: number, data: { comment: string; is_internal?: boolean }) =>
     request(`incidents/${incidentId}/comments`, { method: 'POST', body: JSON.stringify(data) }),
 };
+
+// ----------------------------------------------------------------
+// Endpoints Votes "Moi aussi" (v1.1)
+// ----------------------------------------------------------------
+export const votesApi = {
+  /**
+   * Récupère l'état du vote pour un incident (count + user_has_voted)
+   */
+  getState: (incidentId: number) =>
+    request<{ votes_count: number; user_has_voted: boolean }>(
+      `incidents/${incidentId}/votes`
+    ),
+
+  /**
+   * Vote pour un incident ("Moi aussi")
+   */
+  vote: (incidentId: number) =>
+    request<{ votes_count: number; user_has_voted: boolean }>(
+      `incidents/${incidentId}/vote`,
+      { method: 'POST' }
+    ),
+
+  /**
+   * Retire son vote
+   */
+  removeVote: (incidentId: number) =>
+    request<{ votes_count: number; user_has_voted: boolean }>(
+      `incidents/${incidentId}/vote`,
+      { method: 'DELETE' }
+    ),
+};
+
+// Exports compatibles avec api_additions.ts
+export const voteForIncident = (id: number) => votesApi.vote(id).then(r => r.data!);
+export const removeVote      = (id: number) => votesApi.removeVote(id).then(r => r.data!);
+export const getVotes        = (id: number) => votesApi.getState(id).then(r => r.data!);
+
+// ----------------------------------------------------------------
+// Endpoints Notifications (v1.1)
+// ----------------------------------------------------------------
+export const notificationsApi = {
+  /**
+   * Enregistre le token push de l'appareil
+   */
+  registerToken: (token: string, platform: 'ios' | 'android') =>
+    request('notifications/token', {
+      method: 'POST',
+      body: JSON.stringify({ token, platform }),
+    }),
+
+  /**
+   * Liste les notifications de l'utilisateur connecté
+   */
+  list: (page = 1) =>
+    request<NotificationsResponse>(`notifications?page=${page}`),
+
+  /**
+   * Marque une notification comme lue
+   */
+  markRead: (id: number) =>
+    request(`notifications/${id}/read`, { method: 'PUT' }),
+
+  /**
+   * Marque toutes les notifications comme lues
+   */
+  markAllRead: () =>
+    request('notifications/read-all', { method: 'PUT' }),
+};
+
+// Exports compatibles avec NotificationsScreen / NotificationService
+export const registerPushToken      = (token: string, platform: 'ios' | 'android') =>
+  notificationsApi.registerToken(token, platform);
+export const getNotifications       = (page = 1) =>
+  notificationsApi.list(page).then(r => r.data!);
+export const markNotificationRead   = (id: number) =>
+  notificationsApi.markRead(id);
+export const markAllNotificationsRead = () =>
+  notificationsApi.markAllRead();

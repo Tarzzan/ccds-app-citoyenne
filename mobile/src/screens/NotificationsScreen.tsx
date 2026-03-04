@@ -3,20 +3,10 @@ import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, RefreshControl, ActivityIndicator,
 } from 'react-native';
-import { getNotifications, markAllNotificationsRead, markNotificationRead } from '../services/api';
+import { notificationsApi, Notification } from '../services/api';
+import { useNavigation } from '@react-navigation/native';
 import { clearBadge } from '../services/NotificationService';
 import { COLORS } from '../components/ui';
-
-interface Notification {
-  id: number;
-  type: 'status_change' | 'new_comment' | 'vote_milestone' | 'system';
-  title: string;
-  body: string;
-  is_read: boolean;
-  sent_at: string;
-  incident_reference?: string;
-  incident_title?: string;
-}
 
 const TYPE_ICONS: Record<string, string> = {
   status_change:   '🔄',
@@ -40,7 +30,8 @@ const formatDate = (iso: string): string => {
   return d.toLocaleDateString('fr-FR');
 };
 
-export const NotificationsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+export const NotificationsScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount]     = useState(0);
   const [loading, setLoading]             = useState(true);
@@ -48,9 +39,11 @@ export const NotificationsScreen: React.FC<{ navigation: any }> = ({ navigation 
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const data = await getNotifications();
-      setNotifications(data.notifications);
-      setUnreadCount(data.unread_count);
+      const res = await notificationsApi.list();
+      if (res.data) {
+        setNotifications(res.data.notifications);
+        setUnreadCount(res.data.unread_count);
+      }
     } catch (error) {
       console.error('Erreur chargement notifications', error);
     } finally {
@@ -65,14 +58,14 @@ export const NotificationsScreen: React.FC<{ navigation: any }> = ({ navigation 
   }, []);
 
   const handleMarkAllRead = async () => {
-    await markAllNotificationsRead();
+    await notificationsApi.markAllRead();
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     setUnreadCount(0);
   };
 
   const handlePress = async (notif: Notification) => {
     if (!notif.is_read) {
-      await markNotificationRead(notif.id);
+      await notificationsApi.markRead(notif.id);
       setNotifications((prev) =>
         prev.map((n) => n.id === notif.id ? { ...n, is_read: true } : n)
       );

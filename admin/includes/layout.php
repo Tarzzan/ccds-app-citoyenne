@@ -17,6 +17,12 @@ try {
     $stmt = $db->query("SELECT COUNT(*) FROM incidents WHERE status = 'submitted'");
     $pending_count = (int)$stmt->fetchColumn();
 } catch (Exception $e) {}
+
+// Compter les notifications non lues (v1.1)
+$unread_notifs_count = 0;
+try {
+    $unread_notifs_count = (int)$db->query("SELECT COUNT(*) FROM notifications WHERE is_read = 0")->fetchColumn();
+} catch (Exception $e) {}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -73,6 +79,14 @@ try {
       <a href="/admin/?page=categories" class="nav-item <?= $active_nav === 'categories' ? 'active' : '' ?>">
         <span class="nav-icon">🏷️</span>
         <span>Catégories</span>
+      </a>
+
+      <a href="/admin/?page=notifications" class="nav-item <?= $active_nav === 'notifications' ? 'active' : '' ?>">
+        <span class="nav-icon">🔔</span>
+        <span>Notifications</span>
+        <?php if ($unread_notifs_count > 0): ?>
+          <span class="nav-badge" style="background:#f59e0b"><?= $unread_notifs_count ?></span>
+        <?php endif; ?>
       </a>
 
       <div class="nav-section-title" style="margin-top:8px">Analyse</div>

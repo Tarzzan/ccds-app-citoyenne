@@ -1,11 +1,9 @@
 /**
  * CCDS — Navigateur racine
- * Gère le basculement entre :
- *   1. L'écran de configuration serveur (premier lancement)
- *   2. Le stack authentifié / non-authentifié
+ * v1.1 : ajout onglet Notifications + écran Notifications dans le stack
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { NavigationContainer }         from '@react-navigation/native';
 import { createNativeStackNavigator }  from '@react-navigation/native-stack';
 import { createBottomTabNavigator }    from '@react-navigation/bottom-tabs';
@@ -22,6 +20,7 @@ import MapScreen            from '../screens/MapScreen';
 import CreateIncidentScreen from '../screens/CreateIncidentScreen';
 import MyIncidentsScreen    from '../screens/MyIncidentsScreen';
 import IncidentDetailScreen from '../screens/IncidentDetailScreen';
+import NotificationsScreen  from '../screens/NotificationsScreen';
 
 // ----------------------------------------------------------------
 // Types de navigation
@@ -32,15 +31,16 @@ export type AuthStackParamList = {
 };
 
 export type AppTabParamList = {
-  Map:         undefined;
-  MyIncidents: undefined;
+  Map:           undefined;
+  MyIncidents:   undefined;
+  Notifications: undefined;
 };
 
 export type AppStackParamList = {
   Tabs:           undefined;
   CreateIncident: undefined;
-  IncidentDetail: { id: number };
-  ServerConfig:   undefined; // Accessible depuis les paramètres
+  IncidentDetail: { id: number; reference?: string };
+  ServerConfig:   undefined;
 };
 
 // ----------------------------------------------------------------
@@ -65,7 +65,7 @@ function AppTabs() {
         name="Map"
         component={MapScreen}
         options={{
-          title:        'Carte',
+          title:      'Carte',
           tabBarIcon: ({ color }) => <TabIcon label="🗺️" color={color} />,
         }}
       />
@@ -73,24 +73,34 @@ function AppTabs() {
         name="MyIncidents"
         component={MyIncidentsScreen}
         options={{
-          title:        'Mes signalements',
+          title:      'Mes signalements',
           tabBarIcon: ({ color }) => <TabIcon label="📋" color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{
+          title:      'Notifications',
+          tabBarIcon: ({ color }) => <TabIcon label="🔔" color={color} />,
         }}
       />
     </Tab.Navigator>
   );
 }
 
-// Stack principal (avec modal CreateIncident, détail et config serveur)
+// Stack principal
 function AppNavigator() {
   return (
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
       <AppStack.Screen name="Tabs" component={AppTabs} />
+
       <AppStack.Screen
         name="CreateIncident"
         component={CreateIncidentScreen}
         options={{ presentation: 'modal' }}
       />
+
       <AppStack.Screen
         name="IncidentDetail"
         component={IncidentDetailScreen}
@@ -103,6 +113,7 @@ function AppNavigator() {
           headerTitleStyle: { fontWeight: '700' },
         }}
       />
+
       <AppStack.Screen
         name="ServerConfig"
         options={{
@@ -144,7 +155,6 @@ export default function RootNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
   const [serverConfigured, setServerConfigured] = useState<boolean | null>(null);
 
-  // Vérifier si le serveur est déjà configuré au démarrage
   useEffect(() => {
     ServerConfig.isConfigured().then((configured) => {
       setServerConfigured(configured);

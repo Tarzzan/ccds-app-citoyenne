@@ -1,19 +1,19 @@
 /**
  * CCDS — Écran Détail d'un Signalement
- * Affiche toutes les informations d'un signalement : photos, statut,
- * historique des changements et commentaires publics.
+ * v1.1 : ajout du bouton "Moi aussi" (VoteButton)
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image,
   ActivityIndicator, Alert, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, FlatList,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
 
 import { incidentsApi, commentsApi, Incident, Comment } from '../services/api';
 import { StatusBadge, Button, COLORS } from '../components/ui';
+import { VoteButton } from '../components/VoteButton';
 import { AppStackParamList } from '../navigation/RootNavigator';
 
 type RouteType = RouteProp<AppStackParamList, 'IncidentDetail'>;
@@ -22,11 +22,11 @@ export default function IncidentDetailScreen() {
   const route = useRoute<RouteType>();
   const { id } = route.params;
 
-  const [incident,  setIncident]  = useState<Incident | null>(null);
-  const [comments,  setComments]  = useState<Comment[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [newComment, setNewComment] = useState('');
-  const [sending,   setSending]   = useState(false);
+  const [incident,    setIncident]    = useState<Incident | null>(null);
+  const [comments,    setComments]    = useState<Comment[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [newComment,  setNewComment]  = useState('');
+  const [sending,     setSending]     = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
 
   const load = useCallback(async () => {
@@ -78,7 +78,7 @@ export default function IncidentDetailScreen() {
     );
   }
 
-  const photos = incident.photos ?? [];
+  const photos  = incident.photos ?? [];
   const history = incident.status_history ?? [];
 
   return (
@@ -136,10 +136,26 @@ export default function IncidentDetailScreen() {
             <Text style={styles.infoIcon}>📅</Text>
             <Text style={styles.infoText}>
               {new Date(incident.created_at).toLocaleDateString('fr-FR', {
-                day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                day: '2-digit', month: 'long', year: 'numeric',
+                hour: '2-digit', minute: '2-digit',
               })}
             </Text>
           </View>
+
+          {/* ── Bouton "Moi aussi" (v1.1) ── */}
+          {incident.status !== 'resolved' && incident.status !== 'rejected' && (
+            <View style={styles.voteSection}>
+              <View style={styles.voteDivider} />
+              <Text style={styles.voteHint}>
+                Ce problème vous affecte aussi ?
+              </Text>
+              <VoteButton
+                incidentId={incident.id}
+                initialVotesCount={incident.votes_count ?? 0}
+                initialHasVoted={incident.user_has_voted ?? false}
+              />
+            </View>
+          )}
         </View>
 
         {/* Historique des statuts */}
@@ -270,6 +286,20 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6, gap: 8 },
   infoIcon:{ fontSize: 16 },
   infoText:{ fontSize: 14, color: COLORS.gray, flex: 1 },
+
+  // Vote section (v1.1)
+  voteSection: { marginTop: 8 },
+  voteDivider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginBottom: 12,
+  },
+  voteHint: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
 
   sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.dark, marginBottom: 14 },
 
