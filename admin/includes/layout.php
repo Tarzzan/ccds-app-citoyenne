@@ -94,6 +94,24 @@ try {
         <span>Recherche globale</span>
       </a>
 
+      <div class="nav-section-title" style="margin-top:8px">Modération</div>
+
+      <a href="/admin/?page=moderation" class="nav-item <?= $active_nav === 'moderation' ? 'active' : '' ?>">
+        <span class="nav-icon">🚩</span>
+        <span>Commentaires signalés</span>
+        <?php
+        $flagged_count = 0;
+        try { $flagged_count = (int)$db->query("SELECT COUNT(*) FROM comments WHERE is_flagged = 1")->fetchColumn(); } catch (Exception $e) {}
+        if ($flagged_count > 0): ?>
+          <span class="nav-badge" style="background:#E53935"><?= $flagged_count ?></span>
+        <?php endif; ?>
+      </a>
+
+      <a href="/admin/?page=audit_logs" class="nav-item <?= $active_nav === 'audit_logs' ? 'active' : '' ?>">
+        <span class="nav-icon">📋</span>
+        <span>Logs d'audit</span>
+      </a>
+
       <div class="nav-section-title" style="margin-top:8px">Analyse</div>
 
       <a href="/admin/?page=stats" class="nav-item <?= $active_nav === 'stats' ? 'active' : '' ?>">

@@ -64,6 +64,8 @@ switch ($resource) {
         $ctrl = new AuthController();
         if ($sub === 'password' && $method === 'PUT') {
             $ctrl->changePassword();
+        } elseif ($sub === 'stats' && $method === 'GET') {
+            $ctrl->getStats(); // v1.5 — Tableau de bord citoyen (UX-07)
         } elseif ($method === 'GET') {
             $ctrl->getProfile();
         } elseif ($method === 'PUT') {
@@ -71,6 +73,30 @@ switch ($resource) {
         } else {
             http_response_code(405);
             echo json_encode(['success' => false, 'message' => 'Méthode non autorisée.']);
+        }
+        break;
+
+    // ----------------------------------------------------------------
+    // 2FA (v1.5 — SEC-03)
+    // ----------------------------------------------------------------
+    case 'auth':
+        require_once __DIR__ . '/controllers/TwoFactorController.php';
+        $authSub = $segments[1] ?? ''; // '2fa'
+        $authAct = $segments[2] ?? ''; // 'setup', 'verify', 'disable', 'send-email', 'validate', 'status'
+        if ($authSub === '2fa') {
+            $ctrl = new TwoFactorController();
+            match(true) {
+                $method === 'GET'    && $authAct === 'status'     => $ctrl->getStatus(),
+                $method === 'POST'   && $authAct === 'setup'      => $ctrl->setup(),
+                $method === 'POST'   && $authAct === 'verify'     => $ctrl->verify(),
+                $method === 'DELETE' && $authAct === 'disable'    => $ctrl->disable(),
+                $method === 'POST'   && $authAct === 'send-email' => $ctrl->sendEmailCode(),
+                $method === 'POST'   && $authAct === 'validate'   => $ctrl->validate(),
+                default => (function() { http_response_code(405); echo json_encode(['success' => false, 'message' => 'Méthode non autorisée.']); })()
+            };
+        } else {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Endpoint auth introuvable.']);
         }
         break;
 

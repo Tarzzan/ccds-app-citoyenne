@@ -38,6 +38,8 @@ $page_map = [
     'map'             => 'pages/map.php',
     'notifications'   => 'pages/notifications.php',
     'search'          => 'pages/search.php',
+    'moderation'      => 'pages/moderation.php',
+    'audit_logs'      => 'pages/audit_logs.php',
 ];
 
 $file = $page_map[$page] ?? null;

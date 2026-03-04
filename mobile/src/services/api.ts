@@ -1,40 +1,42 @@
 /**
- * CCDS — Service API centralisé
- * Gère tous les appels HTTP vers le backend PHP.
- * v1.1 : ajout votes "Moi aussi", notifications push, mode hors-ligne
+ * CCDS — Service API centralisé v1.5
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Fusion de api.ts + api_additions.ts (TECH-03)
+ * Tous les appels HTTP vers le backend PHP sont gérés ici.
+ *
+ * Historique :
+ *   v1.0 — Auth, Incidents, Commentaires, Catégories
+ *   v1.1 — Votes "Moi aussi", Notifications Push
+ *   v1.2 — Profil utilisateur, Édition signalement, Recherche/filtres
+ *   v1.3 — Gamification, Carte temps réel
+ *   v1.4 — Photos multiples, Commentaires threading, Partage social
+ *   v1.5 — 2FA, Tableau de bord citoyen, Modération
  */
 
 import * as SecureStore from 'expo-secure-store';
 import { ServerConfig }  from './ServerConfig';
 
-// ----------------------------------------------------------------
-// Configuration dynamique
-// ----------------------------------------------------------------
-export const API_BASE_URL = 'https://votre-domaine.com/api'; // Valeur par défaut (fallback)
+// ─────────────────────────────────────────────────────────────────────────────
+// Configuration
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const API_BASE_URL = 'https://votre-domaine.com/api'; // Valeur par défaut
 const TOKEN_KEY = 'ccds_jwt_token';
 
-export const getBaseUrl = async (): Promise<string> => {
-  return ServerConfig.getServerUrl();
-};
+export const getBaseUrl = async (): Promise<string> => ServerConfig.getServerUrl();
 
-// ----------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 // Gestion du token JWT
-// ----------------------------------------------------------------
-export const saveToken = async (token: string): Promise<void> => {
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
-};
+// ─────────────────────────────────────────────────────────────────────────────
 
-export const getToken = async (): Promise<string | null> => {
-  return SecureStore.getItemAsync(TOKEN_KEY);
-};
+export const saveToken   = (token: string)  => SecureStore.setItemAsync(TOKEN_KEY, token);
+export const getToken    = ()               => SecureStore.getItemAsync(TOKEN_KEY);
+export const removeToken = ()               => SecureStore.deleteItemAsync(TOKEN_KEY);
 
-export const removeToken = async (): Promise<void> => {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
-};
-
-// ----------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 // Client HTTP de base
-// ----------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
@@ -54,29 +56,21 @@ async function request<T>(
 
   if (authenticated) {
     const token = await getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    if (token) headers['Authorization'] = `Bearer ${token}`;
   }
 
   const baseUrl  = await getBaseUrl();
-  const response = await fetch(`${baseUrl}/${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const response = await fetch(`${baseUrl}/${endpoint}`, { ...options, headers });
+  const json     = await response.json();
 
-  const json = await response.json();
-
-  if (!response.ok) {
-    throw { status: response.status, ...json };
-  }
-
+  if (!response.ok) throw { status: response.status, ...json };
   return json;
 }
 
-// ----------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 // Types métier
-// ----------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface User {
   id: number;
   email: string;
@@ -99,6 +93,36 @@ export interface Category {
   description: string;
 }
 
+export interface Photo {
+  id: number;
+  url: string;
+  file_name: string;
+  sort_order: number;
+  uploaded_at: string;
+}
+
+export interface StatusHistory {
+  old_status: string;
+  new_status: string;
+  note: string;
+  changed_at: string;
+  changed_by: string;
+}
+
+export interface Comment {
+  id: number;
+  comment: string;
+  is_internal: boolean;
+  is_edited: boolean;
+  parent_id: number | null;
+  replies?: Comment[];
+  created_at: string;
+  updated_at: string | null;
+  user_id: number;
+  user_name: string;
+  user_role: string;
+}
+
 export interface Incident {
   id: number;
   reference: string;
@@ -117,35 +141,10 @@ export interface Incident {
   thumbnail?: string;
   photos?: Photo[];
   status_history?: StatusHistory[];
-  votes_count?: number;       // v1.1
-  user_has_voted?: boolean;   // v1.1
+  votes_count?: number;
+  user_has_voted?: boolean;
   created_at: string;
   updated_at: string;
-}
-
-export interface Photo {
-  id: number;
-  url: string;
-  file_name: string;
-  uploaded_at: string;
-}
-
-export interface StatusHistory {
-  old_status: string;
-  new_status: string;
-  note: string;
-  changed_at: string;
-  changed_by: string;
-}
-
-export interface Comment {
-  id: number;
-  comment: string;
-  is_internal: boolean;
-  created_at: string;
-  user_id: number;
-  user_name: string;
-  user_role: string;
 }
 
 export interface PaginatedIncidents {
@@ -158,7 +157,6 @@ export interface PaginatedIncidents {
   };
 }
 
-// v1.1 — Notification
 export interface Notification {
   id: number;
   type: 'status_change' | 'new_comment' | 'vote_milestone' | 'system';
@@ -173,22 +171,18 @@ export interface Notification {
 export interface NotificationsResponse {
   notifications: Notification[];
   unread_count: number;
-  pagination: {
-    total: number;
-    page: number;
-    total_pages: number;
-  };
+  pagination: { total: number; page: number; total_pages: number };
 }
 
-// ----------------------------------------------------------------
-// Types profil (v1.2)
-// ----------------------------------------------------------------
 export interface UserProfile {
   id: number;
   email: string;
   full_name: string;
   phone?: string;
   role: string;
+  language: string;
+  dark_mode: boolean;
+  two_factor_enabled: boolean;
   created_at: string;
   notification_preferences: {
     status_change: boolean;
@@ -197,9 +191,22 @@ export interface UserProfile {
   };
 }
 
-// ----------------------------------------------------------------
-// Endpoints Auth
-// ----------------------------------------------------------------
+export interface UserStats {
+  incidents_count: number;
+  resolved_count: number;
+  votes_cast: number;
+  comments_count: number;
+  points: number;
+  rank: number;
+  total_users: number;
+  badges: Array<{ key: string; label: string; icon: string; awarded_at: string }>;
+  recent_incidents: Incident[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auth API
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const authApi = {
   register: (data: { email: string; password: string; full_name: string; phone?: string }) =>
     request<AuthResponse>('register', { method: 'POST', body: JSON.stringify(data) }, false),
@@ -207,13 +214,14 @@ export const authApi = {
   login: (data: { email: string; password: string }) =>
     request<AuthResponse>('login', { method: 'POST', body: JSON.stringify(data) }, false),
 
-  // v1.2 — Profil
   getProfile: () =>
     request<UserProfile>('profile'),
 
   updateProfile: (data: {
-    full_name: string;
+    full_name?: string;
     phone?: string;
+    language?: string;
+    dark_mode?: boolean;
     notification_preferences?: {
       status_change: boolean;
       new_comment: boolean;
@@ -223,31 +231,39 @@ export const authApi = {
 
   changePassword: (data: { current_password: string; new_password: string }) =>
     request<{ updated: boolean }>('profile/password', { method: 'PUT', body: JSON.stringify(data) }),
+
+  // v1.5 — 2FA
+  setup2FA: () =>
+    request<{ secret: string; qr_code_url: string; backup_codes: string[] }>('auth/2fa/setup'),
+
+  verify2FA: (data: { code: string }) =>
+    request<{ enabled: boolean }>('auth/2fa/verify', { method: 'POST', body: JSON.stringify(data) }),
+
+  disable2FA: (data: { password: string }) =>
+    request<{ disabled: boolean }>('auth/2fa/disable', { method: 'DELETE', body: JSON.stringify(data) }),
+
+  // v1.5 — Tableau de bord citoyen
+  getStats: () =>
+    request<UserStats>('profile/stats'),
 };
 
-// ----------------------------------------------------------------
-// Endpoints Catégories
-// ----------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// Catégories API
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const categoriesApi = {
   list: () => request<Category[]>('categories', {}, false),
 };
 
-// ----------------------------------------------------------------
-// Endpoints Incidents
-// ----------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// Incidents API
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const incidentsApi = {
   get: (id: number) =>
     request<Incident>(`incidents/${id}`),
 
-  // v1.2 — Édition d'un signalement (PATCH)
-  edit: (id: number, data: { title?: string; description?: string; address?: string }) =>
-    request<{ id: number; updated: boolean }>(
-      `incidents/${id}`,
-      { method: 'PATCH', body: JSON.stringify(data) }
-    ),
-
-  // v1.2 — Paramètres étendus pour la liste (recherche, tri)
-  list: (params?: Record<string, any>) => {
+  list: (params?: Record<string, unknown>) => {
     const qs = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
@@ -270,43 +286,49 @@ export const incidentsApi = {
     if (!response.ok) throw { status: response.status, ...json };
     return json;
   },
+
+  edit: (id: number, data: { title?: string; description?: string; address?: string }) =>
+    request<{ id: number; updated: boolean }>(
+      `incidents/${id}`,
+      { method: 'PATCH', body: JSON.stringify(data) }
+    ),
 };
 
-// ----------------------------------------------------------------
-// Endpoints Commentaires
-// ----------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// Commentaires API
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const commentsApi = {
   list: (incidentId: number) =>
     request<Comment[]>(`incidents/${incidentId}/comments`),
 
-  add: (incidentId: number, data: { comment: string; is_internal?: boolean }) =>
+  add: (incidentId: number, data: { comment: string; is_internal?: boolean; parent_id?: number }) =>
     request(`incidents/${incidentId}/comments`, { method: 'POST', body: JSON.stringify(data) }),
+
+  edit: (incidentId: number, commentId: number, data: { comment: string }) =>
+    request(`incidents/${incidentId}/comments/${commentId}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (incidentId: number, commentId: number) =>
+    request(`incidents/${incidentId}/comments/${commentId}`, { method: 'DELETE' }),
+
+  flag: (incidentId: number, commentId: number) =>
+    request(`incidents/${incidentId}/comments/${commentId}/flag`, { method: 'POST' }),
 };
 
-// ----------------------------------------------------------------
-// Endpoints Votes "Moi aussi" (v1.1)
-// ----------------------------------------------------------------
-export const votesApi = {
-  /**
-   * Récupère l'état du vote pour un incident (count + user_has_voted)
-   */
-  getState: (incidentId: number) =>
-    request<{ votes_count: number; user_has_voted: boolean }>(
-      `incidents/${incidentId}/votes`
-    ),
+// ─────────────────────────────────────────────────────────────────────────────
+// Votes API
+// ─────────────────────────────────────────────────────────────────────────────
 
-  /**
-   * Vote pour un incident ("Moi aussi")
-   */
+export const votesApi = {
+  getState: (incidentId: number) =>
+    request<{ votes_count: number; user_has_voted: boolean }>(`incidents/${incidentId}/votes`),
+
   vote: (incidentId: number) =>
     request<{ votes_count: number; user_has_voted: boolean }>(
       `incidents/${incidentId}/vote`,
       { method: 'POST' }
     ),
 
-  /**
-   * Retire son vote
-   */
   removeVote: (incidentId: number) =>
     request<{ votes_count: number; user_has_voted: boolean }>(
       `incidents/${incidentId}/vote`,
@@ -314,49 +336,58 @@ export const votesApi = {
     ),
 };
 
-// Exports compatibles avec api_additions.ts
-export const voteForIncident = (id: number) => votesApi.vote(id).then(r => r.data!);
-export const removeVote      = (id: number) => votesApi.removeVote(id).then(r => r.data!);
-export const getVotes        = (id: number) => votesApi.getState(id).then(r => r.data!);
+// Alias rétrocompatibles
+export const voteForIncident      = (id: number) => votesApi.vote(id).then(r => r.data!);
+export const removeVote           = (id: number) => votesApi.removeVote(id).then(r => r.data!);
+export const getVotes             = (id: number) => votesApi.getState(id).then(r => r.data!);
 
-// ----------------------------------------------------------------
-// Endpoints Notifications (v1.1)
-// ----------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// Notifications API
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const notificationsApi = {
-  /**
-   * Enregistre le token push de l'appareil
-   */
   registerToken: (token: string, platform: 'ios' | 'android') =>
-    request('notifications/token', {
-      method: 'POST',
-      body: JSON.stringify({ token, platform }),
-    }),
+    request('notifications/token', { method: 'POST', body: JSON.stringify({ token, platform }) }),
 
-  /**
-   * Liste les notifications de l'utilisateur connecté
-   */
   list: (page = 1) =>
     request<NotificationsResponse>(`notifications?page=${page}`),
 
-  /**
-   * Marque une notification comme lue
-   */
   markRead: (id: number) =>
     request(`notifications/${id}/read`, { method: 'PUT' }),
 
-  /**
-   * Marque toutes les notifications comme lues
-   */
   markAllRead: () =>
     request('notifications/read-all', { method: 'PUT' }),
 };
 
-// Exports compatibles avec NotificationsScreen / NotificationService
-export const registerPushToken      = (token: string, platform: 'ios' | 'android') =>
+// Alias rétrocompatibles
+export const registerPushToken        = (token: string, platform: 'ios' | 'android') =>
   notificationsApi.registerToken(token, platform);
-export const getNotifications       = (page = 1) =>
+export const getNotifications         = (page = 1) =>
   notificationsApi.list(page).then(r => r.data!);
-export const markNotificationRead   = (id: number) =>
-  notificationsApi.markRead(id);
-export const markAllNotificationsRead = () =>
-  notificationsApi.markAllRead();
+export const markNotificationRead     = (id: number) => notificationsApi.markRead(id);
+export const markAllNotificationsRead = () => notificationsApi.markAllRead();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Photos API (v1.4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const photosApi = {
+  list: (incidentId: number) =>
+    request<Photo[]>(`incidents/${incidentId}/photos`),
+
+  upload: async (incidentId: number, formData: FormData) => {
+    const token   = await getToken();
+    const baseUrl = await getBaseUrl();
+    const response = await fetch(`${baseUrl}/incidents/${incidentId}/photos`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    const json = await response.json();
+    if (!response.ok) throw { status: response.status, ...json };
+    return json;
+  },
+
+  delete: (incidentId: number, photoId: number) =>
+    request(`incidents/${incidentId}/photos/${photoId}`, { method: 'DELETE' }),
+};
