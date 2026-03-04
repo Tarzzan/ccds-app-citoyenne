@@ -311,3 +311,40 @@ CREATE TABLE user_badges (
 - **2026-03-04 (v1.4)** : Adoption de **Phinx** pour les migrations BDD plutôt qu'un système maison, car Phinx est compatible avec les hébergements mutualisés (pas de dépendance à Doctrine ORM) et offre un CLI simple.
 - **2026-03-04 (v1.4)** : L'**export PDF** utilisera **FPDF2** (via Composer), une bibliothèque légère sans dépendances système, compatible avec tous les hébergements PHP.
 - **2026-03-04 (v1.4)** : Le **CI/CD** utilisera GitHub Actions avec un runner Ubuntu et PHP 8.1, pour rester cohérent avec l'environnement de production cible.
+
+---
+
+## 📋 Version 1.5 — Qualité, Sécurité et Expérience Citoyen
+
+> **Objectif :** Combler la dette technique accumulée, renforcer la sécurité des comptes et enrichir l'expérience des citoyens.
+
+### Thème 1 — Qualité et Dette Technique (P0 — Critique)
+
+| Ticket | Titre | Priorité |
+|---|---|---|
+| TEST-02 | Couverture de tests backend 100% (9 contrôleurs manquants) | **P0** |
+| DEVOPS-05 | Migrations Phinx pour les tables v1.1 → v1.4 | **P0** |
+| TECH-03 | Consolidation des services API mobiles (fusion api.ts + api_additions.ts) | **P0** |
+| DOCS-02 | Documentation des composants React Native avec Storybook | P1 |
+
+### Thème 2 — Sécurité et Confiance (P1 — Important)
+
+| Ticket | Titre | Priorité |
+|---|---|---|
+| SEC-03 | Authentification à deux facteurs (2FA — email et TOTP) | P1 |
+| ADMIN-07 | Modération des commentaires (signalement + file d'attente admin) | P1 |
+| ADMIN-08 | Logs d'audit administrateur (traçabilité des actions sensibles) | P1 |
+
+### Thème 3 — Expérience Citoyen (P2 — Normal)
+
+| Ticket | Titre | Priorité |
+|---|---|---|
+| UX-07 | Tableau de bord citoyen (statistiques personnelles) | P2 |
+| UX-08 | Onboarding des nouveaux utilisateurs (écrans de bienvenue) | P2 |
+| UX-09 | Page de statut publique (disponibilité des services) | P2 |
+
+### Décisions de conception v1.5
+
+- **2026-03-04 (v1.5)** : La **2FA TOTP** utilisera la bibliothèque `RobThree/TwoFactorAuth` (via Composer), compatible avec Google Authenticator et Authy, sans dépendance à un service tiers payant.
+- **2026-03-04 (v1.5)** : Les **logs d'audit** seront stockés en base de données (table `audit_logs`) pour permettre la recherche et le filtrage depuis l'interface admin.
+- **2026-03-04 (v1.5)** : La **page de statut** sera une page HTML statique générée par un cron job toutes les 5 minutes, pour rester disponible même en cas de panne de l'API principale.
