@@ -181,6 +181,23 @@ export interface NotificationsResponse {
 }
 
 // ----------------------------------------------------------------
+// Types profil (v1.2)
+// ----------------------------------------------------------------
+export interface UserProfile {
+  id: number;
+  email: string;
+  full_name: string;
+  phone?: string;
+  role: string;
+  created_at: string;
+  notification_preferences: {
+    status_change: boolean;
+    new_comment: boolean;
+    vote_milestone: boolean;
+  };
+}
+
+// ----------------------------------------------------------------
 // Endpoints Auth
 // ----------------------------------------------------------------
 export const authApi = {
@@ -189,6 +206,23 @@ export const authApi = {
 
   login: (data: { email: string; password: string }) =>
     request<AuthResponse>('login', { method: 'POST', body: JSON.stringify(data) }, false),
+
+  // v1.2 — Profil
+  getProfile: () =>
+    request<UserProfile>('profile'),
+
+  updateProfile: (data: {
+    full_name: string;
+    phone?: string;
+    notification_preferences?: {
+      status_change: boolean;
+      new_comment: boolean;
+      vote_milestone: boolean;
+    };
+  }) => request<{ updated: boolean }>('profile', { method: 'PUT', body: JSON.stringify(data) }),
+
+  changePassword: (data: { current_password: string; new_password: string }) =>
+    request<{ updated: boolean }>('profile/password', { method: 'PUT', body: JSON.stringify(data) }),
 };
 
 // ----------------------------------------------------------------
@@ -202,17 +236,27 @@ export const categoriesApi = {
 // Endpoints Incidents
 // ----------------------------------------------------------------
 export const incidentsApi = {
-  list: (params?: { page?: number; status?: string; category?: number }) => {
+  get: (id: number) =>
+    request<Incident>(`incidents/${id}`),
+
+  // v1.2 — Édition d'un signalement (PATCH)
+  edit: (id: number, data: { title?: string; description?: string; address?: string }) =>
+    request<{ id: number; updated: boolean }>(
+      `incidents/${id}`,
+      { method: 'PATCH', body: JSON.stringify(data) }
+    ),
+
+  // v1.2 — Paramètres étendus pour la liste (recherche, tri)
+  list: (params?: Record<string, any>) => {
     const qs = new URLSearchParams();
-    if (params?.page)     qs.set('page',     String(params.page));
-    if (params?.status)   qs.set('status',   params.status);
-    if (params?.category) qs.set('category', String(params.category));
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+      });
+    }
     const query = qs.toString() ? `?${qs.toString()}` : '';
     return request<PaginatedIncidents>(`incidents${query}`, {}, false);
   },
-
-  get: (id: number) =>
-    request<Incident>(`incidents/${id}`),
 
   create: async (formData: FormData) => {
     const token   = await getToken();

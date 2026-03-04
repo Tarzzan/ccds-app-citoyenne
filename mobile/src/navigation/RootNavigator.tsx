@@ -1,9 +1,9 @@
 /**
  * CCDS — Navigateur racine
- * v1.1 : ajout onglet Notifications + écran Notifications dans le stack
+ * v1.2 : ajout routes EditIncident et Profile
  */
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer }         from '@react-navigation/native';
 import { createNativeStackNavigator }  from '@react-navigation/native-stack';
 import { createBottomTabNavigator }    from '@react-navigation/bottom-tabs';
@@ -21,6 +21,8 @@ import CreateIncidentScreen from '../screens/CreateIncidentScreen';
 import MyIncidentsScreen    from '../screens/MyIncidentsScreen';
 import IncidentDetailScreen from '../screens/IncidentDetailScreen';
 import NotificationsScreen  from '../screens/NotificationsScreen';
+import EditIncidentScreen   from '../screens/EditIncidentScreen';
+import ProfileScreen        from '../screens/ProfileScreen';
 
 // ----------------------------------------------------------------
 // Types de navigation
@@ -40,6 +42,8 @@ export type AppStackParamList = {
   Tabs:           undefined;
   CreateIncident: undefined;
   IncidentDetail: { id: number; reference?: string };
+  EditIncident:   { id: number };
+  Profile:        undefined;
   ServerConfig:   undefined;
 };
 
@@ -50,7 +54,7 @@ const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack  = createNativeStackNavigator<AppStackParamList>();
 const Tab       = createBottomTabNavigator<AppTabParamList>();
 
-// Onglets principaux (utilisateur connecté)
+// Onglets principaux
 function AppTabs() {
   return (
     <Tab.Navigator
@@ -64,26 +68,17 @@ function AppTabs() {
       <Tab.Screen
         name="Map"
         component={MapScreen}
-        options={{
-          title:      'Carte',
-          tabBarIcon: ({ color }) => <TabIcon label="🗺️" color={color} />,
-        }}
+        options={{ title: 'Carte', tabBarIcon: ({ color }) => <TabIcon label="🗺️" color={color} /> }}
       />
       <Tab.Screen
         name="MyIncidents"
         component={MyIncidentsScreen}
-        options={{
-          title:      'Mes signalements',
-          tabBarIcon: ({ color }) => <TabIcon label="📋" color={color} />,
-        }}
+        options={{ title: 'Mes signalements', tabBarIcon: ({ color }) => <TabIcon label="📋" color={color} /> }}
       />
       <Tab.Screen
         name="Notifications"
         component={NotificationsScreen}
-        options={{
-          title:      'Notifications',
-          tabBarIcon: ({ color }) => <TabIcon label="🔔" color={color} />,
-        }}
+        options={{ title: 'Notifications', tabBarIcon: ({ color }) => <TabIcon label="🔔" color={color} /> }}
       />
     </Tab.Navigator>
   );
@@ -91,6 +86,14 @@ function AppTabs() {
 
 // Stack principal
 function AppNavigator() {
+  const headerStyle = { backgroundColor: '#0f4c2a' };
+  const headerOpts  = {
+    headerStyle,
+    headerTintColor:  '#ffffff' as const,
+    headerTitleStyle: { fontWeight: '700' as const },
+    headerBackTitle:  'Retour',
+  };
+
   return (
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
       <AppStack.Screen name="Tabs" component={AppTabs} />
@@ -104,27 +107,26 @@ function AppNavigator() {
       <AppStack.Screen
         name="IncidentDetail"
         component={IncidentDetailScreen}
-        options={{
-          headerShown:      true,
-          title:            'Détail du signalement',
-          headerBackTitle:  'Retour',
-          headerStyle:      { backgroundColor: '#0f4c2a' },
-          headerTintColor:  '#ffffff',
-          headerTitleStyle: { fontWeight: '700' },
-        }}
+        options={{ headerShown: true, title: 'Détail du signalement', ...headerOpts }}
+      />
+
+      {/* v1.2 — Édition d'un signalement */}
+      <AppStack.Screen
+        name="EditIncident"
+        component={EditIncidentScreen}
+        options={{ headerShown: true, title: 'Modifier le signalement', ...headerOpts }}
+      />
+
+      {/* v1.2 — Profil utilisateur */}
+      <AppStack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ headerShown: true, title: 'Mon profil', ...headerOpts }}
       />
 
       <AppStack.Screen
         name="ServerConfig"
-        options={{
-          headerShown:      true,
-          title:            'Configuration serveur',
-          headerBackTitle:  'Retour',
-          headerStyle:      { backgroundColor: '#0f4c2a' },
-          headerTintColor:  '#ffffff',
-          headerTitleStyle: { fontWeight: '700' },
-          presentation:     'modal',
-        }}
+        options={{ headerShown: true, title: 'Configuration serveur', ...headerOpts, presentation: 'modal' }}
       >
         {(props) => (
           <ServerConfigScreen
@@ -156,12 +158,9 @@ export default function RootNavigator() {
   const [serverConfigured, setServerConfigured] = useState<boolean | null>(null);
 
   useEffect(() => {
-    ServerConfig.isConfigured().then((configured) => {
-      setServerConfigured(configured);
-    });
+    ServerConfig.isConfigured().then(setServerConfigured);
   }, []);
 
-  // Écran de chargement initial
   if (isLoading || serverConfigured === null) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f4c2a' }}>
@@ -174,7 +173,6 @@ export default function RootNavigator() {
     );
   }
 
-  // Premier lancement : afficher l'écran de configuration serveur
   if (!serverConfigured) {
     return (
       <ServerConfigScreen
@@ -184,7 +182,6 @@ export default function RootNavigator() {
     );
   }
 
-  // Serveur configuré : navigation normale
   return (
     <NavigationContainer>
       {isAuthenticated ? <AppNavigator /> : <AuthNavigator />}
@@ -192,7 +189,6 @@ export default function RootNavigator() {
   );
 }
 
-// Petit composant icône pour les onglets
 function TabIcon({ label, color }: { label: string; color: string }) {
   return <Text style={{ fontSize: 22, color }}>{label}</Text>;
 }

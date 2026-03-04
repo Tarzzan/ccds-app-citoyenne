@@ -89,49 +89,57 @@ Développer une solution complète (application mobile iOS/Android et back-offic
 |---------|--------|------|
 | v1.0.0  | ✅ Stable | 27 Fév 2026 |
 | v1.1.0  | ✅ Stable | 04 Mars 2026 |
-| v1.2.0  | ⏳ Planifié | À venir |
+| v1.2.0  | ✅ Stable | 04 Mars 2026 |
 
 ---
 
-## 🎯 Version 1.2 — Planification
+## ✅ Version 1.2 — Livrée
 
-> **Objectif :** Refactorisation technique, amélioration de l'expérience utilisateur et enrichissement des fonctionnalités pour les agents et administrateurs.
+> Branche : `main` | Livraison : 04 Mars 2026 | Tag : `v1.2.0`
 
-### Thème 1 : Modernisation Technique et Sécurité (Priorité P0)
+### Thème 1 : Modernisation Technique et Sécurité ✅
 
-L'objectif est de solidifier les bases du projet pour garantir sa pérennité, sa sécurité et sa maintenabilité.
-
-| Ticket | Titre | Description | Priorité |
+| Ticket | Titre | Fichiers créés / modifiés | Statut |
 |---|---|---|---|
-| **TECH-01** | Refactorisation du Backend PHP | Migrer l'architecture procédurale des endpoints API vers une structure plus robuste et orientée objet (ex: contrôleurs, services). Centraliser la logique métier et améliorer la gestion des erreurs. | **P0 - Critique** |
-| **SEC-01** | Renforcement de la Sécurité | Mettre en place des protections contre les vulnérabilités courantes (CSRF, XSS). Revoir toutes les requêtes SQL pour utiliser exclusivement des requêtes préparées. | **P0 - Critique** |
-| **SEC-02** | Permissions Basées sur les Rôles (RBAC) | Remplacer la vérification `['agent', 'admin']` par un système de permissions plus fin, permettant de définir des droits spécifiques par action (ex: `incident:update_status`, `user:create`). | **P1 - Important** |
+| **TECH-01** | Refactorisation Backend PHP OO | `backend/core/BaseController.php`, `backend/controllers/AuthController.php`, `backend/controllers/IncidentController.php`, `backend/controllers/CategoryController.php`, `backend/index.php` (routeur OO) | ✅ |
+| **SEC-01** | Sécurité renforcée (CSRF, XSS, rate limiting) | `backend/core/Security.php` — sanitisation, headers HTTP, rate limiting, validation centralisée | ✅ |
+| **SEC-02** | RBAC avec permissions fines | `backend/core/Permissions.php` — matrice de permissions par rôle (citizen/agent/admin), intégré dans tous les contrôleurs | ✅ |
 
-### Thème 2 : Expérience Utilisateur (Citoyen) (Priorité P1)
+### Thème 2 : Expérience Utilisateur (Citoyen) ✅
 
-Améliorer l'interaction du citoyen avec l'application pour la rendre plus intuitive et complète.
-
-| Ticket | Titre | Description | Priorité |
+| Ticket | Titre | Fichiers créés / modifiés | Statut |
 |---|---|---|---|
-| **UX-01** | Recherche et Filtres Avancés | Ajouter une barre de recherche textuelle et des options de tri (date, votes) sur l'écran "Mes Signalements" et la carte. Étendre l'API pour supporter ces nouvelles requêtes. | **P1 - Important** |
-| **UX-02** | Édition d'un Signalement | Permettre à un citoyen de modifier la description ou d'ajouter/supprimer des photos de son propre signalement tant que celui-ci a le statut "Soumis". | **P1 - Important** |
-| **UX-03** | Gestion du Profil Utilisateur | Créer un nouvel écran "Mon Profil" permettant à l'utilisateur de modifier son nom, son mot de passe et de gérer ses préférences de notification (ex: désactiver les notifications pour les nouveaux commentaires). | **P2 - Normal** |
+| **UX-01** | Recherche et filtres avancés | `mobile/src/screens/MyIncidentsScreen.tsx` — barre de recherche, filtres dépliables, tri (date/votes/màj), debounce 400ms | ✅ |
+| **UX-02** | Édition d'un signalement | `mobile/src/screens/EditIncidentScreen.tsx` (nouveau), `backend/controllers/IncidentController.php` — PATCH `/incidents/{id}` (propriétaire + statut=submitted) | ✅ |
+| **UX-03** | Écran Mon Profil | `mobile/src/screens/ProfileScreen.tsx` (nouveau) — 3 onglets : profil, mot de passe, préférences notifs. `authApi.getProfile/updateProfile/changePassword` | ✅ |
 
-### Thème 3 : Outils pour les Agents et Administrateurs (Priorité P2)
+### Thème 3 : Outils Admin ✅
 
-Fournir des outils plus puissants pour la gestion et l'analyse des données.
-
-| Ticket | Titre | Description | Priorité |
+| Ticket | Titre | Fichiers créés / modifiés | Statut |
 |---|---|---|---|
-| **ADMIN-01** | Tableau de Bord Analytique | Enrichir la page "Statistiques" avec de nouveaux graphiques interactifs (temps de résolution par catégorie, signalements par jour/semaine/mois, carte de chaleur des signalements). Ajouter un sélecteur de période personnalisée. | **P2 - Normal** |
-| **ADMIN-02** | CRUD Complet pour les Catégories | Permettre aux administrateurs de créer, modifier, et supprimer des catégories directement depuis le back-office, y compris le choix de l'icône et de la couleur. | **P2 - Normal** |
-| **ADMIN-03** | Recherche et Filtres sur la Liste des Incidents | Ajouter des filtres (par statut, catégorie, priorité, date) et une barre de recherche (par référence, titre, nom du citoyen) sur la page principale des signalements dans le back-office. | **P1 - Important** |
+| **ADMIN-01** | Tableau de bord analytique enrichi | `admin/pages/stats.php` — 7 KPIs (votes, citoyens actifs), carte de chaleur horaire, graphique soumis vs résolus, top 5 votés, export CSV | ✅ |
+| **ADMIN-02** | CRUD Catégories complet | `admin/pages/categories.php` — création, édition inline, activation/désactivation, suppression sécurisée, icône emoji, stats votes | ✅ |
+| **ADMIN-03** | Filtres avancés liste incidents | `admin/pages/incidents.php` — filtres date (from/to), tri par votes/date, export CSV, colonnes votes et titre | ✅ |
 
-### Thème 4 : Améliorations Générales (Priorité P2)
+### Thème 4 : Améliorations Générales ✅
 
-| Ticket | Titre | Description | Priorité |
+| Ticket | Titre | Fichiers créés | Statut |
 |---|---|---|---|
-| **I18N-01** | Internationalisation (i18n) | Préparer l'application (mobile et admin) pour la traduction en externalisant toutes les chaînes de caractères en français dans des fichiers de langue (ex: `fr.json`). | **P2 - Normal** |
+| **I18N-01** | Internationalisation | `mobile/src/i18n/fr.json` (100+ clés), `mobile/src/i18n/i18n.ts` (service `t()` avec interpolation) | ✅ |
+
+### Migration SQL v1.2
+
+Exécuter sur le serveur de production :
+```sql
+-- Colonnes profil utilisateur (préférences notifications)
+ALTER TABLE users
+  ADD COLUMN notification_status_change  TINYINT(1) NOT NULL DEFAULT 1,
+  ADD COLUMN notification_new_comment    TINYINT(1) NOT NULL DEFAULT 1,
+  ADD COLUMN notification_vote_milestone TINYINT(1) NOT NULL DEFAULT 0;
+
+-- Colonne icône catégorie
+ALTER TABLE categories ADD COLUMN icon VARCHAR(10) NOT NULL DEFAULT '📌' AFTER name;
+```
 
 ---
 
@@ -143,3 +151,6 @@ Fournir des outils plus puissants pour la gestion et l'analyse des données.
 *   **2026-03-04**: Décision d'utiliser **Expo Push Notifications** (via l'API Expo Push) plutôt que Firebase FCM directement, afin de simplifier l'intégration cross-platform et éviter la gestion de certificats APNs/FCM séparément.
 *   **2026-03-04**: Décision d'utiliser **AsyncStorage** pour la queue hors-ligne (plutôt que SQLite) pour rester dans l'écosystème Expo sans module natif supplémentaire. Migration possible vers SQLite si le volume de données l'exige.
 *   **2026-03-04**: Le système de vote utilise une contrainte **UNIQUE (user_id, incident_id)** en base pour garantir l'idempotence — un citoyen ne peut voter qu'une fois par signalement, même en cas de double-clic ou de retry réseau.
+*   **2026-03-04 (v1.2)**: Décision d'adopter une **architecture OO pour le backend PHP** (contrôleurs + `BaseController` + `Security` + `Permissions`) sans framework externe, pour rester déployable sur hébergements mutualisés standard.
+*   **2026-03-04 (v1.2)**: Le **RBAC** est implémenté via une matrice statique dans `Permissions.php` plutôt qu'une table BDD, pour éviter une requête supplémentaire à chaque appel API. Migration vers BDD possible en v1.3 si les rôles deviennent configurables.
+*   **2026-03-04 (v1.2)**: L'**internationalisation** utilise un simple fichier `fr.json` + service `t()` maison, sans bibliothèque i18n tierce (ex: i18next), pour limiter les dépendances. Extension multi-langue prévue en v1.3 si besoin créole guérillais.

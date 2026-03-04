@@ -1,0 +1,177 @@
+{
+  "app": {
+    "name": "CCDS Citoyen",
+    "tagline": "Signalez, suivez, améliorez votre territoire",
+    "loading": "Chargement..."
+  },
+  "auth": {
+    "login": "Connexion",
+    "register": "Inscription",
+    "logout": "Se déconnecter",
+    "email": "Adresse email",
+    "password": "Mot de passe",
+    "full_name": "Nom complet",
+    "phone": "Téléphone",
+    "confirm_password": "Confirmer le mot de passe",
+    "login_btn": "Se connecter",
+    "register_btn": "Créer mon compte",
+    "no_account": "Pas encore de compte ?",
+    "already_account": "Déjà un compte ?",
+    "forgot_password": "Mot de passe oublié ?",
+    "errors": {
+      "invalid_credentials": "Email ou mot de passe incorrect.",
+      "email_taken": "Cette adresse email est déjà utilisée.",
+      "passwords_mismatch": "Les mots de passe ne correspondent pas.",
+      "password_too_short": "Le mot de passe doit contenir au moins 8 caractères.",
+      "name_too_short": "Le nom doit contenir au moins 2 caractères."
+    }
+  },
+  "incidents": {
+    "title": "Signalements",
+    "my_incidents": "Mes signalements",
+    "new_incident": "Signaler un problème",
+    "detail": "Détail du signalement",
+    "edit": "Modifier le signalement",
+    "reference": "Référence",
+    "description": "Description",
+    "address": "Adresse",
+    "category": "Catégorie",
+    "photos": "Photos",
+    "status_history": "Historique des statuts",
+    "votes": "Moi aussi",
+    "vote_count": "{{count}} personne(s) concernée(s)",
+    "search_placeholder": "Rechercher un signalement...",
+    "sort": {
+      "recent": "Plus récents",
+      "votes": "Plus votés",
+      "updated": "Mis à jour"
+    },
+    "filters": {
+      "title": "Filtres",
+      "status": "Statut",
+      "sort_by": "Trier par",
+      "all": "Tous"
+    },
+    "empty": {
+      "title": "Aucun signalement",
+      "message": "Vous n'avez pas encore effectué de signalement.\nAppuyez sur le bouton ci-dessus pour commencer.",
+      "search": "Aucun résultat pour \"{{query}}\".",
+      "filtered": "Aucun signalement avec le statut \"{{status}}\"."
+    },
+    "create": {
+      "title": "Nouveau signalement",
+      "step_category": "Choisissez une catégorie",
+      "step_location": "Localisez le problème",
+      "step_details": "Décrivez le problème",
+      "step_photo": "Ajoutez une photo (optionnel)",
+      "submit": "Envoyer le signalement",
+      "submitting": "Envoi en cours...",
+      "success": "Signalement envoyé ! Référence : {{reference}}",
+      "offline_queued": "Signalement enregistré hors-ligne. Il sera envoyé dès que vous serez connecté.",
+      "errors": {
+        "description_too_short": "La description doit contenir au moins 10 caractères.",
+        "category_required": "Veuillez choisir une catégorie.",
+        "location_required": "Veuillez localiser le problème sur la carte."
+      }
+    },
+    "edit": {
+      "title": "Modifier le signalement",
+      "info": "Vous pouvez modifier ce signalement tant qu'il n'a pas été pris en charge.",
+      "save": "Enregistrer les modifications",
+      "cancel": "Annuler",
+      "success": "Signalement modifié.",
+      "not_editable": "Ce signalement ne peut plus être modifié (statut : {{status}})."
+    }
+  },
+  "status": {
+    "submitted": "Soumis",
+    "acknowledged": "Pris en charge",
+    "in_progress": "En cours",
+    "resolved": "Résolu",
+    "rejected": "Rejeté"
+  },
+  "priority": {
+    "low": "Faible",
+    "medium": "Normale",
+    "high": "Haute",
+    "critical": "Critique"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "Aucune notification",
+    "empty_message": "Vous n'avez pas encore de notifications.",
+    "mark_all_read": "Tout marquer comme lu",
+    "types": {
+      "status_change": "Changement de statut",
+      "new_comment": "Nouveau commentaire",
+      "vote_milestone": "Palier de votes",
+      "system": "Notification système"
+    }
+  },
+  "profile": {
+    "title": "Mon profil",
+    "tab_profile": "Profil",
+    "tab_password": "Mot de passe",
+    "tab_notifications": "Notifications",
+    "full_name": "Nom complet",
+    "phone": "Téléphone",
+    "email_readonly": "L'adresse email ne peut pas être modifiée.",
+    "save": "Enregistrer",
+    "current_password": "Mot de passe actuel",
+    "new_password": "Nouveau mot de passe",
+    "confirm_new_password": "Confirmer le nouveau mot de passe",
+    "change_password": "Changer le mot de passe",
+    "notification_prefs": "Préférences de notifications",
+    "notif_status_change": "Changement de statut",
+    "notif_status_change_desc": "Quand votre signalement est pris en charge ou résolu",
+    "notif_new_comment": "Nouveau commentaire",
+    "notif_new_comment_desc": "Quand un agent commente votre signalement",
+    "notif_vote_milestone": "Palier de votes",
+    "notif_vote_milestone_desc": "Quand votre signalement atteint 10, 50 ou 100 votes",
+    "save_prefs": "Enregistrer les préférences",
+    "roles": {
+      "citizen": "Citoyen",
+      "agent": "Agent municipal",
+      "admin": "Administrateur"
+    }
+  },
+  "offline": {
+    "banner_offline": "Hors-ligne",
+    "banner_online": "Connecté",
+    "pending": "{{count}} signalement(s) en attente",
+    "sync": "Synchroniser",
+    "syncing": "Synchronisation...",
+    "sync_success": "{{count}} signalement(s) synchronisé(s).",
+    "sync_error": "Erreur de synchronisation. Réessayez."
+  },
+  "map": {
+    "title": "Carte",
+    "loading": "Chargement de la carte...",
+    "location_error": "Impossible d'obtenir votre position.",
+    "tap_to_report": "Appuyez sur la carte pour signaler un problème ici"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "save": "Enregistrer",
+    "back": "Retour",
+    "retry": "Réessayer",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "required": "Obligatoire",
+    "optional": "Optionnel",
+    "yes": "Oui",
+    "no": "Non",
+    "close": "Fermer",
+    "see_more": "Voir plus",
+    "see_less": "Voir moins",
+    "refresh": "Actualiser",
+    "no_results": "Aucun résultat",
+    "server_error": "Erreur serveur. Veuillez réessayer.",
+    "network_error": "Erreur réseau. Vérifiez votre connexion."
+  }
+}
