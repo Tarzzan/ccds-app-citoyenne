@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CCDS Citoyen — Documentation API Publique</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+  <style>
+    body { margin: 0; background: #0f172a; }
+    .swagger-ui .topbar { background: #1e3a5f; }
+    .swagger-ui .topbar .download-url-wrapper { display: none; }
+    .swagger-ui .info .title { color: #3B82F6; }
+    .swagger-ui .scheme-container { background: #1e293b; }
+    .ccds-header {
+      background: linear-gradient(135deg, #1e3a5f, #0f172a);
+      padding: 24px 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 2px solid #3B82F6;
+    }
+    .ccds-header h1 { color: #fff; font-size: 22px; font-weight: 800; margin: 0; font-family: Inter, sans-serif; }
+    .ccds-header p  { color: #94a3b8; font-size: 13px; margin: 4px 0 0; font-family: Inter, sans-serif; }
+    .ccds-badge { background: #10B981; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="ccds-header">
+    <span style="font-size:36px">🌿</span>
+    <div>
+      <h1>CCDS Citoyen — API Publique</h1>
+      <p>Données ouvertes de signalements citoyens en Guyane · <span class="ccds-badge">v1.6</span></p>
+    </div>
+  </div>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    SwaggerUIBundle({
+      url: '/api/openapi.yml',
+      dom_id: '#swagger-ui',
+      presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+      layout: 'BaseLayout',
+      deepLinking: true,
+      displayRequestDuration: true,
+      filter: true,
+      tryItOutEnabled: true,
+    });
+  </script>
+</body>
+</html>

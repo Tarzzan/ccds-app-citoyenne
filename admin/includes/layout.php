@@ -119,6 +119,29 @@ try {
         <span>Statistiques</span>
       </a>
 
+      <a href="/admin/?page=realtime_dashboard" class="nav-item <?= $active_nav === 'realtime_dashboard' ? 'active' : '' ?>">
+        <span class="nav-icon">📡</span>
+        <span>Temps réel</span>
+        <span class="nav-badge" style="background:#10B981;animation:pulse 1.5s infinite">LIVE</span>
+      </a>
+
+      <a href="/admin/?page=predictive_analysis" class="nav-item <?= $active_nav === 'predictive_analysis' ? 'active' : '' ?>">
+        <span class="nav-icon">🔮</span>
+        <span>Analyse prédictive</span>
+      </a>
+
+      <div class="nav-section-title" style="margin-top:8px">Communauté</div>
+
+      <a href="/admin/?page=polls" class="nav-item <?= $active_nav === 'polls' ? 'active' : '' ?>">
+        <span class="nav-icon">🗳️</span>
+        <span>Sondages</span>
+      </a>
+
+      <a href="/admin/?page=events" class="nav-item <?= $active_nav === 'events' ? 'active' : '' ?>">
+        <span class="nav-icon">📅</span>
+        <span>Événements</span>
+      </a>
+
     </nav>
 
     <div class="sidebar-footer">

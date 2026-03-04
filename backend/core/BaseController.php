@@ -9,10 +9,37 @@
 abstract class BaseController
 {
     protected PDO $db;
+    protected RateLimiter $rateLimiter;
 
     public function __construct()
     {
-        $this->db = Database::getInstance()->getConnection();
+        $this->db          = Database::getInstance()->getConnection();
+        $this->rateLimiter = new RateLimiter();
+    }
+
+    /**
+     * Applique le rate limiting pour un endpoint donné.
+     * Ajoute automatiquement les headers X-RateLimit-* à la réponse.
+     */
+    protected function applyRateLimit(string $endpoint, ?int $userId = null): void
+    {
+        $ip = $_SERVER['HTTP_X_FORWARDED_FOR']
+            ?? $_SERVER['REMOTE_ADDR']
+            ?? '0.0.0.0';
+        // Prendre la première IP en cas de proxy chain
+        $ip = trim(explode(',', $ip)[0]);
+
+        // Ajouter les headers de rate limiting
+        foreach ($this->rateLimiter->getHeaders($endpoint, $ip, $userId) as $header => $value) {
+            header("{$header}: {$value}");
+        }
+
+        try {
+            $this->rateLimiter->check($endpoint, $ip, $userId);
+        } catch (RateLimitException $e) {
+            header('Retry-After: ' . $e->retryAfter);
+            $this->error($e->getMessage(), 429);
+        }
     }
 
     // ----------------------------------------------------------------

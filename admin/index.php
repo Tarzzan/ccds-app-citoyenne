@@ -38,8 +38,12 @@ $page_map = [
     'map'             => 'pages/map.php',
     'notifications'   => 'pages/notifications.php',
     'search'          => 'pages/search.php',
-    'moderation'      => 'pages/moderation.php',
-    'audit_logs'      => 'pages/audit_logs.php',
+    'moderation'           => 'pages/moderation.php',
+    'audit_logs'           => 'pages/audit_logs.php',
+    'realtime_dashboard'   => 'pages/realtime_dashboard.php',
+    'predictive_analysis'  => 'pages/predictive_analysis.php',
+    'polls'                => 'pages/polls_admin.php',
+    'events'               => 'pages/events_admin.php',
 ];
 
 $file = $page_map[$page] ?? null;
