@@ -6,9 +6,9 @@ Ce document est la source de vérité unique pour le développement de l'applica
 
 Développer une solution complète (application mobile iOS/Android et back-office web) permettant aux citoyens de signaler des anomalies dans l'espace public de leur commune, et aux services municipaux de recevoir, gérer et traiter ces signalements de manière efficace.
 
-## 🗺️ Phases du Projet
+---
 
-Le projet est découpé en 6 phases principales, chacune avec des objectifs clairs.
+## 🗺️ Phases du Projet v1.0
 
 ### Phase 1 : Initialisation et Architecture
 *   [x] Créer le dépôt GitHub privé (`Tarzzan/ccds-app-citoyenne`).
@@ -51,22 +51,59 @@ Le projet est découpé en 6 phases principales, chacune avec des objectifs clai
 *   [x] **Déploiement Backend** : Guide complet rédigé (`docs/GUIDE_DEPLOIEMENT_SERVEUR.md`) — installation LAMP, configuration Apache VirtualHost SSL, script `deploy.sh` automatisé avec sauvegarde BDD, Fail2Ban, cron backup.
 *   [x] **Build Mobile** : Guide complet rédigé (`docs/GUIDE_BUILD_MOBILE_EAS.md`) — configuration `eas.json` (dev/preview/production), builds Android (APK + AAB) et iOS (IPA), soumission automatisée, mises à jour OTA.
 
-### Phase 6 : Documentation et Finalisation
+### Phase 6 : Documentation et Finalisation v1.0
 *   [x] **Documentation API** : Spécification OpenAPI 3.0 complète (`docs/api/openapi.yaml`) + page HTML interactive Redoc (`docs/api/index.html`) couvrant tous les endpoints (Auth, Catégories, Incidents, Commentaires) avec schémas, exemples et sécurité JWT.
 *   [x] **Nettoyage** : Suppression des `.gitkeep` inutiles, des logs et fichiers temporaires. Dépôt propre et cohérent.
 *   [x] **Commit Final** : Tag `v1.0.0` créé et poussé sur GitHub. Projet officiellement livré en version stable.
 
 ---
 
-##  trạng thái hiện tại (Current State)
+## 🚀 Version 1.1 — Améliorations Prioritaires
 
-*   **ID de la Phase Actuelle** : `6`
-*   **Statut** : ✅ PROJET TERMINÉ — Version 1.0.0 stable
-*   **Date de livraison** : 27 Février 2026
-*   **Prochaine Étape** : Déploiement en production (voir `docs/deployment/GUIDE_SERVEUR.md`)
+> Branche : `feature/v1.1-ameliorations` | Démarrage : 04 Mars 2026
+
+### Amélioration 1 : Système de Vote "Moi aussi" ✅
+*   [x] **Migration SQL** : Table `votes` (user_id, incident_id, UNIQUE) + colonne `votes_count` dans `incidents`.
+*   [x] **Backend PHP** : `backend/api/votes.php` — POST (voter), DELETE (retirer vote), GET (état du vote).
+*   [x] **Composant Mobile** : `mobile/src/components/VoteButton.tsx` — bouton animé avec compteur, état persisté.
+*   [x] **Intégration API** : `api_additions.ts` — `voteForIncident()`, `removeVote()`, `getVotes()`.
+
+### Amélioration 2 : Mode Hors-Ligne ✅
+*   [x] **Migration SQL** : Table `offline_sync_log` pour traçabilité des synchronisations.
+*   [x] **Service Queue** : `mobile/src/services/OfflineQueue.ts` — AsyncStorage, détection réseau, retry auto (3 tentatives).
+*   [x] **Composant Bannière** : `mobile/src/components/OfflineBanner.tsx` — indicateur visuel + bouton sync manuelle.
+*   [x] **Intégration** : Formulaire de création signalement redirige vers queue si hors-ligne.
+
+### Amélioration 3 : Notifications Push ✅
+*   [x] **Migration SQL** : Tables `push_tokens` et `notifications`.
+*   [x] **Backend PHP** : `backend/api/notifications.php` — enregistrement token, liste, marquer lu/tous lus.
+*   [x] **Service Push** : `backend/config/PushNotificationService.php` — envoi via Expo Push API, gestion des erreurs.
+*   [x] **Service Mobile** : `mobile/src/services/NotificationService.ts` — permissions, enregistrement token, listeners.
+*   [x] **Écran Notifications** : `mobile/src/screens/NotificationsScreen.tsx` — liste, badge, navigation vers signalement.
+
+---
+
+## 📊 État Actuel
+
+| Version | Statut | Date |
+|---------|--------|------|
+| v1.0.0  | ✅ Stable | 27 Fév 2026 |
+| v1.1.0  | 🔄 En cours (branche feature) | 04 Mars 2026 |
+
+**Prochaines étapes v1.1 :**
+1. Intégrer `VoteButton` et `OfflineBanner` dans les écrans existants (Detail, CreateReport)
+2. Déclencher les notifications depuis le back-office admin (changement de statut)
+3. Tests sur appareils réels (iOS + Android) en mode avion pour le mode hors-ligne
+4. Merger la branche et créer le tag `v1.1.0`
+5. Mettre à jour la documentation OpenAPI avec les nouveaux endpoints
+
+---
 
 ## 📓 Journal des Décisions (Decision Log)
 
 *   **2026-02-26**: Décision d'utiliser **React Native avec Expo** pour le développement mobile afin de mutualiser le code pour iOS et Android, réduisant ainsi le temps et les coûts de développement.
 *   **2026-02-26**: Décision d'utiliser l'authentification par **JWT (JSON Web Tokens)** pour sécuriser l'API REST, une méthode standard et robuste pour les applications mobiles.
 *   **2026-02-26**: Le dépôt GitHub est créé en mode **privé** pour protéger la propriété intellectuelle du projet durant sa phase de développement.
+*   **2026-03-04**: Décision d'utiliser **Expo Push Notifications** (via l'API Expo Push) plutôt que Firebase FCM directement, afin de simplifier l'intégration cross-platform et éviter la gestion de certificats APNs/FCM séparément.
+*   **2026-03-04**: Décision d'utiliser **AsyncStorage** pour la queue hors-ligne (plutôt que SQLite) pour rester dans l'écosystème Expo sans module natif supplémentaire. Migration possible vers SQLite si le volume de données l'exige.
+*   **2026-03-04**: Le système de vote utilise une contrainte **UNIQUE (user_id, incident_id)** en base pour garantir l'idempotence — un citoyen ne peut voter qu'une fois par signalement, même en cas de double-clic ou de retry réseau.
