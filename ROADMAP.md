@@ -348,3 +348,24 @@ CREATE TABLE user_badges (
 - **2026-03-04 (v1.5)** : La **2FA TOTP** utilisera la bibliothèque `RobThree/TwoFactorAuth` (via Composer), compatible avec Google Authenticator et Authy, sans dépendance à un service tiers payant.
 - **2026-03-04 (v1.5)** : Les **logs d'audit** seront stockés en base de données (table `audit_logs`) pour permettre la recherche et le filtrage depuis l'interface admin.
 - **2026-03-04 (v1.5)** : La **page de statut** sera une page HTML statique générée par un cron job toutes les 5 minutes, pour rester disponible même en cas de panne de l'API principale.
+
+---
+
+## Version 1.6 — Engagement, Intelligence & Interopérabilité *(Planifiée)*
+
+**Objectif :** Transformer CCDS Citoyen en une véritable plateforme de démocratie participative locale, enrichir l'analyse des données et ouvrir la plateforme à l'écosystème.
+
+| Ticket | Titre | Thème | Priorité |
+| :--- | :--- | :--- | :--- |
+| TEST-03 | Tests E2E avec Detox | Qualité | P0 |
+| TECH-04 | Rate Limiting avancé par IP/utilisateur | Sécurité | P0 |
+| ADMIN-11 | Export RGPD des données citoyen | Conformité | P1 |
+| UX-10 | Sondages & Consultations citoyens | Engagement | P1 |
+| UX-11 | Mentions `@` dans les commentaires | Engagement | P1 |
+| UX-12 | Événements communautaires | Engagement | P1 |
+| ADMIN-09 | Dashboard Admin Temps Réel (WebSocket) | Intelligence | P1 |
+| ADMIN-10 | Analyse Prédictive des zones à risque | Intelligence | P2 |
+| API-02 | API Publique lecture seule (Swagger UI) | Interopérabilité | P2 |
+| API-03 | Webhooks sortants configurables | Interopérabilité | P2 |
+
+> Voir le document complet : `docs/planning/v1.6_PLANIFICATION.md`
