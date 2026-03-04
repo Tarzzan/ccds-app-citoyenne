@@ -90,6 +90,60 @@ Développer une solution complète (application mobile iOS/Android et back-offic
 | v1.0.0  | ✅ Stable | 27 Fév 2026 |
 | v1.1.0  | ✅ Stable | 04 Mars 2026 |
 | v1.2.0  | ✅ Stable | 04 Mars 2026 |
+| v1.3.0  | ⏳ Planifié | À venir |
+
+---
+
+## 🎯 Version 1.3 — Planification
+
+> **Objectif :** Qualité technique, accessibilité inclusive et engagement citoyen.
+
+### Thème 1 : Qualité Technique et Performance (Priorité P0)
+
+| Ticket | Titre | Description | Priorité |
+|---|---|---|---|
+| **TEST-01** | Couverture de tests backend | Atteindre 80% de couverture de tests pour le backend PHP. Tests d'intégration pour les contrôleurs OO (`AuthController`, `IncidentController`, `CategoryController`) et tests unitaires pour `Security.php` et `Permissions.php`. | **P0 - Critique** |
+| **TECH-02** | Nettoyage du backend procédural | Supprimer les anciens fichiers `backend/api/*.php` (maintenant remplacés par les contrôleurs OO) et mettre à jour la documentation OpenAPI pour refléter la nouvelle architecture. | **P0 - Critique** |
+| **PERF-01** | Optimisation des performances mobiles | Réduire le temps de démarrage de l'application. Optimiser le rendu des listes (`FlatList` + `getItemLayout`). Mettre en cache les images et les données fréquemment consultées via `react-query` ou un cache mémoire. | **P1 - Important** |
+
+### Thème 2 : Accessibilité et Internationalisation (Priorité P1)
+
+| Ticket | Titre | Description | Priorité |
+|---|---|---|---|
+| **A11Y-01** | Conformité WCAG 2.1 AA (Mobile) | Auditer et corriger l'application mobile : contrastes de couleurs, labels `accessibilityLabel` pour les lecteurs d'écran, navigation au clavier, tailles de police accessibles. | **P1 - Important** |
+| **A11Y-02** | Mode Sombre (Dark Mode) | Implémenter un mode sombre complet sur l'application mobile, synchronisé avec les préférences système (`useColorScheme`). | **P2 - Normal** |
+| **I18N-02** | Support multi-langue (Créole guyanais) | Ajouter le support du créole guyanais. Créer `mobile/src/i18n/cr.json` et permettre à l'utilisateur de changer de langue dans les paramètres du profil. | **P2 - Normal** |
+
+### Thème 3 : Engagement Citoyen (Priorité P2)
+
+| Ticket | Titre | Description | Priorité |
+|---|---|---|---|
+| **GAMIF-01** | Gamification : Badges et Points | Système de points (par signalement, vote, commentaire) et de badges (ex: "Explorateur", "Contributeur actif"). Écran "Mon Impact" pour visualiser ses contributions et son rang. | **P2 - Normal** |
+| **RT-01** | Carte temps réel (WebSocket) | Mettre à jour la carte principale en temps réel lors de nouveaux signalements via WebSocket. Indicateur visuel de nouveaux signalements sans rechargement manuel. | **P2 - Normal** |
+
+### Migration SQL v1.3
+
+```sql
+-- Gamification
+CREATE TABLE user_gamification (
+  user_id INT PRIMARY KEY,
+  points INT NOT NULL DEFAULT 0,
+  last_action_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE user_badges (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  badge_key VARCHAR(50) NOT NULL,
+  awarded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY (user_id, badge_key),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Multi-langue
+ALTER TABLE users ADD COLUMN language VARCHAR(5) NOT NULL DEFAULT 'fr';
+```
 
 ---
 
