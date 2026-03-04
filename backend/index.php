@@ -1,7 +1,8 @@
 <?php
 /**
- * CCDS v1.2 — Point d'entrée de l'API REST
- * Architecture OO avec contrôleurs, RBAC et sécurité renforcée (TECH-01 + SEC-01)
+ * CCDS v1.3 — Point d'entrée de l'API REST
+ * Architecture OO complète — tous les endpoints passent par des contrôleurs.
+ * TECH-02 : Suppression des anciens fichiers procéduraux backend/api/
  */
 
 // --- Chargement de la configuration ---
@@ -92,22 +93,38 @@ switch ($resource) {
     // Incidents
     // ----------------------------------------------------------------
     case 'incidents':
+        require_once __DIR__ . '/controllers/IncidentController.php';
+        require_once __DIR__ . '/controllers/CommentController.php';
+        require_once __DIR__ . '/controllers/VoteController.php';
+
         if ($id && $sub === 'comments') {
-            // Commentaires — on garde l'ancien fichier procédural (compatible)
-            require_once __DIR__ . '/api/comments.php';
-            handle_comments($method, $id);
+            // GET /incidents/{id}/comments ou POST /incidents/{id}/comments
+            $ctrl = new CommentController();
+            match($method) {
+                'GET'  => $ctrl->list((int)$id),
+                'POST' => $ctrl->create((int)$id),
+                default => http_response_code(405),
+            };
         } elseif ($id && $sub === 'vote') {
-            require_once __DIR__ . '/api/votes.php';
-            handle_votes($method, $id);
+            // POST /incidents/{id}/vote ou DELETE /incidents/{id}/vote ou GET /incidents/{id}/votes
+            $ctrl = new VoteController();
+            match($method) {
+                'GET'    => $ctrl->getState((int)$id),
+                'POST'   => $ctrl->vote((int)$id),
+                'DELETE' => $ctrl->removeVote((int)$id),
+                default  => http_response_code(405),
+            };
+        } elseif ($id && $sub === 'votes') {
+            require_once __DIR__ . '/controllers/VoteController.php';
+            (new VoteController())->getState((int)$id);
         } else {
-            require_once __DIR__ . '/controllers/IncidentController.php';
             $ctrl = new IncidentController();
             if ($id) {
                 match($method) {
-                    'GET'    => $ctrl->show($id),
-                    'PUT'    => $ctrl->update($id),
-                    'PATCH'  => $ctrl->edit($id),
-                    'DELETE' => $ctrl->destroy($id),
+                    'GET'    => $ctrl->show((int)$id),
+                    'PUT'    => $ctrl->update((int)$id),
+                    'PATCH'  => $ctrl->edit((int)$id),
+                    'DELETE' => $ctrl->destroy((int)$id),
                     default  => http_response_code(405),
                 };
             } else {
@@ -121,11 +138,55 @@ switch ($resource) {
         break;
 
     // ----------------------------------------------------------------
+    // Commentaires (suppression directe)
+    // ----------------------------------------------------------------
+    case 'comments':
+        require_once __DIR__ . '/controllers/CommentController.php';
+        $ctrl = new CommentController();
+        if ($id && $method === 'DELETE') {
+            $ctrl->delete((int)$id);
+        } else {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Méthode non autorisée.']);
+        }
+        break;
+
+    // ----------------------------------------------------------------
     // Notifications
     // ----------------------------------------------------------------
     case 'notifications':
-        require_once __DIR__ . '/api/notifications.php';
-        handle_notifications($method, $id, $sub);
+        require_once __DIR__ . '/controllers/NotificationController.php';
+        $ctrl = new NotificationController();
+
+        if ($sub === 'token' && $method === 'POST') {
+            $ctrl->registerToken();
+        } elseif ($id === 'read-all' && $method === 'PUT') {
+            $ctrl->markAllRead();
+        } elseif ($id === 'send' && $method === 'POST') {
+            $ctrl->send();
+        } elseif ($id && $sub === 'read' && $method === 'PUT') {
+            $ctrl->markRead((int)$id);
+        } elseif (!$id && $method === 'GET') {
+            $ctrl->list();
+        } else {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Méthode non autorisée.']);
+        }
+        break;
+
+    // ----------------------------------------------------------------
+    // Gamification (v1.3 — GAMIF-01)
+    // ----------------------------------------------------------------
+    case 'gamification':
+        require_once __DIR__ . '/controllers/GamificationController.php';
+        $ctrl = new GamificationController();
+        if ($sub === 'badges' && $method === 'GET') {
+            $ctrl->badges();
+        } elseif ($method === 'GET') {
+            $ctrl->stats();
+        } else {
+            http_response_code(405);
+        }
         break;
 
     // ----------------------------------------------------------------

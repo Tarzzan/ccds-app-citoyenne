@@ -1,24 +1,47 @@
 /**
- * CCDS — Écran Carte Interactive
+ * CCDS v1.3 — Écran Carte Interactive (RT-01 + A11Y-02)
  * Affiche tous les signalements sous forme de marqueurs colorés sur une carte.
- * Bouton flottant pour créer un nouveau signalement.
+ * Nouveautés v1.3 : mises à jour temps réel (WebSocket), mode sombre, cache.
  */
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Alert, Platform,
+  ActivityIndicator, Alert, Platform, Animated,
 } from 'react-native';
 import MapView, { Marker, Callout, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { incidentsApi, Incident } from '../services/api';
 import { COLORS, STATUS_COLORS, STATUS_LABELS } from '../components/ui';
 import { AppStackParamList } from '../navigation/RootNavigator';
+import { useTheme } from '../theme/ThemeContext';
+import { realtimeService, useRealtime, RealtimeIncident } from '../services/RealtimeService';
+import { cache } from '../services/CacheService';
 
 type NavProp = NativeStackNavigationProp<AppStackParamList>;
+
+// Indicateur de connexion temps réel
+const RealtimeIndicator = ({ connected }: { connected: boolean }) => {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (connected) {
+      Animated.loop(Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.4, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.0, duration: 800, useNativeDriver: true }),
+      ])).start();
+    }
+  }, [connected, pulseAnim]);
+  return (
+    <View style={[styles.realtimeIndicator]}>
+      <Animated.View style={[styles.realtimeDot, { backgroundColor: connected ? '#10B981' : '#EF4444', transform: [{ scale: pulseAnim }] }]} />
+      <Text style={styles.realtimeText}>{connected ? 'Temps réel' : 'Hors ligne'}</Text>
+    </View>
+  );
+};
 
 // Région par défaut : Kourou, Guyane Française
 const DEFAULT_REGION: Region = {
@@ -31,11 +54,13 @@ const DEFAULT_REGION: Region = {
 export default function MapScreen() {
   const navigation = useNavigation<NavProp>();
   const mapRef     = useRef<MapView>(null);
+  const { theme }  = useTheme();
 
   const [incidents,       setIncidents]       = useState<Incident[]>([]);
   const [loading,         setLoading]         = useState(true);
   const [locationGranted, setLocationGranted] = useState(false);
   const [userLocation,    setUserLocation]    = useState<{ latitude: number; longitude: number } | null>(null);
+  const [newCount,        setNewCount]        = useState(0);
 
   // Charger les signalements
   const loadIncidents = useCallback(async () => {
@@ -61,6 +86,27 @@ export default function MapScreen() {
       mapRef.current?.animateToRegion({ ...coords, latitudeDelta: 0.05, longitudeDelta: 0.05 }, 800);
     }
   }, []);
+
+  // Gestion temps réel WebSocket
+  useEffect(() => {
+    AsyncStorage.getItem('@ccds_server_url').then(url => {
+      if (url) AsyncStorage.getItem('@ccds_token').then(token => {
+        if (token) realtimeService.connect(url, token);
+      });
+    });
+    const onNew = (incident: RealtimeIncident) => {
+      setNewCount(n => n + 1);
+      setIncidents(prev => {
+        if (prev.some(i => i.id === incident.id)) return prev;
+        return [{ ...incident, latitude: incident.latitude, longitude: incident.longitude, description: incident.title, category_name: incident.category_name, category_color: '#2563EB', created_at: incident.created_at, reference: incident.reference } as any, ...prev];
+      });
+      mapRef.current?.animateToRegion({ latitude: incident.latitude, longitude: incident.longitude, latitudeDelta: 0.05, longitudeDelta: 0.05 }, 800);
+    };
+    realtimeService.on('incident:new', onNew);
+    return () => { realtimeService.off('incident:new', onNew); realtimeService.disconnect(); };
+  }, []);
+
+  const { connected } = useRealtime();
 
   useEffect(() => {
     loadIncidents();
@@ -111,6 +157,16 @@ export default function MapScreen() {
           </Marker>
         ))}
       </MapView>
+
+      {/* Indicateur temps réel */}
+      <RealtimeIndicator connected={connected} />
+
+      {/* Badge nouveaux signalements */}
+      {newCount > 0 && (
+        <TouchableOpacity style={styles.newBadge} onPress={() => { setNewCount(0); loadIncidents(); }}>
+          <Text style={styles.newBadgeText}>🔴 {newCount} nouveau{newCount > 1 ? 'x' : ''} signalement{newCount > 1 ? 's' : ''}</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Indicateur de chargement */}
       {loading && (
@@ -262,4 +318,22 @@ const styles = StyleSheet.create({
   },
   calloutBadgeText: { fontSize: 11, fontWeight: '600' },
   calloutTap:       { fontSize: 11, color: COLORS.primary, fontWeight: '500' },
+
+  // Temps réel
+  realtimeIndicator: {
+    position: 'absolute', top: 60, left: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.95)',
+    shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
+  },
+  realtimeDot:  { width: 8, height: 8, borderRadius: 4 },
+  realtimeText: { fontSize: 12, fontWeight: '500', color: '#374151' },
+  newBadge: {
+    position: 'absolute', top: 60, alignSelf: 'center',
+    backgroundColor: '#1F2937', borderRadius: 20,
+    paddingHorizontal: 16, paddingVertical: 10,
+    shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 8, elevation: 6,
+  },
+  newBadgeText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
 });

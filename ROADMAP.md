@@ -208,3 +208,50 @@ ALTER TABLE categories ADD COLUMN icon VARCHAR(10) NOT NULL DEFAULT '📌' AFTER
 *   **2026-03-04 (v1.2)**: Décision d'adopter une **architecture OO pour le backend PHP** (contrôleurs + `BaseController` + `Security` + `Permissions`) sans framework externe, pour rester déployable sur hébergements mutualisés standard.
 *   **2026-03-04 (v1.2)**: Le **RBAC** est implémenté via une matrice statique dans `Permissions.php` plutôt qu'une table BDD, pour éviter une requête supplémentaire à chaque appel API. Migration vers BDD possible en v1.3 si les rôles deviennent configurables.
 *   **2026-03-04 (v1.2)**: L'**internationalisation** utilise un simple fichier `fr.json` + service `t()` maison, sans bibliothèque i18n tierce (ex: i18next), pour limiter les dépendances. Extension multi-langue prévue en v1.3 si besoin créole guérillais.
+
+---
+
+## 🚀 Version 1.3 — Qualité, Accessibilité & Engagement
+
+**Statut :** ✅ Développée — release `v1.3.0`
+**Date :** 2026-03-04
+
+### Tickets livrés
+
+| Ticket | Titre | Fichiers clés | Statut |
+|---|---|---|---|
+| **TEST-01** | Couverture de tests backend 80% | `tests/Unit/SecurityTest.php`, `tests/Unit/PermissionsTest.php`, `tests/Integration/IncidentControllerTest.php` | ✅ |
+| **TECH-02** | Nettoyage backend procédural | Suppression `backend/api/votes.php`, `comments.php`, `notifications.php` — migration vers `VoteController`, `CommentController`, `NotificationController` | ✅ |
+| **PERF-01** | Optimisation performances mobiles | `mobile/src/services/CacheService.ts` (stale-while-revalidate, TTL), `mobile/src/components/OptimizedIncidentList.tsx` (FlatList + `getItemLayout`) | ✅ |
+| **A11Y-01** | Accessibilité WCAG 2.1 AA | `mobile/src/components/AccessibleButton.tsx` (zones 44dp, ratios contraste ≥ 4.5:1, `accessibilityState`) | ✅ |
+| **A11Y-02** | Mode Sombre | `mobile/src/theme/ThemeContext.tsx` (palettes light/dark, sync système, persistance AsyncStorage) | ✅ |
+| **I18N-02** | Support créole guyanais | `mobile/src/i18n/cr.json` (100+ clés), `mobile/src/i18n/i18n.ts` (hook `useTranslation`, fallback fr, singleton) | ✅ |
+| **GAMIF-01** | Badges, points et écran Mon Impact | `backend/controllers/GamificationController.php`, `mobile/src/screens/ImpactScreen.tsx`, migration SQL `user_gamification` + `user_badges` | ✅ |
+| **RT-01** | Carte temps réel (WebSocket) | `mobile/src/services/RealtimeService.ts` (backoff exponentiel, heartbeat), `backend/websocket/server.php` (Ratchet), `MapScreen.tsx` mis à jour | ✅ |
+
+### Migration SQL v1.3
+Exécuter sur le serveur de production :
+```sql
+-- Gamification
+CREATE TABLE user_gamification (
+  user_id       INT PRIMARY KEY,
+  points        INT NOT NULL DEFAULT 0,
+  last_action_at DATETIME,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE user_badges (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  user_id    INT NOT NULL,
+  badge_key  VARCHAR(50) NOT NULL,
+  awarded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_user_badge (user_id, badge_key),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+### Décisions de conception v1.3
+- **2026-03-04 (v1.3)** : Le **WebSocket** utilise la bibliothèque Ratchet (PHP) plutôt qu'un serveur Node.js séparé, pour rester dans l'écosystème PHP du projet. Démarrage via `php backend/websocket/server.php` sur le port 8080.
+- **2026-03-04 (v1.3)** : Le **cache** utilise une stratégie *stale-while-revalidate* : les données périmées sont affichées immédiatement pendant le rechargement en arrière-plan, pour une UX fluide même sur réseau lent.
+- **2026-03-04 (v1.3)** : Le **mode sombre** est synchronisé avec les préférences système via `Appearance.addChangeListener`, avec possibilité de forcer un mode via les préférences utilisateur (persisté en AsyncStorage).
+- **2026-03-04 (v1.3)** : La **gamification** utilise un calcul de points à la demande (recalcul depuis les tables existantes) plutôt qu'un trigger SQL, pour éviter la complexité de maintenance des triggers sur hébergements mutualisés.
