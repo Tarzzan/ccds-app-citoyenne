@@ -255,3 +255,59 @@ CREATE TABLE user_badges (
 - **2026-03-04 (v1.3)** : Le **cache** utilise une stratégie *stale-while-revalidate* : les données périmées sont affichées immédiatement pendant le rechargement en arrière-plan, pour une UX fluide même sur réseau lent.
 - **2026-03-04 (v1.3)** : Le **mode sombre** est synchronisé avec les préférences système via `Appearance.addChangeListener`, avec possibilité de forcer un mode via les préférences utilisateur (persisté en AsyncStorage).
 - **2026-03-04 (v1.3)** : La **gamification** utilise un calcul de points à la demande (recalcul depuis les tables existantes) plutôt qu'un trigger SQL, pour éviter la complexité de maintenance des triggers sur hébergements mutualisés.
+
+---
+
+## 🔧 Version 1.4 — Industrialisation, Admin & Engagement
+
+**Statut :** 🔄 Planifiée
+**Document complet :** `docs/planning/v1.4_PLANIFICATION.md`
+
+### Tableau d'état des versions
+
+| Version | Titre | Statut |
+|---|---|---|
+| v1.0 | Fondations (backend, mobile, admin) | ✅ Livrée |
+| v1.1 | Votes, Mode Hors-Ligne, Notifications Push | ✅ Livrée |
+| v1.2 | Refactorisation OO, RBAC, Filtres, Profil, Analytics | ✅ Livrée |
+| v1.3 | Tests, Perf, Mode Sombre, Créole, Gamification, WebSocket | ✅ Livrée |
+| v1.4 | Industrialisation, Admin avancé, Engagement | 🔄 Planifiée |
+
+### Tickets v1.4 — Vue d'ensemble
+
+**Thème 1 — Industrialisation & DevOps (P0 — Critique)**
+
+| Ticket | Titre | Priorité |
+|---|---|---|
+| DEVOPS-01 | CI/CD avec GitHub Actions (tests + linter automatiques) | **P0** |
+| DEVOPS-02 | Conteneurisation Docker (Nginx + PHP-FPM + MySQL) | **P0** |
+| DEVOPS-03 | Intégration Composer + autoloading PSR-4 | **P0** |
+| DEVOPS-04 | Système de migrations BDD avec Phinx | **P0** |
+
+**Thème 2 — Expérience Administrateur (P1 — Important)**
+
+| Ticket | Titre | Priorité |
+|---|---|---|
+| ADMIN-04 | Gestion des utilisateurs avancée (recherche, filtres, vue détail) | P1 |
+| ADMIN-05 | Génération de rapports PDF par incident | P1 |
+| ADMIN-06 | Recherche globale dans le back-office | P2 |
+
+**Thème 3 — Engagement Citoyen (P1 — Important)**
+
+| Ticket | Titre | Priorité |
+|---|---|---|
+| UX-04 | Upload de photos multiples (jusqu'à 5 par signalement) | P1 |
+| UX-05 | Amélioration des commentaires (édition, suppression, threading) | P2 |
+| UX-06 | Partage sur les réseaux sociaux | P2 |
+
+**Thème 4 — Documentation & API (P2 — Normal)**
+
+| Ticket | Titre | Priorité |
+|---|---|---|
+| API-01 | Endpoints Admin pour la gestion des utilisateurs | P2 |
+| DOCS-01 | Mise à jour complète de la spécification OpenAPI | P2 |
+
+### Décisions de conception v1.4
+- **2026-03-04 (v1.4)** : Adoption de **Phinx** pour les migrations BDD plutôt qu'un système maison, car Phinx est compatible avec les hébergements mutualisés (pas de dépendance à Doctrine ORM) et offre un CLI simple.
+- **2026-03-04 (v1.4)** : L'**export PDF** utilisera **FPDF2** (via Composer), une bibliothèque légère sans dépendances système, compatible avec tous les hébergements PHP.
+- **2026-03-04 (v1.4)** : Le **CI/CD** utilisera GitHub Actions avec un runner Ubuntu et PHP 8.1, pour rester cohérent avec l'environnement de production cible.
