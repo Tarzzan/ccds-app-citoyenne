@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         stopOnFailure="false"
+         displayDetailsOnTestsThatTriggerWarnings="true"
+         displayDetailsOnTestsThatTriggerDeprecations="true">
+
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>../tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Integration">
+            <directory>../tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+
+    <coverage>
+        <include>
+            <directory>./core</directory>
+            <directory>./controllers</directory>
+            <directory>./config</directory>
+        </include>
+        <report>
+            <html outputDirectory="../docs/coverage"/>
+            <text outputFile="php://stdout" showUncoveredFiles="false"/>
+        </report>
+    </coverage>
+
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="DB_HOST" value="127.0.0.1"/>
+        <env name="DB_NAME" value="ccds_test"/>
+        <env name="DB_USER" value="ccds_user"/>
+        <env name="DB_PASS" value="ccds_pass"/>
+        <env name="JWT_SECRET" value="test_secret_key_for_phpunit"/>
+    </php>
+
+</phpunit>

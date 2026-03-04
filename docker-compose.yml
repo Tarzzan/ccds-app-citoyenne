@@ -1,0 +1,130 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────
+# CCDS Citoyen — Environnement de développement Docker
+# Usage : docker-compose up -d
+# ─────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Nginx (reverse proxy) ─────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: ccds_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./backend:/var/www/backend:ro
+      - ./admin:/var/www/admin:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - uploads_data:/var/www/backend/uploads
+    depends_on:
+      - php
+    networks:
+      - ccds_net
+    restart: unless-stopped
+
+  # ── PHP-FPM 8.1 ───────────────────────────────────────────
+  php:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: ccds_php
+    volumes:
+      - ./backend:/var/www/backend
+      - ./admin:/var/www/admin
+      - uploads_data:/var/www/backend/uploads
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-ccds_db}
+      DB_USER: ${DB_USER:-ccds_user}
+      DB_PASS: ${DB_PASS:-ccds_pass}
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+      APP_ENV: development
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ccds_net
+    restart: unless-stopped
+
+  # ── MySQL 8.0 ─────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: ccds_mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${DB_NAME:-ccds_db}
+      MYSQL_USER: ${DB_USER:-ccds_user}
+      MYSQL_PASSWORD: ${DB_PASS:-ccds_pass}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docs/database.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ccds_net
+    restart: unless-stopped
+
+  # ── phpMyAdmin (interface BDD) ────────────────────────────
+  phpmyadmin:
+    image: phpmyadmin:5.2-apache
+    container_name: ccds_phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: ${DB_USER:-ccds_user}
+      PMA_PASSWORD: ${DB_PASS:-ccds_pass}
+    depends_on:
+      - mysql
+    networks:
+      - ccds_net
+    profiles:
+      - tools
+
+  # ── WebSocket Server (Ratchet) ────────────────────────────
+  websocket:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: ccds_websocket
+    command: ["php", "/var/www/backend/websocket/server.php"]
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./backend:/var/www/backend
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-ccds_db}
+      DB_USER: ${DB_USER:-ccds_user}
+      DB_PASS: ${DB_PASS:-ccds_pass}
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+      WS_PORT: 8081
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ccds_net
+    restart: unless-stopped
+
+# ── Volumes persistants ───────────────────────────────────────
+volumes:
+  mysql_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+# ── Réseau interne ────────────────────────────────────────────
+networks:
+  ccds_net:
+    driver: bridge

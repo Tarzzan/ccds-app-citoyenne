@@ -1,92 +1,23 @@
 openapi: 3.0.3
 info:
-  title: "CCDS Citoyen - API v1.1"
-  description: |
-    API REST pour l'application mobile CCDS Citoyen.
-    Cette version inclut les fonctionnalités de vote "Moi aussi", le mode hors-ligne et les notifications push.
-  version: "1.1.0"
+  title: CCDS Citoyen API
+  description: |- 
+    API pour l'application mobile et le back-office de CCDS Citoyen.
+    Versions 1.0 à 1.4.
+  version: 1.4.0
 servers:
-  - url: "https://votre-domaine.com/api"
-    description: "Serveur de production"
+  - url: /api
+    description: Serveur de production
+
+security:
+  - bearerAuth: []
 
 paths:
-  # --------------------------------------------------------------
-  # Votes (Moi aussi) - v1.1
-  # --------------------------------------------------------------
-  /incidents/{id}/votes:
-    get:
-      summary: "Obtenir les votes pour un signalement"
-      tags:
-        - "Votes"
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: "ID du signalement"
-      responses:
-        "200":
-          description: "Succès"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/VoteState"
-
-  /incidents/{id}/vote:
+  # ── Auth (v1.0) ───────────────────────────────────────────────
+  /auth/login:
     post:
-      summary: "Voter pour un signalement (Moi aussi)"
-      tags:
-        - "Votes"
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: "ID du signalement"
-      responses:
-        "200":
-          description: "Vote enregistré"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/VoteState"
-        "409":
-          description: "L'utilisateur a déjà voté"
-    delete:
-      summary: "Retirer son vote"
-      tags:
-        - "Votes"
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: "ID du signalement"
-      responses:
-        "200":
-          description: "Vote retiré"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/VoteState"
-
-  # --------------------------------------------------------------
-  # Notifications Push - v1.1
-  # --------------------------------------------------------------
-  /notifications/token:
-    post:
-      summary: "Enregistrer un token de notification push"
-      tags:
-        - "Notifications"
-      security:
-        - bearerAuth: []
+      summary: Connexion
+      tags: [Auth]
       requestBody:
         required: true
         content:
@@ -94,65 +25,339 @@ paths:
             schema:
               type: object
               properties:
-                token:
-                  type: string
-                  example: "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]"
-                platform:
-                  type: string
-                  enum: ["ios", "android"]
+                email: { type: string, format: email }
+                password: { type: string }
       responses:
-        "200":
-          description: "Token enregistré"
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '401':
+          description: Identifiants incorrects
 
-  /notifications:
-    get:
-      summary: "Lister les notifications de l'utilisateur"
-      tags:
-        - "Notifications"
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: page
-          schema:
-            type: integer
-            default: 1
+  /auth/register:
+    post:
+      summary: Inscription
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/User' }
       responses:
-        "200":
-          description: "Liste des notifications"
+        '201':
+          description: Inscription réussie
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+
+  # ── Incidents (v1.0, v1.2, v1.4) ──────────────────────────────
+  /incidents:
+    get:
+      summary: Liste des incidents (avec filtres v1.2)
+      tags: [Incidents]
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: 'Recherche titre/description' }
+        - { name: status, in: query, schema: { type: string, enum: [submitted, in_progress, resolved, rejected] } }
+        - { name: category_id, in: query, schema: { type: integer } }
+        - { name: sort, in: query, schema: { type: string, enum: [created_at, votes_count, updated_at] } }
+        - { name: dir, in: query, schema: { type: string, enum: [asc, desc] } }
+      responses:
+        '200':
+          description: Liste des incidents
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/NotificationsResponse"
+                type: array
+                items: { $ref: '#/components/schemas/Incident' }
+    post:
+      summary: Créer un incident
+      tags: [Incidents]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IncidentCreate' }
+      responses:
+        '201':
+          description: Incident créé
 
-  /notifications/{id}/read:
-    put:
-      summary: "Marquer une notification comme lue"
-      tags:
-        - "Notifications"
-      security:
-        - bearerAuth: []
+  /incidents/{id}:
+    get:
+      summary: Détail d'un incident
+      tags: [Incidents]
       parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
+        - { name: id, in: path, required: true, schema: { type: integer } }
       responses:
-        "200":
-          description: "Notification marquée comme lue"
-
-  /notifications/read-all:
+        '200':
+          description: Détail de l'incident
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Incident' }
     put:
-      summary: "Marquer toutes les notifications comme lues"
-      tags:
-        - "Notifications"
-      security:
-        - bearerAuth: []
+      summary: Modifier un incident (auteur, statut=soumis) (v1.2)
+      tags: [Incidents]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                address: { type: string }
       responses:
-        "200":
-          description: "Toutes les notifications marquées comme lues"
+        '200':
+          description: Incident modifié
 
+  # ── Votes (v1.1) ──────────────────────────────────────────────
+  /incidents/{id}/vote:
+    post:
+      summary: Voter pour un incident
+      tags: [Votes]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: 'Vote enregistré' }
+    delete:
+      summary: Retirer son vote
+      tags: [Votes]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: 'Vote retiré' }
+    get:
+      summary: Obtenir l'état du vote et le compteur
+      tags: [Votes]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: État du vote
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  has_voted: { type: boolean }
+                  votes_count: { type: integer }
+
+  # ── Photos (v1.4) ─────────────────────────────────────────────
+  /incidents/{id}/photos:
+    get:
+      summary: Lister les photos d'un incident
+      tags: [Photos]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Liste des photos
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Photo' }
+    post:
+      summary: Uploader une photo (max 5)
+      tags: [Photos]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo: { type: string, format: binary }
+                sort_order: { type: integer }
+      responses:
+        '201':
+          description: Photo uploadée
+
+  /incidents/{id}/photos/{photoId}:
+    delete:
+      summary: Supprimer une photo
+      tags: [Photos]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: photoId, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: 'Photo supprimée' }
+
+  # ── Commentaires (v1.4) ───────────────────────────────────────
+  /incidents/{id}/comments:
+    get:
+      summary: Lister les commentaires (avec réponses)
+      tags: [Commentaires]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Liste des commentaires
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CommentThread' }
+    post:
+      summary: Créer un commentaire ou une réponse
+      tags: [Commentaires]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment: { type: string }
+                parent_id: { type: integer, nullable: true }
+      responses:
+        '201': { description: 'Commentaire créé' }
+
+  /incidents/{id}/comments/{commentId}:
+    put:
+      summary: Modifier un commentaire
+      tags: [Commentaires]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: commentId, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { comment: { type: string } } }
+      responses:
+        '200': { description: 'Commentaire modifié' }
+    delete:
+      summary: Supprimer un commentaire
+      tags: [Commentaires]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: commentId, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: 'Commentaire supprimé' }
+
+  # ── Rapports (v1.4) ───────────────────────────────────────────
+  /incidents/{id}/report:
+    get:
+      summary: Télécharger un rapport PDF
+      tags: [Rapports]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Fichier PDF
+          content:
+            application/pdf: {}
+
+  # ── Catégories (v1.0) ─────────────────────────────────────────
+  /categories:
+    get:
+      summary: Liste des catégories
+      tags: [Catégories]
+      responses:
+        '200':
+          description: Liste des catégories
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Category' }
+
+  # ── Profil (v1.2) ─────────────────────────────────────────────
+  /profile:
+    get:
+      summary: Obtenir son profil
+      tags: [Profil]
+      responses:
+        '200':
+          description: Données du profil
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+    put:
+      summary: Mettre à jour son profil
+      tags: [Profil]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name: { type: string }
+                email: { type: string, format: email }
+                phone: { type: string }
+      responses:
+        '200': { description: 'Profil mis à jour' }
+
+  /profile/password:
+    put:
+      summary: Changer son mot de passe
+      tags: [Profil]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                current_password: { type: string }
+                new_password: { type: string }
+      responses:
+        '200': { description: 'Mot de passe changé' }
+
+  # ── Admin (v1.4) ──────────────────────────────────────────────
+  /admin/users:
+    get:
+      summary: '[Admin] Liste des utilisateurs'
+      tags: [Admin]
+      responses:
+        '200':
+          description: Liste des utilisateurs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/User' }
+
+  /admin/users/{id}:
+    get:
+      summary: '[Admin] Détail d''un utilisateur'
+      tags: [Admin]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Détail de l'utilisateur
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+    put:
+      summary: '[Admin] Mettre à jour un utilisateur'
+      tags: [Admin]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role: { type: string, enum: [citizen, agent, admin] }
+                is_active: { type: boolean }
+      responses:
+        '200': { description: 'Utilisateur mis à jour' }
+
+# ─────────────────────────────────────────────────────────────────
 components:
   securitySchemes:
     bearerAuth:
@@ -161,53 +366,76 @@ components:
       bearerFormat: JWT
 
   schemas:
-    VoteState:
+    AuthResponse:
       type: object
       properties:
-        votes_count:
-          type: integer
-          description: "Nombre total de votes 'Moi aussi'"
-          example: 42
-        user_has_voted:
-          type: boolean
-          description: "Vrai si l'utilisateur authentifié a voté"
+        token: { type: string }
+        user: { $ref: '#/components/schemas/User' }
 
-    Notification:
+    User:
       type: object
       properties:
-        id:
-          type: integer
-        type:
-          type: string
-          enum: ["status_change", "new_comment", "vote_milestone", "system"]
-        title:
-          type: string
-        body:
-          type: string
-        is_read:
-          type: boolean
-        sent_at:
-          type: string
-          format: date-time
-        incident_reference:
-          type: string
-          nullable: true
+        id: { type: integer }
+        full_name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string, nullable: true }
+        role: { type: string, enum: [citizen, agent, admin] }
+        is_active: { type: boolean }
+        created_at: { type: string, format: date-time }
 
-    NotificationsResponse:
+    Incident:
       type: object
       properties:
-        notifications:
+        id: { type: integer }
+        reference: { type: string }
+        title: { type: string }
+        description: { type: string }
+        address: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        status: { type: string, enum: [submitted, in_progress, resolved, rejected] }
+        votes_count: { type: integer }
+        user_id: { type: integer }
+        category_id: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        photos: { type: array, items: { $ref: '#/components/schemas/Photo' } }
+
+    IncidentCreate:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string }
+        address: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        category_id: { type: integer }
+
+    Category:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        icon: { type: string }
+        color: { type: string }
+        is_active: { type: boolean }
+
+    Photo:
+      type: object
+      properties:
+        id: { type: integer }
+        url: { type: string, format: uri }
+        file_name: { type: string }
+        sort_order: { type: integer }
+
+    CommentThread:
+      type: object
+      properties:
+        id: { type: integer }
+        comment: { type: string }
+        author_name: { type: string }
+        created_at: { type: string, format: date-time }
+        is_edited: { type: boolean }
+        replies: 
           type: array
-          items:
-            $ref: "#/components/schemas/Notification"
-        unread_count:
-          type: integer
-        pagination:
-          type: object
-          properties:
-            total:
-              type: integer
-            page:
-              type: integer
-            total_pages:
-              type: integer
+          items: { $ref: '#/components/schemas/CommentThread' }

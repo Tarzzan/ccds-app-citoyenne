@@ -1,0 +1,117 @@
+name: CI — Tests & Linting
+
+on:
+  push:
+    branches: [ main, develop, "feature/**" ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Job 1 : Tests PHPUnit (backend)
+  # ─────────────────────────────────────────────
+  test-backend:
+    name: PHPUnit Tests
+    runs-on: ubuntu-22.04
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ccds_test
+          MYSQL_USER: ccds_user
+          MYSQL_PASSWORD: ccds_pass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.1
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+          extensions: pdo, pdo_mysql, mbstring, json, openssl
+          coverage: xdebug
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --working-dir=backend
+
+      - name: Run database migrations (Phinx)
+        run: |
+          cd backend
+          vendor/bin/phinx migrate -e testing
+        env:
+          DB_HOST: 127.0.0.1
+          DB_NAME: ccds_test
+          DB_USER: ccds_user
+          DB_PASS: ccds_pass
+
+      - name: Run PHPUnit tests
+        run: |
+          cd backend
+          vendor/bin/phpunit --configuration phpunit.xml --coverage-text
+        env:
+          DB_HOST: 127.0.0.1
+          DB_NAME: ccds_test
+          DB_USER: ccds_user
+          DB_PASS: ccds_pass
+          JWT_SECRET: test_secret_key_ci
+
+  # ─────────────────────────────────────────────
+  # Job 2 : Linting PHP (PHP-CS-Fixer)
+  # ─────────────────────────────────────────────
+  lint-backend:
+    name: PHP Code Style (PHP-CS-Fixer)
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.1
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --working-dir=backend
+
+      - name: Run PHP-CS-Fixer (dry-run)
+        run: |
+          cd backend
+          vendor/bin/php-cs-fixer fix --dry-run --diff --config=.php-cs-fixer.php
+
+  # ─────────────────────────────────────────────
+  # Job 3 : Linting TypeScript (mobile)
+  # ─────────────────────────────────────────────
+  lint-mobile:
+    name: TypeScript Lint (ESLint)
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --prefix mobile
+
+      - name: Run ESLint
+        run: npm run lint --prefix mobile
+
+      - name: TypeScript type check
+        run: npm run tsc --prefix mobile

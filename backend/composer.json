@@ -1,0 +1,40 @@
+{
+    "name": "ccds/backend",
+    "description": "CCDS Citoyen — Backend API REST PHP",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.1",
+        "cboden/ratchet": "^0.4",
+        "setasign/fpdf": "^1.8",
+        "robmorgan/phinx": "^0.16"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5",
+        "friendsofphp/php-cs-fixer": "^3.48"
+    },
+    "autoload": {
+        "psr-4": {
+            "CCDS\\Core\\": "core/",
+            "CCDS\\Controllers\\": "controllers/",
+            "CCDS\\Config\\": "config/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "CCDS\\Tests\\": "../tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit --configuration phpunit.xml",
+        "lint": "vendor/bin/php-cs-fixer fix --dry-run --diff",
+        "lint:fix": "vendor/bin/php-cs-fixer fix",
+        "migrate": "vendor/bin/phinx migrate",
+        "migrate:rollback": "vendor/bin/phinx rollback",
+        "migrate:status": "vendor/bin/phinx status"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}

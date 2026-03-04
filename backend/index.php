@@ -105,6 +105,35 @@ switch ($resource) {
                 'POST' => $ctrl->create((int)$id),
                 default => http_response_code(405),
             };
+        } elseif ($id && $sub === 'comments') {
+            // Commentaires v1.4 (UX-05) : GET, POST, PUT /{cid}, DELETE /{cid}, POST /{cid}/reply
+            require_once __DIR__ . '/controllers/CommentController.php';
+            $ctrl = new CommentController();
+            $cid  = (int)($segments[4] ?? 0);
+            $csub = $segments[5] ?? '';
+            match(true) {
+                $method === 'GET'  && !$cid             => $ctrl->list((int)$id),
+                $method === 'POST' && !$cid             => $ctrl->create((int)$id),
+                $method === 'PUT'  && $cid > 0          => $ctrl->update((int)$id, $cid),
+                $method === 'DELETE' && $cid > 0        => $ctrl->delete((int)$id, $cid),
+                $method === 'POST' && $cid > 0 && $csub === 'reply' => $ctrl->create((int)$id), // parent_id dans le body
+                default                                 => http_response_code(405),
+            };
+        } elseif ($id && $sub === 'photos') {
+            // GET/POST /incidents/{id}/photos  et  DELETE /incidents/{id}/photos/{pid}
+            require_once __DIR__ . '/controllers/PhotoController.php';
+            $ctrl = new PhotoController();
+            $pid  = (int)($segments[4] ?? 0); // /incidents/{id}/photos/{pid}
+            match(true) {
+                $method === 'GET'                  => $ctrl->list((int)$id),
+                $method === 'POST'                 => $ctrl->upload((int)$id),
+                $method === 'DELETE' && $pid > 0   => $ctrl->delete((int)$id, $pid),
+                default                            => http_response_code(405),
+            };
+        } elseif ($id && $sub === 'report' && $method === 'GET') {
+            // GET /incidents/{id}/report → Télécharger le PDF (ADMIN-05)
+            require_once __DIR__ . '/controllers/ReportController.php';
+            (new ReportController())->downloadPdf((int)$id);
         } elseif ($id && $sub === 'vote') {
             // POST /incidents/{id}/vote ou DELETE /incidents/{id}/vote ou GET /incidents/{id}/votes
             $ctrl = new VoteController();
@@ -186,6 +215,44 @@ switch ($resource) {
             $ctrl->stats();
         } else {
             http_response_code(405);
+        }
+        break;
+
+    // ----------------------------------------------------------------
+    // Admin — Utilisateurs (v1.4 — ADMIN-04 + API-01)
+    // GET    /api/admin/users
+    // GET    /api/admin/users/{id}
+    // PUT    /api/admin/users/{id}
+    // GET    /api/admin/users/{id}/activity
+    // GET    /api/admin/stats/users
+    // ----------------------------------------------------------------
+    case 'admin':
+        require_once __DIR__ . '/controllers/UserController.php';
+        $adminResource = $segments[1] ?? '';
+        $adminId       = isset($segments[2]) ? Security::sanitizeId($segments[2]) : null;
+        $adminSub      = $segments[3] ?? null;
+
+        if ($adminResource === 'users') {
+            $ctrl = new UserController();
+            if ($adminId && $adminSub === 'activity') {
+                $ctrl->activity((int)$adminId);
+            } elseif ($adminId) {
+                match($method) {
+                    'GET' => $ctrl->show((int)$adminId),
+                    'PUT' => $ctrl->update((int)$adminId),
+                    default => http_response_code(405),
+                };
+            } else {
+                match($method) {
+                    'GET' => $ctrl->index(),
+                    default => http_response_code(405),
+                };
+            }
+        } elseif ($adminResource === 'stats' && ($segments[2] ?? '') === 'users') {
+            (new UserController())->stats();
+        } else {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => "Ressource admin '$adminResource' introuvable."]);
         }
         break;
 

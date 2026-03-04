@@ -37,6 +37,7 @@ $page_map = [
     'categories'      => 'pages/categories.php',
     'map'             => 'pages/map.php',
     'notifications'   => 'pages/notifications.php',
+    'search'          => 'pages/search.php',
 ];
 
 $file = $page_map[$page] ?? null;

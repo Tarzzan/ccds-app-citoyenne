@@ -89,6 +89,11 @@ try {
         <?php endif; ?>
       </a>
 
+      <a href="/admin/?page=search" class="nav-item <?= $active_nav === 'search' ? 'active' : '' ?>">
+        <span class="nav-icon">🔍</span>
+        <span>Recherche globale</span>
+      </a>
+
       <div class="nav-section-title" style="margin-top:8px">Analyse</div>
 
       <a href="/admin/?page=stats" class="nav-item <?= $active_nav === 'stats' ? 'active' : '' ?>">
@@ -116,7 +121,13 @@ try {
   <main class="main">
     <header class="topbar">
       <h1 class="topbar-title"><?= e($page_title) ?></h1>
-      <div class="topbar-actions">
+      <div class="topbar-actions" style="display:flex;align-items:center;gap:12px">
+        <form method="GET" action="/admin/" style="display:flex;align-items:center;gap:6px">
+          <input type="hidden" name="page" value="search">
+          <input type="text" name="q" placeholder="🔍 Recherche rapide…"
+                 style="padding:6px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:.8rem;width:200px;outline:none"
+                 autocomplete="off">
+        </form>
         <span class="text-muted text-small"><?= date('d/m/Y H:i') ?></span>
       </div>
     </header>

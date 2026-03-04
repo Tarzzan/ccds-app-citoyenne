@@ -1,7 +1,8 @@
 <?php
 /**
- * CCDS v1.3 — CommentController (TECH-02)
- * Migration de backend/api/comments.php vers l'architecture OO.
+ * CCDS v1.4 — CommentController (UX-05)
+ * Commentaires avec édition, suppression, réponses (threading niveau 1).
+ * Compatible avec la version v1.3 (TECH-02).
  */
 require_once __DIR__ . '/../core/BaseController.php';
 require_once __DIR__ . '/../core/Permissions.php';
@@ -9,114 +10,146 @@ require_once __DIR__ . '/../core/Permissions.php';
 class CommentController extends BaseController
 {
     /**
-     * GET /incidents/{id}/comments — Liste des commentaires
+     * GET /incidents/{id}/comments — Liste avec replies imbriquées (UX-05)
      */
     public function list(int $incidentId): void
     {
         $userId = $this->requireAuth();
         $role   = $this->user['role'] ?? 'citizen';
-
-        // Les commentaires internes ne sont visibles que par agents et admins
         $showInternal = in_array($role, ['agent', 'admin'], true);
 
+        // Commentaires racine
         $sql = "
-            SELECT c.id, c.comment, c.is_internal, c.created_at,
-                   u.id AS user_id, u.full_name AS user_name, u.role AS user_role
+            SELECT c.id, c.comment, c.is_internal, c.is_edited,
+                   c.parent_id, c.created_at, c.updated_at,
+                   u.id AS user_id, u.full_name AS author_name, u.role AS author_role
             FROM comments c
             JOIN users u ON u.id = c.user_id
-            WHERE c.incident_id = ?
+            WHERE c.incident_id = ? AND c.parent_id IS NULL
         ";
-        if (!$showInternal) {
-            $sql .= " AND c.is_internal = 0";
-        }
+        if (!$showInternal) { $sql .= " AND c.is_internal = 0"; }
         $sql .= " ORDER BY c.created_at ASC";
-
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$incidentId]);
-        $comments = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $roots = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-        $this->success(array_map(function ($c) {
-            return [
-                'id'          => (int)$c['id'],
-                'comment'     => $c['comment'],
-                'is_internal' => (bool)$c['is_internal'],
-                'created_at'  => $c['created_at'],
-                'user_id'     => (int)$c['user_id'],
-                'user_name'   => $c['user_name'],
-                'user_role'   => $c['user_role'],
-            ];
-        }, $comments));
+        // Réponses
+        $sqlR = "
+            SELECT c.id, c.comment, c.is_internal, c.is_edited,
+                   c.parent_id, c.created_at, c.updated_at,
+                   u.id AS user_id, u.full_name AS author_name, u.role AS author_role
+            FROM comments c
+            JOIN users u ON u.id = c.user_id
+            WHERE c.incident_id = ? AND c.parent_id IS NOT NULL
+        ";
+        if (!$showInternal) { $sqlR .= " AND c.is_internal = 0"; }
+        $sqlR .= " ORDER BY c.created_at ASC";
+        $stmtR = $this->db->prepare($sqlR);
+        $stmtR->execute([$incidentId]);
+        $allReplies = $stmtR->fetchAll(\PDO::FETCH_ASSOC);
+
+        $repliesByParent = [];
+        foreach ($allReplies as $r) { $repliesByParent[$r['parent_id']][] = $r; }
+        foreach ($roots as &$root) { $root['replies'] = $repliesByParent[$root['id']] ?? []; }
+
+        $this->success(['comments' => $roots]);
     }
 
     /**
-     * POST /incidents/{id}/comments — Ajouter un commentaire
+     * POST /incidents/{id}/comments — Créer un commentaire
      */
     public function create(int $incidentId): void
     {
         $userId = $this->requireAuth();
         $this->requirePermission('comment:create');
 
-        $body        = $this->getBody();
-        $comment     = trim($body['comment'] ?? '');
-        $isInternal  = (bool)($body['is_internal'] ?? false);
+        $body       = $this->getBody();
+        $comment    = trim($body['comment'] ?? '');
+        $isInternal = (bool)($body['is_internal'] ?? false);
+        $parentId   = isset($body['parent_id']) ? (int)$body['parent_id'] : null;
 
-        if (strlen($comment) < 2) {
-            $this->error('Le commentaire doit contenir au moins 2 caractères.', 422);
-        }
+        if (mb_strlen($comment) < 2) { $this->error('Commentaire trop court.', 422); }
+        if (mb_strlen($comment) > 1000) { $this->error('Commentaire trop long (max 1000).', 422); }
+        if ($isInternal && !$this->hasPermission('comment:create_internal')) { $isInternal = false; }
 
-        // Seuls les agents et admins peuvent créer des commentaires internes
-        if ($isInternal && !$this->hasPermission('comment:create_internal')) {
-            $isInternal = false;
-        }
-
-        // Vérifier que l'incident existe
         $check = $this->db->prepare("SELECT id FROM incidents WHERE id = ?");
         $check->execute([$incidentId]);
-        if (!$check->fetch()) {
-            $this->notFound('Signalement introuvable.');
+        if (!$check->fetch()) { $this->notFound('Signalement introuvable.'); }
+
+        // Valider le parent si réponse
+        if ($parentId) {
+            $pStmt = $this->db->prepare("SELECT id, parent_id FROM comments WHERE id = ? AND incident_id = ?");
+            $pStmt->execute([$parentId, $incidentId]);
+            $parent = $pStmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$parent) { $this->error('Commentaire parent introuvable.', 404); }
+            if ($parent['parent_id'] !== null) { $this->error('Réponses imbriquées non autorisées.', 422); }
         }
 
         $stmt = $this->db->prepare("
-            INSERT INTO comments (incident_id, user_id, comment, is_internal, created_at)
-            VALUES (?, ?, ?, ?, NOW())
+            INSERT INTO comments (incident_id, user_id, parent_id, comment, is_internal, is_edited, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, 0, NOW(), NOW())
         ");
-        $stmt->execute([$incidentId, $userId, $comment, $isInternal ? 1 : 0]);
+        $stmt->execute([$incidentId, $userId, $parentId, $comment, $isInternal ? 1 : 0]);
         $newId = (int)$this->db->lastInsertId();
 
-        // Récupérer le commentaire créé
-        $row = $this->db->prepare("
-            SELECT c.*, u.full_name AS user_name, u.role AS user_role
-            FROM comments c JOIN users u ON u.id = c.user_id
-            WHERE c.id = ?
-        ");
-        $row->execute([$newId]);
-        $created = $row->fetch(\PDO::FETCH_ASSOC);
-
-        $this->success([
-            'id'          => $newId,
-            'comment'     => $created['comment'],
-            'is_internal' => (bool)$created['is_internal'],
-            'created_at'  => $created['created_at'],
-            'user_name'   => $created['user_name'],
-            'user_role'   => $created['user_role'],
-        ], 201);
+        $this->success(['id' => $newId, 'comment_id' => $newId], 201);
     }
 
     /**
-     * DELETE /comments/{id} — Supprimer un commentaire (admin uniquement)
+     * PUT /incidents/{id}/comments/{cid} — Modifier (auteur, fenêtre 24h) (UX-05)
      */
-    public function delete(int $commentId): void
+    public function update(int $incidentId, int $commentId): void
     {
         $this->requireAuth();
-        $this->requirePermission('comment:delete');
+        $body    = $this->getBody();
+        $comment = trim($body['comment'] ?? '');
 
-        $stmt = $this->db->prepare("DELETE FROM comments WHERE id = ?");
-        $stmt->execute([$commentId]);
+        if (mb_strlen($comment) < 2)    { $this->error('Commentaire trop court.', 422); }
+        if (mb_strlen($comment) > 1000) { $this->error('Commentaire trop long.', 422); }
 
-        if ($stmt->rowCount() === 0) {
-            $this->notFound('Commentaire introuvable.');
+        $existing = $this->loadComment($commentId, $incidentId);
+        if ((int)$existing['user_id'] !== (int)$this->user['id']) {
+            $this->error('Vous ne pouvez modifier que vos propres commentaires.', 403);
+        }
+        if (time() - strtotime($existing['created_at']) > 86400) {
+            $this->error('Fenêtre d\'édition (24h) dépassée.', 422);
         }
 
+        $this->db->prepare("UPDATE comments SET comment = ?, is_edited = 1, updated_at = NOW() WHERE id = ?")
+                 ->execute([$comment, $commentId]);
+
+        $this->success(['updated' => true]);
+    }
+
+    /**
+     * DELETE /incidents/{id}/comments/{cid} — Supprimer (auteur ou staff) (UX-05)
+     */
+    public function delete(int $incidentId, int $commentId): void
+    {
+        $this->requireAuth();
+        $existing = $this->loadComment($commentId, $incidentId);
+
+        $isAuthor = (int)$existing['user_id'] === (int)$this->user['id'];
+        $isStaff  = in_array($this->user['role'], ['agent', 'admin']);
+
+        if (!$isAuthor && !$isStaff) {
+            $this->error('Accès refusé.', 403);
+        }
+
+        // Supprimer le commentaire et ses réponses
+        $this->db->prepare("DELETE FROM comments WHERE id = ? OR parent_id = ?")
+                 ->execute([$commentId, $commentId]);
+
         $this->success(['deleted' => true]);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────
+    private function loadComment(int $commentId, int $incidentId): array
+    {
+        $stmt = $this->db->prepare("SELECT * FROM comments WHERE id = ? AND incident_id = ?");
+        $stmt->execute([$commentId, $incidentId]);
+        $c = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$c) { $this->notFound('Commentaire introuvable.'); }
+        return $c;
     }
 }
