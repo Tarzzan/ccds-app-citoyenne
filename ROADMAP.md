@@ -88,14 +88,50 @@ Développer une solution complète (application mobile iOS/Android et back-offic
 | Version | Statut | Date |
 |---------|--------|------|
 | v1.0.0  | ✅ Stable | 27 Fév 2026 |
-| v1.1.0  | 🔄 En cours (branche feature) | 04 Mars 2026 |
+| v1.1.0  | ✅ Stable | 04 Mars 2026 |
+| v1.2.0  | ⏳ Planifié | À venir |
 
-**Prochaines étapes v1.1 :**
-1. Intégrer `VoteButton` et `OfflineBanner` dans les écrans existants (Detail, CreateReport)
-2. Déclencher les notifications depuis le back-office admin (changement de statut)
-3. Tests sur appareils réels (iOS + Android) en mode avion pour le mode hors-ligne
-4. Merger la branche et créer le tag `v1.1.0`
-5. Mettre à jour la documentation OpenAPI avec les nouveaux endpoints
+---
+
+## 🎯 Version 1.2 — Planification
+
+> **Objectif :** Refactorisation technique, amélioration de l'expérience utilisateur et enrichissement des fonctionnalités pour les agents et administrateurs.
+
+### Thème 1 : Modernisation Technique et Sécurité (Priorité P0)
+
+L'objectif est de solidifier les bases du projet pour garantir sa pérennité, sa sécurité et sa maintenabilité.
+
+| Ticket | Titre | Description | Priorité |
+|---|---|---|---|
+| **TECH-01** | Refactorisation du Backend PHP | Migrer l'architecture procédurale des endpoints API vers une structure plus robuste et orientée objet (ex: contrôleurs, services). Centraliser la logique métier et améliorer la gestion des erreurs. | **P0 - Critique** |
+| **SEC-01** | Renforcement de la Sécurité | Mettre en place des protections contre les vulnérabilités courantes (CSRF, XSS). Revoir toutes les requêtes SQL pour utiliser exclusivement des requêtes préparées. | **P0 - Critique** |
+| **SEC-02** | Permissions Basées sur les Rôles (RBAC) | Remplacer la vérification `['agent', 'admin']` par un système de permissions plus fin, permettant de définir des droits spécifiques par action (ex: `incident:update_status`, `user:create`). | **P1 - Important** |
+
+### Thème 2 : Expérience Utilisateur (Citoyen) (Priorité P1)
+
+Améliorer l'interaction du citoyen avec l'application pour la rendre plus intuitive et complète.
+
+| Ticket | Titre | Description | Priorité |
+|---|---|---|---|
+| **UX-01** | Recherche et Filtres Avancés | Ajouter une barre de recherche textuelle et des options de tri (date, votes) sur l'écran "Mes Signalements" et la carte. Étendre l'API pour supporter ces nouvelles requêtes. | **P1 - Important** |
+| **UX-02** | Édition d'un Signalement | Permettre à un citoyen de modifier la description ou d'ajouter/supprimer des photos de son propre signalement tant que celui-ci a le statut "Soumis". | **P1 - Important** |
+| **UX-03** | Gestion du Profil Utilisateur | Créer un nouvel écran "Mon Profil" permettant à l'utilisateur de modifier son nom, son mot de passe et de gérer ses préférences de notification (ex: désactiver les notifications pour les nouveaux commentaires). | **P2 - Normal** |
+
+### Thème 3 : Outils pour les Agents et Administrateurs (Priorité P2)
+
+Fournir des outils plus puissants pour la gestion et l'analyse des données.
+
+| Ticket | Titre | Description | Priorité |
+|---|---|---|---|
+| **ADMIN-01** | Tableau de Bord Analytique | Enrichir la page "Statistiques" avec de nouveaux graphiques interactifs (temps de résolution par catégorie, signalements par jour/semaine/mois, carte de chaleur des signalements). Ajouter un sélecteur de période personnalisée. | **P2 - Normal** |
+| **ADMIN-02** | CRUD Complet pour les Catégories | Permettre aux administrateurs de créer, modifier, et supprimer des catégories directement depuis le back-office, y compris le choix de l'icône et de la couleur. | **P2 - Normal** |
+| **ADMIN-03** | Recherche et Filtres sur la Liste des Incidents | Ajouter des filtres (par statut, catégorie, priorité, date) et une barre de recherche (par référence, titre, nom du citoyen) sur la page principale des signalements dans le back-office. | **P1 - Important** |
+
+### Thème 4 : Améliorations Générales (Priorité P2)
+
+| Ticket | Titre | Description | Priorité |
+|---|---|---|---|
+| **I18N-01** | Internationalisation (i18n) | Préparer l'application (mobile et admin) pour la traduction en externalisant toutes les chaînes de caractères en français dans des fichiers de langue (ex: `fr.json`). | **P2 - Normal** |
 
 ---
 
