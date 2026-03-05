@@ -2,8 +2,10 @@
 /**
  * EventController — Événements communautaires (UX-12)
  *
- * Permet aux agents/admins de créer des événements locaux
- * (nettoyage, réunion publique, etc.) et aux citoyens de s'inscrire.
+ * Colonnes réelles (migration 20260304000007) :
+ * - events     : id, title, description, location, event_date, created_by, created_at
+ * - event_rsvps: id, event_id, user_id, status, created_at
+ * - users      : full_name (pas 'name')
  */
 class EventController extends BaseController
 {
@@ -18,7 +20,7 @@ class EventController extends BaseController
 
         $stmt = $this->db->prepare("
             SELECT e.*,
-                   u.name AS created_by_name,
+                   u.full_name AS created_by_name,
                    (SELECT COUNT(*) FROM event_rsvps WHERE event_id = e.id AND status = 'attending') AS attendees_count,
                    (SELECT COUNT(*) FROM event_rsvps WHERE event_id = e.id AND status = 'interested') AS interested_count,
                    (SELECT status FROM event_rsvps WHERE event_id = e.id AND user_id = :uid LIMIT 1) AS user_rsvp
@@ -56,9 +58,9 @@ class EventController extends BaseController
             VALUES (?, ?, ?, ?, ?, NOW())
         ");
         $stmt->execute([
-            $input['title'],
-            $input['description'] ?? null,
-            $input['location'],
+            Security::sanitizeString($input['title']),
+            Security::sanitizeString($input['description'] ?? ''),
+            Security::sanitizeString($input['location']),
             $input['event_date'],
             $user['id'],
         ]);
@@ -123,7 +125,7 @@ class EventController extends BaseController
         $user = $this->requireAuth();
 
         $eventStmt = $this->db->prepare("
-            SELECT e.*, u.name AS created_by_name,
+            SELECT e.*, u.full_name AS created_by_name,
                    (SELECT status FROM event_rsvps WHERE event_id = e.id AND user_id = ? LIMIT 1) AS user_rsvp
             FROM events e
             JOIN users u ON u.id = e.created_by
@@ -135,7 +137,7 @@ class EventController extends BaseController
 
         // Participants (limité à 20 pour la preview)
         $attendeesStmt = $this->db->prepare("
-            SELECT u.id, u.name, r.status, r.created_at
+            SELECT u.id, u.full_name AS name, r.status, r.created_at
             FROM event_rsvps r
             JOIN users u ON u.id = r.user_id
             WHERE r.event_id = ? AND r.status = 'attending'
@@ -153,19 +155,21 @@ class EventController extends BaseController
     private function notifyAllUsers(int $eventId, string $title): void
     {
         // Insérer une notification pour tous les utilisateurs actifs
-        $this->db->prepare("
-            INSERT INTO notifications (user_id, title, body, type, data, created_at)
-            SELECT id,
-                   '📅 Nouvel événement communautaire',
-                   :title,
-                   'event',
-                   :data,
-                   NOW()
-            FROM users
-            WHERE is_active = 1
-        ")->execute([
-            ':title' => $title,
-            ':data'  => json_encode(['event_id' => $eventId]),
-        ]);
+        // incident_id est nullable — on passe NULL pour les notifications d'événements
+        try {
+            $this->db->prepare("
+                INSERT INTO notifications (user_id, incident_id, title, body, type, created_at)
+                SELECT id, NULL,
+                       '📅 Nouvel événement communautaire',
+                       :title,
+                       'event',
+                       NOW()
+                FROM users
+                WHERE is_active = 1
+            ")->execute([':title' => $title]);
+        } catch (\Exception $e) {
+            // Ne pas bloquer la création de l'événement si les notifications échouent
+            error_log('EventController::notifyAllUsers error: ' . $e->getMessage());
+        }
     }
 }
