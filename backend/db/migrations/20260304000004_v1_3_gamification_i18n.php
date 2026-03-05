@@ -16,7 +16,7 @@ final class V13GamificationI18n extends AbstractMigration
         // -----------------------------------------------------------------
         if (!$this->hasTable('user_gamification')) {
             $this->table('user_gamification', ['id' => false, 'primary_key' => 'user_id'])
-                ->addColumn('user_id',        'integer',  ['null' => false])
+                ->addColumn('user_id',        'integer',  ['null' => false, 'signed' => false])
                 ->addColumn('points',         'integer',  ['default' => 0])
                 ->addColumn('last_action_at', 'datetime', ['null' => true])
                 ->addForeignKey('user_id', 'users', 'id', ['delete' => 'CASCADE'])
@@ -28,7 +28,7 @@ final class V13GamificationI18n extends AbstractMigration
         // -----------------------------------------------------------------
         if (!$this->hasTable('user_badges')) {
             $this->table('user_badges')
-                ->addColumn('user_id',    'integer',  ['null' => false])
+                ->addColumn('user_id',    'integer',  ['null' => false, 'signed' => false])
                 ->addColumn('badge_key',  'string',   ['limit' => 50, 'null' => false])
                 ->addColumn('awarded_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
                 ->addForeignKey('user_id', 'users', 'id', ['delete' => 'CASCADE'])

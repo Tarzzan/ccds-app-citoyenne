@@ -26,10 +26,10 @@ final class V15TwoFactorAuth extends AbstractMigration
         // Table audit_logs (ADMIN-08)
         if (!$this->hasTable('audit_logs')) {
             $this->table('audit_logs')
-                ->addColumn('admin_id',   'integer',  ['null' => false])
+                ->addColumn('admin_id',   'integer',  ['null' => false, 'signed' => false])
                 ->addColumn('action',     'string',   ['limit' => 100, 'null' => false])
                 ->addColumn('entity',     'string',   ['limit' => 50,  'null' => false])
-                ->addColumn('entity_id',  'integer',  ['null' => true])
+                ->addColumn('entity_id',  'integer',  ['null' => true, 'signed' => false])
                 ->addColumn('old_value',  'text',     ['null' => true])
                 ->addColumn('new_value',  'text',     ['null' => true])
                 ->addColumn('ip_address', 'string',   ['limit' => 45, 'null' => true])

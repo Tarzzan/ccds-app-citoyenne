@@ -17,8 +17,8 @@ final class V11VotesPushNotifications extends AbstractMigration
         if (!$this->hasTable('votes')) {
             $votes = $this->table('votes');
             $votes
-                ->addColumn('user_id',     'integer', ['null' => false])
-                ->addColumn('incident_id', 'integer', ['null' => false])
+                ->addColumn('user_id',     'integer', ['null' => false, 'signed' => false])
+                ->addColumn('incident_id', 'integer', ['null' => false, 'signed' => false])
                 ->addColumn('created_at',  'datetime', ['default' => 'CURRENT_TIMESTAMP'])
                 ->addForeignKey('user_id',     'users',     'id', ['delete' => 'CASCADE'])
                 ->addForeignKey('incident_id', 'incidents', 'id', ['delete' => 'CASCADE'])
@@ -39,7 +39,7 @@ final class V11VotesPushNotifications extends AbstractMigration
         if (!$this->hasTable('push_tokens')) {
             $tokens = $this->table('push_tokens');
             $tokens
-                ->addColumn('user_id',    'integer',     ['null' => false])
+                ->addColumn('user_id',    'integer',     ['null' => false, 'signed' => false])
                 ->addColumn('token',      'string',      ['limit' => 255, 'null' => false])
                 ->addColumn('platform',   'string',      ['limit' => 10, 'default' => 'expo'])
                 ->addColumn('created_at', 'datetime',    ['default' => 'CURRENT_TIMESTAMP'])
@@ -55,8 +55,8 @@ final class V11VotesPushNotifications extends AbstractMigration
         if (!$this->hasTable('notifications')) {
             $notifs = $this->table('notifications');
             $notifs
-                ->addColumn('user_id',     'integer',  ['null' => false])
-                ->addColumn('incident_id', 'integer',  ['null' => true])
+                ->addColumn('user_id',     'integer',  ['null' => false, 'signed' => false])
+                ->addColumn('incident_id', 'integer',  ['null' => true, 'signed' => false])
                 ->addColumn('type',        'string',   ['limit' => 50, 'null' => false])
                 ->addColumn('title',       'string',   ['limit' => 255, 'null' => false])
                 ->addColumn('body',        'text',     ['null' => false])

@@ -8,6 +8,9 @@ use Phinx\Migration\AbstractMigration;
  * Migration 001 — Schéma initial CCDS Citoyen
  * Crée toutes les tables de base : users, categories, incidents, photos,
  * comments, status_history, votes, push_tokens, notifications.
+ *
+ * NOTE: Toutes les colonnes FK utilisent ['signed' => false] pour être
+ * compatibles avec les id UNSIGNED générés par Phinx sur MySQL 8.0.
  */
 final class InitialSchema extends AbstractMigration
 {
@@ -41,8 +44,8 @@ final class InitialSchema extends AbstractMigration
         // ── incidents ──────────────────────────────────────────
         $incidents = $this->table('incidents');
         $incidents->addColumn('reference', 'string', ['limit' => 30])
-                  ->addColumn('user_id', 'integer')
-                  ->addColumn('category_id', 'integer')
+                  ->addColumn('user_id', 'integer', ['signed' => false])
+                  ->addColumn('category_id', 'integer', ['signed' => false])
                   ->addColumn('title', 'string', ['limit' => 200])
                   ->addColumn('description', 'text', ['null' => true])
                   ->addColumn('address', 'string', ['limit' => 255, 'null' => true])
@@ -62,7 +65,7 @@ final class InitialSchema extends AbstractMigration
 
         // ── photos ─────────────────────────────────────────────
         $photos = $this->table('photos');
-        $photos->addColumn('incident_id', 'integer')
+        $photos->addColumn('incident_id', 'integer', ['signed' => false])
                ->addColumn('file_path', 'string', ['limit' => 255])
                ->addColumn('file_name', 'string', ['limit' => 100])
                ->addColumn('mime_type', 'string', ['limit' => 50])
@@ -75,9 +78,9 @@ final class InitialSchema extends AbstractMigration
 
         // ── comments ───────────────────────────────────────────
         $comments = $this->table('comments');
-        $comments->addColumn('incident_id', 'integer')
-                 ->addColumn('user_id', 'integer')
-                 ->addColumn('parent_id', 'integer', ['null' => true])
+        $comments->addColumn('incident_id', 'integer', ['signed' => false])
+                 ->addColumn('user_id', 'integer', ['signed' => false])
+                 ->addColumn('parent_id', 'integer', ['null' => true, 'signed' => false])
                  ->addColumn('comment', 'text')
                  ->addColumn('is_edited', 'boolean', ['default' => false])
                  ->addColumn('edited_at', 'datetime', ['null' => true])
@@ -90,8 +93,8 @@ final class InitialSchema extends AbstractMigration
 
         // ── status_history ─────────────────────────────────────
         $history = $this->table('status_history');
-        $history->addColumn('incident_id', 'integer')
-                ->addColumn('changed_by', 'integer')
+        $history->addColumn('incident_id', 'integer', ['signed' => false])
+                ->addColumn('changed_by', 'integer', ['signed' => false])
                 ->addColumn('old_status', 'string', ['limit' => 30])
                 ->addColumn('new_status', 'string', ['limit' => 30])
                 ->addColumn('comment', 'text', ['null' => true])
@@ -102,8 +105,8 @@ final class InitialSchema extends AbstractMigration
 
         // ── votes ──────────────────────────────────────────────
         $votes = $this->table('votes');
-        $votes->addColumn('incident_id', 'integer')
-              ->addColumn('user_id', 'integer')
+        $votes->addColumn('incident_id', 'integer', ['signed' => false])
+              ->addColumn('user_id', 'integer', ['signed' => false])
               ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
               ->addIndex(['incident_id', 'user_id'], ['unique' => true])
               ->addForeignKey('incident_id', 'incidents', 'id', ['delete' => 'CASCADE'])
@@ -112,7 +115,7 @@ final class InitialSchema extends AbstractMigration
 
         // ── push_tokens ────────────────────────────────────────
         $tokens = $this->table('push_tokens');
-        $tokens->addColumn('user_id', 'integer')
+        $tokens->addColumn('user_id', 'integer', ['signed' => false])
                ->addColumn('token', 'string', ['limit' => 255])
                ->addColumn('platform', 'enum', ['values' => ['ios', 'android', 'web'], 'default' => 'android'])
                ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
@@ -122,8 +125,8 @@ final class InitialSchema extends AbstractMigration
 
         // ── notifications ──────────────────────────────────────
         $notifs = $this->table('notifications');
-        $notifs->addColumn('user_id', 'integer')
-               ->addColumn('incident_id', 'integer', ['null' => true])
+        $notifs->addColumn('user_id', 'integer', ['signed' => false])
+               ->addColumn('incident_id', 'integer', ['null' => true, 'signed' => false])
                ->addColumn('type', 'string', ['limit' => 50])
                ->addColumn('title', 'string', ['limit' => 200])
                ->addColumn('body', 'text')
@@ -135,7 +138,7 @@ final class InitialSchema extends AbstractMigration
 
         // ── user_gamification ──────────────────────────────────
         $gamif = $this->table('user_gamification', ['id' => false, 'primary_key' => ['user_id']]);
-        $gamif->addColumn('user_id', 'integer')
+        $gamif->addColumn('user_id', 'integer', ['signed' => false])
               ->addColumn('points', 'integer', ['default' => 0])
               ->addColumn('last_action_at', 'datetime', ['null' => true])
               ->addForeignKey('user_id', 'users', 'id', ['delete' => 'CASCADE'])
@@ -143,7 +146,7 @@ final class InitialSchema extends AbstractMigration
 
         // ── user_badges ────────────────────────────────────────
         $badges = $this->table('user_badges');
-        $badges->addColumn('user_id', 'integer')
+        $badges->addColumn('user_id', 'integer', ['signed' => false])
                ->addColumn('badge_key', 'string', ['limit' => 50])
                ->addColumn('awarded_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
                ->addIndex(['user_id', 'badge_key'], ['unique' => true])

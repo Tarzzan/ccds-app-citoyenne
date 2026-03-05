@@ -16,7 +16,7 @@ final class V14PhotosCommentsThreading extends AbstractMigration
         // -----------------------------------------------------------------
         if (!$this->hasTable('photos')) {
             $this->table('photos')
-                ->addColumn('incident_id', 'integer',  ['null' => false])
+                ->addColumn('incident_id', 'integer',  ['null' => false, 'signed' => false])
                 ->addColumn('file_path',   'string',   ['limit' => 255, 'null' => false])
                 ->addColumn('file_name',   'string',   ['limit' => 255, 'null' => false])
                 ->addColumn('mime_type',   'string',   ['limit' => 50,  'null' => false])
@@ -35,7 +35,7 @@ final class V14PhotosCommentsThreading extends AbstractMigration
             $comments = $this->table('comments');
             if (!$comments->hasColumn('parent_id')) {
                 $comments
-                    ->addColumn('parent_id',  'integer',  ['null' => true, 'after' => 'incident_id'])
+                    ->addColumn('parent_id',  'integer',  ['null' => true, 'signed' => false, 'after' => 'incident_id'])
                     ->addColumn('is_edited',  'boolean',  ['default' => false])
                     ->addColumn('is_flagged', 'boolean',  ['default' => false])
                     ->addColumn('updated_at', 'datetime', ['null' => true])
