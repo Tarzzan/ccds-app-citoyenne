@@ -75,7 +75,7 @@ echo "✅ config.php généré (host=${RESOLVED_HOST}, db=${RESOLVED_NAME}, user
 echo "🔌 Vérification de la connexion MySQL (${RESOLVED_HOST}:${RESOLVED_PORT})..."
 MAX_RETRIES=30
 RETRY=0
-until php8.1 -r "
+until php -r "
     try {
         new PDO('mysql:host=${RESOLVED_HOST};port=${RESOLVED_PORT};dbname=${RESOLVED_NAME}', '${RESOLVED_USER}', '${RESOLVED_PASS}');
         echo 'OK';
@@ -97,7 +97,7 @@ done
 # Si phinxlog n'existe pas mais que les tables existent déjà (migration manuelle),
 # on crée phinxlog et on marque toutes les migrations précédentes comme appliquées.
 echo "📋 Vérification de l'état des migrations Phinx..."
-php8.1 -r "
+php -r "
     try {
         \$pdo = new PDO('mysql:host=${RESOLVED_HOST};port=${RESOLVED_PORT};dbname=${RESOLVED_NAME}', '${RESOLVED_USER}', '${RESOLVED_PASS}');
         \$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
