@@ -20,7 +20,7 @@ import { ServerConfig }  from './ServerConfig';
 // Configuration
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const API_BASE_URL = 'https://votre-domaine.com/api'; // Valeur par défaut
+export const API_BASE_URL = 'https://ccds-app-citoyenne-production.up.railway.app/api'; // Production Railway v1.6
 const TOKEN_KEY = 'ccds_jwt_token';
 
 export const getBaseUrl = async (): Promise<string> => ServerConfig.getServerUrl();

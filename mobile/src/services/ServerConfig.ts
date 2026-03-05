@@ -7,7 +7,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SERVER_URL_KEY = 'ccds_server_url';
-const DEFAULT_URL    = 'https://votre-domaine.com/api';
+const DEFAULT_URL    = 'https://ccds-app-citoyenne-production.up.railway.app/api';
 
 export const ServerConfig = {
 
