@@ -15,8 +15,8 @@ export default function EventsScreen() {
 
   const loadEvents = useCallback(async () => {
     try {
-      const data = await eventsApi.list();
-      setEvents(data);
+      const res = await eventsApi.list();
+      setEvents((res.data as any) ?? []);
     } catch {
       Alert.alert('Erreur', 'Impossible de charger les événements.');
     } finally {
@@ -27,17 +27,16 @@ export default function EventsScreen() {
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
 
-  const handleRsvp = async (eventId: number, status: 'attending' | 'interested' | 'not_attending') => {
+  const handleRsvp = async (eventId: number, status: 'attending' | 'interested' | null) => {
     setRsvpLoading(eventId);
     try {
       await eventsApi.rsvp(eventId, status);
       loadEvents();
       const messages: Record<string, string> = {
-        attending:     '✅ Vous participez à cet événement !',
-        interested:    '👀 Vous êtes intéressé(e) par cet événement.',
-        not_attending: '❌ Inscription annulée.',
+        attending:  '✅ Vous participez à cet événement !',
+        interested: '👀 Vous êtes intéressé(e) par cet événement.',
       };
-      Alert.alert('Inscription', messages[status]);
+      Alert.alert('Inscription', status ? messages[status] : '❌ Inscription annulée.');
     } catch (e: any) {
       Alert.alert('Erreur', e.message ?? 'Impossible de mettre à jour votre inscription.');
     } finally {
@@ -60,17 +59,19 @@ export default function EventsScreen() {
     const diff = Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
     if (diff === 0) return "Aujourd'hui";
     if (diff === 1) return 'Demain';
+    if (diff < 0) return 'Passé';
     return `Dans ${diff} jours`;
   };
 
   const renderEvent = ({ item }: { item: Event }) => {
     const isLoading   = rsvpLoading === item.id;
     const userRsvp    = item.user_rsvp;
-    const daysUntil   = getDaysUntil(item.event_date);
-    const isUrgent    = new Date(item.event_date).getTime() - Date.now() < 86400000 * 3;
+    const startDate   = item.starts_at;
+    const daysUntil   = getDaysUntil(startDate);
+    const isUrgent    = new Date(startDate).getTime() - Date.now() < 86400000 * 3 && new Date(startDate).getTime() > Date.now();
 
     return (
-      <View style={[styles.card, { backgroundColor: theme.card }]}>
+      <View style={[styles.card, { backgroundColor: theme.surface }]}>
         {/* Badge urgence */}
         {isUrgent && (
           <View style={[styles.urgentBadge, { backgroundColor: '#F59E0B22' }]}>
@@ -82,16 +83,16 @@ export default function EventsScreen() {
         <View style={styles.dateRow}>
           <View style={[styles.dateBox, { backgroundColor: theme.primary }]}>
             <Text style={styles.dateDay}>
-              {new Date(item.event_date).getDate()}
+              {new Date(startDate).getDate()}
             </Text>
             <Text style={styles.dateMonth}>
-              {new Date(item.event_date).toLocaleDateString('fr-FR', { month: 'short' }).toUpperCase()}
+              {new Date(startDate).toLocaleDateString('fr-FR', { month: 'short' }).toUpperCase()}
             </Text>
           </View>
           <View style={styles.dateInfo}>
-            <Text style={[styles.eventTitle, { color: theme.text }]}>{item.title}</Text>
+            <Text style={[styles.eventTitle, { color: theme.textPrimary }]}>{item.title}</Text>
             <Text style={[styles.eventMeta, { color: theme.textSecondary }]}>
-              🕐 {formatTime(item.event_date)} · 📍 {item.location}
+              🕐 {formatTime(startDate)} · 📍 {item.location}
             </Text>
             {!isUrgent && (
               <Text style={[styles.daysUntil, { color: theme.textSecondary }]}>{daysUntil}</Text>
@@ -115,7 +116,7 @@ export default function EventsScreen() {
             👀 {item.interested_count} intéressé{item.interested_count !== 1 ? 's' : ''}
           </Text>
           <Text style={[styles.counter, { color: theme.textSecondary }]}>
-            👤 {item.created_by_name}
+            👤 {item.organizer}
           </Text>
         </View>
 
@@ -124,7 +125,7 @@ export default function EventsScreen() {
           {userRsvp === 'attending' ? (
             <TouchableOpacity
               style={[styles.rsvpBtn, styles.rsvpBtnActive, { backgroundColor: theme.primary }]}
-              onPress={() => handleRsvp(item.id, 'not_attending')}
+              onPress={() => handleRsvp(item.id, null)}
               disabled={isLoading}
               accessibilityRole="button"
               accessibilityLabel="Annuler ma participation"
@@ -142,7 +143,7 @@ export default function EventsScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.rsvpBtn, { borderColor: theme.border, borderWidth: 1.5 }]}
-                onPress={() => handleRsvp(item.id, 'not_attending')}
+                onPress={() => handleRsvp(item.id, null)}
                 disabled={isLoading}
               >
                 <Text style={[styles.rsvpBtnText, { color: theme.textSecondary }]}>❌ Annuler</Text>
@@ -196,7 +197,7 @@ export default function EventsScreen() {
           />
         }
         ListHeaderComponent={
-          <Text style={[styles.headerTitle, { color: theme.text }]}>
+          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>
             Événements communautaires
           </Text>
         }
@@ -214,29 +215,29 @@ export default function EventsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:    { flex: 1 },
-  center:       { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-  list:         { padding: 16 },
-  headerTitle:  { fontSize: 22, fontWeight: '800', marginBottom: 16 },
-  card:         { borderRadius: 14, padding: 16, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
-  urgentBadge:  { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginBottom: 10 },
-  urgentText:   { fontSize: 12, fontWeight: '700' },
-  dateRow:      { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 10 },
-  dateBox:      { width: 52, height: 52, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  dateDay:      { color: '#fff', fontSize: 20, fontWeight: '800', lineHeight: 22 },
-  dateMonth:    { color: '#fff', fontSize: 10, fontWeight: '700' },
-  dateInfo:     { flex: 1 },
-  eventTitle:   { fontSize: 16, fontWeight: '700', marginBottom: 4 },
-  eventMeta:    { fontSize: 12, lineHeight: 18 },
-  daysUntil:    { fontSize: 11, marginTop: 2 },
-  description:  { fontSize: 13, lineHeight: 18, marginBottom: 10 },
-  counters:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  counter:      { fontSize: 11 },
-  rsvpButtons:  { marginTop: 4 },
-  rsvpRow:      { flexDirection: 'row', gap: 8 },
-  rsvpBtn:      { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
+  container:        { flex: 1 },
+  center:           { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  list:             { padding: 16 },
+  headerTitle:      { fontSize: 22, fontWeight: '800', marginBottom: 16 },
+  card:             { borderRadius: 14, padding: 16, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
+  urgentBadge:      { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginBottom: 10 },
+  urgentText:       { fontSize: 12, fontWeight: '700' },
+  dateRow:          { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 10 },
+  dateBox:          { width: 52, height: 52, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  dateDay:          { color: '#fff', fontSize: 20, fontWeight: '800', lineHeight: 22 },
+  dateMonth:        { color: '#fff', fontSize: 10, fontWeight: '700' },
+  dateInfo:         { flex: 1 },
+  eventTitle:       { fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  eventMeta:        { fontSize: 12, lineHeight: 18 },
+  daysUntil:        { fontSize: 11, marginTop: 2 },
+  description:      { fontSize: 13, lineHeight: 18, marginBottom: 10 },
+  counters:         { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  counter:          { fontSize: 11 },
+  rsvpButtons:      { marginTop: 4 },
+  rsvpRow:          { flexDirection: 'row', gap: 8 },
+  rsvpBtn:          { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
   rsvpBtnActive:    {},
   rsvpBtnActiveText:{ color: '#fff', fontWeight: '700', fontSize: 13 },
-  rsvpBtnText:  { fontWeight: '600', fontSize: 13 },
-  emptyText:    { fontSize: 15, fontWeight: '600' },
+  rsvpBtnText:      { fontWeight: '600', fontSize: 13 },
+  emptyText:        { fontSize: 15, fontWeight: '600' },
 });

@@ -69,7 +69,7 @@ export default function MyIncidentsScreen() {
 
       const res = await incidentsApi.list(params);
       if (res.data) {
-        const newItems = res.data.items ?? res.data.incidents ?? [];
+        const newItems = (res.data as any).incidents ?? (res.data as any).items ?? [];
         setIncidents(prev => reset || p === 1 ? newItems : [...prev, ...newItems]);
         setTotalPages(res.data.pagination?.total_pages ?? 1);
         setPage(p);

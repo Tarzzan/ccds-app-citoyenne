@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   },
   voteHint: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: COLORS.gray,
     marginBottom: 4,
     textAlign: 'center',
   },

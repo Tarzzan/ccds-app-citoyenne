@@ -38,7 +38,6 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router",
       [
         "expo-camera",
         {
@@ -57,6 +56,7 @@
       "API_BASE_URL": "https://votre-domaine.com/api",
       "APP_TERRITORY": "Kourou, Sinnamary, Iracoubo, Saint-Élie",
       "APP_REGION": "Guyane Française"
-    }
+    },
+    "sdkVersion": "54.0.0"
   }
 }

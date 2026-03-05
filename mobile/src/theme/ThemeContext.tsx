@@ -136,7 +136,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const isDark = themeMode === 'dark' || (themeMode === 'system' && systemScheme === 'dark');
-  const theme  = isDark ? darkTheme : lightTheme;
+  const theme  = (isDark ? darkTheme : lightTheme) as Theme;
 
   return (
     <ThemeContext.Provider value={{ theme, themeMode, isDark, setThemeMode }}>

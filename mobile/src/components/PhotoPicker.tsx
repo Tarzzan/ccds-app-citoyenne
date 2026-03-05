@@ -68,7 +68,7 @@ export default function PhotoPicker({
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      await addPhotos(result.assets.map(a => ({ uri: a.uri, fileName: a.fileName, mimeType: a.mimeType, size: a.fileSize })));
+      await addPhotos(result.assets.map(a => ({ uri: a.uri, fileName: a.fileName ?? undefined, mimeType: a.mimeType ?? undefined, size: a.fileSize })));
     }
   };
 
@@ -83,7 +83,7 @@ export default function PhotoPicker({
     const result = await ImagePicker.launchCameraAsync({ quality: 1 });
     if (!result.canceled && result.assets.length > 0) {
       const a = result.assets[0];
-      await addPhotos([{ uri: a.uri, fileName: a.fileName, mimeType: a.mimeType, size: a.fileSize }]);
+      await addPhotos([{ uri: a.uri, fileName: a.fileName ?? undefined, mimeType: a.mimeType ?? undefined, size: a.fileSize }]);
     }
   };
 

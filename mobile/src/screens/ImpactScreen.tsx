@@ -105,13 +105,13 @@ export default function ImpactScreen() {
   const loadStats = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-      const res = await apiRequest<GamificationStats>('GET', '/gamification');
-      setStats(res.data);
+      const res = await apiRequest<GamificationStats>('gamification');
+      if (res.data) setStats(res.data);
       setError(null);
 
       // Animation des points
       Animated.timing(pointsAnim, {
-        toValue: res.data.points,
+        toValue: res.data?.points ?? 0,
         duration: 1200,
         useNativeDriver: false,
       }).start();

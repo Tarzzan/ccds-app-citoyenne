@@ -120,6 +120,7 @@ export interface Comment {
   updated_at: string | null;
   user_id: number;
   user_name: string;
+  author_name?: string;  // alias pour user_name (rétrocompatibilité)
   user_role: string;
 }
 
@@ -245,6 +246,11 @@ export const authApi = {
   // v1.5 — Tableau de bord citoyen
   getStats: () =>
     request<UserStats>('profile/stats'),
+
+  // v1.6 — Recherche d'utilisateurs pour les mentions (@)
+  searchUsers: (query: string) =>
+    request<User[]>(`users/search?q=${encodeURIComponent(query)}`)
+      .then(r => r.data ?? []),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -304,6 +310,16 @@ export const commentsApi = {
 
   add: (incidentId: number, data: { comment: string; is_internal?: boolean; parent_id?: number }) =>
     request(`incidents/${incidentId}/comments`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // alias pour rétrocompatibilité (CommentThread utilise create/reply/update)
+  create: (incidentId: number, comment: string) =>
+    request(`incidents/${incidentId}/comments`, { method: 'POST', body: JSON.stringify({ comment }) }),
+
+  reply: (incidentId: number, parentId: number, comment: string) =>
+    request(`incidents/${incidentId}/comments`, { method: 'POST', body: JSON.stringify({ comment, parent_id: parentId }) }),
+
+  update: (incidentId: number, commentId: number, comment: string) =>
+    request(`incidents/${incidentId}/comments/${commentId}`, { method: 'PUT', body: JSON.stringify({ comment }) }),
 
   edit: (incidentId: number, commentId: number, data: { comment: string }) =>
     request(`incidents/${incidentId}/comments/${commentId}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -390,4 +406,72 @@ export const photosApi = {
 
   delete: (incidentId: number, photoId: number) =>
     request(`incidents/${incidentId}/photos/${photoId}`, { method: 'DELETE' }),
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Alias utilitaires manquants
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Alias de getToken pour la rétrocompatibilité */
+export const getAuthToken = getToken;
+
+/** Fonction générique d'appel API exposée pour les services externes */
+export const apiRequest = request;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Types Sondages & Événements (v1.6)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PollOption {
+  id: number;
+  text: string;
+  votes_count: number;
+}
+
+export interface Poll {
+  id: number;
+  title: string;
+  description: string;
+  status: 'active' | 'closed';
+  ends_at: string;
+  total_votes: number;
+  user_vote_id: number | null;
+  options: PollOption[];
+  created_at: string;
+}
+
+export interface Event {
+  id: number;
+  title: string;
+  description: string;
+  location: string;
+  starts_at: string;
+  ends_at: string;
+  organizer: string;
+  attendees_count: number;
+  interested_count: number;
+  user_rsvp: 'attending' | 'interested' | null;
+  created_at: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sondages API (v1.6 — UX-10)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const pollsApi = {
+  list: () => request<Poll[]>('polls'),
+  get: (id: number) => request<Poll>(`polls/${id}`),
+  vote: (pollId: number, optionId: number) =>
+    request(`polls/${pollId}/vote`, { method: 'POST', body: JSON.stringify({ option_id: optionId }) }),
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Événements API (v1.6 — UX-12)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const eventsApi = {
+  list: () => request<Event[]>('events'),
+  get: (id: number) => request<Event>(`events/${id}`),
+  rsvp: (eventId: number, status: 'attending' | 'interested' | null) =>
+    request(`events/${eventId}/rsvp`, { method: 'POST', body: JSON.stringify({ status }) }),
 };

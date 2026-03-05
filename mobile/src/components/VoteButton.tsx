@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   },
   count: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: COLORS.gray,
     marginTop: 1,
   },
   countVoted: {

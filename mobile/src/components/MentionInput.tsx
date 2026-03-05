@@ -4,13 +4,7 @@ import {
   StyleSheet, ViewStyle,
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { authApi } from '../services/api';
-
-interface User {
-  id: number;
-  name: string;
-  role: string;
-}
+import { authApi, User } from '../services/api';
 
 interface MentionInputProps {
   value: string;
@@ -48,7 +42,7 @@ export default function MentionInput({
         setMentionStart(atIndex);
         try {
           const users = await authApi.searchUsers(query);
-          setSuggestions(users.slice(0, 5));
+          setSuggestions([...users.slice(0, 5)]);
         } catch {
           setSuggestions([]);
         }
@@ -70,7 +64,7 @@ export default function MentionInput({
     // Remplacer @query par @NomUtilisateur
     const before = value.slice(0, mentionStart);
     const after  = value.slice(mentionStart + 1 + mentionQuery.length);
-    const newText = `${before}@${user.name} ${after}`;
+    const newText = `${before}@${user.full_name} ${after}`;
 
     const newMentions = [...new Set([...mentions, user.id])];
     setMentions(newMentions);
@@ -88,7 +82,7 @@ export default function MentionInput({
           part.startsWith('@') ? (
             <Text key={i} style={{ color: theme.primary, fontWeight: '700' }}>{part}</Text>
           ) : (
-            <Text key={i} style={{ color: theme.text }}>{part}</Text>
+            <Text key={i} style={{ color: theme.textPrimary }}>{part}</Text>
           )
         )}
       </Text>
@@ -107,8 +101,8 @@ export default function MentionInput({
         style={[
           styles.input,
           {
-            backgroundColor: theme.card,
-            color: theme.text,
+            backgroundColor: theme.surface,
+            color: theme.textPrimary,
             borderColor: theme.border,
           },
         ]}
@@ -118,7 +112,7 @@ export default function MentionInput({
 
       {/* Liste de suggestions */}
       {suggestions.length > 0 && (
-        <View style={[styles.suggestionsContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <View style={[styles.suggestionsContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <FlatList
             data={suggestions}
             keyExtractor={(item) => String(item.id)}
@@ -128,15 +122,15 @@ export default function MentionInput({
                 style={[styles.suggestionItem, { borderBottomColor: theme.border }]}
                 onPress={() => selectMention(item)}
                 accessibilityRole="button"
-                accessibilityLabel={`Mentionner ${item.name}`}
+                accessibilityLabel={`Mentionner ${item.full_name}`}
               >
                 <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
                   <Text style={styles.avatarText}>
-                    {item.name.charAt(0).toUpperCase()}
+                    {item.full_name.charAt(0).toUpperCase()}
                   </Text>
                 </View>
                 <View>
-                  <Text style={[styles.userName, { color: theme.text }]}>{item.name}</Text>
+                  <Text style={[styles.userName, { color: theme.textPrimary }]}>{item.full_name}</Text>
                   <Text style={[styles.userRole, { color: theme.textSecondary }]}>
                     {item.role === 'agent' ? '🏛️ Agent' : '👤 Citoyen'}
                   </Text>

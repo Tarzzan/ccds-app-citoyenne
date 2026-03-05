@@ -8,14 +8,14 @@ import { pollsApi, Poll } from '../services/api';
 
 export default function PollsScreen() {
   const { theme } = useTheme();
-  const [polls, setPolls]       = useState<Poll[]>([]);
-  const [loading, setLoading]   = useState(true);
+  const [polls, setPolls]           = useState<Poll[]>([]);
+  const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadPolls = useCallback(async () => {
     try {
-      const data = await pollsApi.list();
-      setPolls(data);
+      const res = await pollsApi.list();
+      setPolls((res.data as any) ?? []);
     } catch (e) {
       Alert.alert('Erreur', 'Impossible de charger les sondages.');
     } finally {
@@ -29,7 +29,6 @@ export default function PollsScreen() {
   const handleVote = async (pollId: number, optionId: number) => {
     try {
       await pollsApi.vote(pollId, optionId);
-      // Recharger pour afficher les résultats mis à jour
       loadPolls();
       Alert.alert('✅ Vote enregistré', 'Merci pour votre participation !');
     } catch (e: any) {
@@ -38,15 +37,15 @@ export default function PollsScreen() {
   };
 
   const renderPoll = ({ item }: { item: Poll }) => {
-    const isExpired  = item.end_date ? new Date(item.end_date) < new Date() : false;
-    const hasVoted   = item.user_vote_option_id != null;
+    const isExpired  = item.ends_at ? new Date(item.ends_at) < new Date() : false;
+    const hasVoted   = item.user_vote_id != null;
     const totalVotes = item.total_votes ?? 0;
 
     return (
-      <View style={[styles.card, { backgroundColor: theme.card }]}>
+      <View style={[styles.card, { backgroundColor: theme.surface }]}>
         {/* En-tête */}
         <View style={styles.cardHeader}>
-          <Text style={[styles.pollTitle, { color: theme.text }]}>{item.title}</Text>
+          <Text style={[styles.pollTitle, { color: theme.textPrimary }]}>{item.title}</Text>
           {isExpired ? (
             <View style={[styles.badge, { backgroundColor: '#EF444422' }]}>
               <Text style={[styles.badgeText, { color: '#EF4444' }]}>Terminé</Text>
@@ -68,15 +67,15 @@ export default function PollsScreen() {
         {/* Méta */}
         <Text style={[styles.meta, { color: theme.textSecondary }]}>
           {totalVotes} vote{totalVotes !== 1 ? 's' : ''}
-          {item.end_date ? ` · Jusqu'au ${new Date(item.end_date).toLocaleDateString('fr-FR')}` : ''}
+          {item.ends_at ? ` · Jusqu'au ${new Date(item.ends_at).toLocaleDateString('fr-FR')}` : ''}
         </Text>
 
         {/* Options */}
         <View style={styles.options}>
           {item.options?.map((option) => {
-            const isSelected = item.user_vote_option_id === option.id;
+            const isSelected = item.user_vote_id === option.id;
             const percentage = totalVotes > 0
-              ? Math.round((option.vote_count / totalVotes) * 100)
+              ? Math.round((option.votes_count / totalVotes) * 100)
               : 0;
 
             return (
@@ -91,7 +90,7 @@ export default function PollsScreen() {
                   if (!hasVoted && !isExpired) {
                     Alert.alert(
                       'Confirmer votre vote',
-                      `Voter pour "${option.option_text}" ?`,
+                      `Voter pour "${option.text}" ?`,
                       [
                         { text: 'Annuler', style: 'cancel' },
                         { text: 'Confirmer', onPress: () => handleVote(item.id, option.id) },
@@ -102,11 +101,11 @@ export default function PollsScreen() {
                 disabled={hasVoted || isExpired}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: isSelected }}
-                accessibilityLabel={`${option.option_text}, ${percentage}% des votes`}
+                accessibilityLabel={`${option.text}, ${percentage}% des votes`}
               >
                 <View style={styles.optionRow}>
-                  <Text style={[styles.optionText, { color: theme.text }]}>
-                    {isSelected ? '✅ ' : ''}{option.option_text}
+                  <Text style={[styles.optionText, { color: theme.textPrimary }]}>
+                    {isSelected ? '✅ ' : ''}{option.text}
                   </Text>
                   {(hasVoted || isExpired) && (
                     <Text style={[styles.percentage, { color: theme.primary }]}>
@@ -121,7 +120,7 @@ export default function PollsScreen() {
                     <View
                       style={[
                         styles.progressFill,
-                        { width: `${percentage}%`, backgroundColor: theme.primary },
+                        { width: `${percentage}%` as any, backgroundColor: theme.primary },
                       ]}
                     />
                   </View>
@@ -172,7 +171,7 @@ export default function PollsScreen() {
           </View>
         }
         ListHeaderComponent={
-          <Text style={[styles.headerTitle, { color: theme.text }]}>
+          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>
             Sondages & Consultations
           </Text>
         }

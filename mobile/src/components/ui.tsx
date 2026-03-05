@@ -24,6 +24,8 @@ export const COLORS = {
   white:        '#ffffff',
   dark:         '#111827',
   border:       '#e5e7eb',
+  light:         '#f9fafb',
+  textSecondary: '#6b7280',
 };
 
 // Couleurs par statut de signalement

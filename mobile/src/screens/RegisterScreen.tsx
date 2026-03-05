@@ -61,7 +61,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
         <View style={styles.form}>
           <Text style={styles.title}>Créer un compte</Text>
-          <Text style={styles.subtitl          Rejoignez les citoyens actifs de Kourou, Sinnamary et Iracoubo.
+          <Text style={styles.subtitle}>Rejoignez les citoyens actifs de Kourou, Sinnamary et Iracoubo.</Text>
 
           <Input
             label="Nom complet"

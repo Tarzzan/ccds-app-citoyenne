@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12,
     backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0',
   },
-  headerTitle:  { fontSize: 18, fontWeight: '700', color: COLORS.text },
+  headerTitle:  { fontSize: 18, fontWeight: '700', color: COLORS.dark },
   badge:        {
     backgroundColor: COLORS.primary, color: '#fff',
     fontSize: 12, fontWeight: '700', borderRadius: 10,
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   itemUnread:   { backgroundColor: '#f0fdf4' },
   icon:         { fontSize: 24, marginTop: 2 },
   content:      { flex: 1 },
-  title:        { fontSize: 14, fontWeight: '500', color: COLORS.text, marginBottom: 3 },
+  title:        { fontSize: 14, fontWeight: '500', color: COLORS.dark, marginBottom: 3 },
   titleUnread:  { fontWeight: '700' },
   body:         { fontSize: 13, color: COLORS.textSecondary, lineHeight: 18 },
   ref:          { fontSize: 11, color: COLORS.primary, marginTop: 4, fontWeight: '600' },
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   empty:        { alignItems: 'center', paddingTop: 80, paddingHorizontal: 40 },
   emptyIcon:    { fontSize: 48, marginBottom: 16 },
-  emptyText:    { fontSize: 16, fontWeight: '600', color: COLORS.text, textAlign: 'center' },
+  emptyText:    { fontSize: 16, fontWeight: '600', color: COLORS.dark, textAlign: 'center' },
   emptySubtext: { fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', marginTop: 8 },
 });
 
