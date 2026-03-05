@@ -113,10 +113,5 @@ cd /var/www/backend && \
     PHINX_DBPASS="${RESOLVED_PASS}" \
     vendor/bin/phinx seed:run -e production 2>&1 || echo "⚠️  Seeder ignoré (données déjà présentes)"
 
-# ── Configurer le port Nginx depuis $PORT (Railway) ─────────────────────────
-PORT=${PORT:-80}
-echo "🔧 Configuration Nginx sur le port $PORT..."
-sed -i "s/listen 80;/listen $PORT;/g" /etc/nginx/http.d/default.conf
-
-echo "🚀 Démarrage de Nginx + PHP-FPM..."
+echo "🚀 Démarrage de Nginx + PHP-FPM (port 80)..."
 exec /usr/bin/supervisord -c /etc/supervisord.conf
