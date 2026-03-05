@@ -12,9 +12,10 @@ import { registerPushToken } from './api';
 // ── Configuration du comportement des notifications ──────────────────────────
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge:  true,
+    shouldShowBanner: true,  // remplace shouldShowAlert (expo-notifications 0.32+)
+    shouldShowList:   true,
+    shouldPlaySound:  true,
+    shouldSetBadge:   true,
   }),
 });
 
