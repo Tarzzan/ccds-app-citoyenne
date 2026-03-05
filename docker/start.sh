@@ -93,6 +93,56 @@ until php8.1 -r "
     sleep 2
 done
 
+# ── Initialiser phinxlog si nécessaire ────────────────────────────────────────
+# Si phinxlog n'existe pas mais que les tables existent déjà (migration manuelle),
+# on crée phinxlog et on marque toutes les migrations précédentes comme appliquées.
+echo "📋 Vérification de l'état des migrations Phinx..."
+php8.1 -r "
+    try {
+        \$pdo = new PDO('mysql:host=${RESOLVED_HOST};port=${RESOLVED_PORT};dbname=${RESOLVED_NAME}', '${RESOLVED_USER}', '${RESOLVED_PASS}');
+        \$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        // Vérifier si phinxlog existe
+        \$tables = \$pdo->query(\"SHOW TABLES LIKE 'phinxlog'\")->fetchAll();
+        if (empty(\$tables)) {
+            // Créer phinxlog
+            \$pdo->exec(\"CREATE TABLE IF NOT EXISTS phinxlog (
+                version BIGINT NOT NULL,
+                migration_name VARCHAR(100) DEFAULT NULL,
+                start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                end_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                breakpoint TINYINT(1) NOT NULL DEFAULT 0,
+                PRIMARY KEY (version)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4\");
+
+            // Marquer les migrations déjà appliquées (tables existent déjà)
+            \$migrations = [
+                [20260101000001, 'InitialSchema'],
+                [20260304000002, 'V11VotesPushNotifications'],
+                [20260304000003, 'V12TwoFactorAuth'],
+                [20260304000004, 'V13GamificationI18n'],
+                [20260304000005, 'V14PhotosCommentsThreading'],
+                [20260304000006, 'V15TwoFactorAuth'],
+                [20260304000007, 'V16WebhooksPollsEvents'],
+            ];
+            \$stmt = \$pdo->prepare(\"INSERT IGNORE INTO phinxlog (version, migration_name, start_time, end_time) VALUES (?, ?, NOW(), NOW())\");
+            foreach (\$migrations as \$m) {
+                // Vérifier si la table users existe (migrations déjà appliquées)
+                \$exists = \$pdo->query(\"SHOW TABLES LIKE 'users'\")->fetchAll();
+                if (!empty(\$exists)) {
+                    \$stmt->execute([\$m[0], \$m[1]]);
+                    echo 'Marqué migration ' . \$m[0] . ' comme appliquée' . PHP_EOL;
+                }
+            }
+            echo 'phinxlog initialisé avec les migrations existantes' . PHP_EOL;
+        } else {
+            echo 'phinxlog existe déjà' . PHP_EOL;
+        }
+    } catch (Exception \$e) {
+        echo 'Erreur phinxlog: ' . \$e->getMessage() . PHP_EOL;
+    }
+" 2>&1
+
 # ── Lancer les migrations Phinx ───────────────────────────────────────────────
 echo "🗄️  Exécution des migrations..."
 cd /var/www/backend && \
