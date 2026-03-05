@@ -104,5 +104,10 @@ echo "🌱 Vérification du seeder..."
 cd /var/www/backend && \
     vendor/bin/phinx seed:run -e production 2>&1 || echo "⚠️  Seeder ignoré (données déjà présentes)"
 
+# ── Configurer le port Nginx depuis $PORT (Railway) ─────────────────────────
+PORT=${PORT:-80}
+echo "🔧 Configuration Nginx sur le port $PORT..."
+sed -i "s/listen 80;/listen $PORT;/g" /etc/nginx/http.d/default.conf
+
 echo "🚀 Démarrage de Nginx + PHP-FPM..."
 exec /usr/bin/supervisord -c /etc/supervisord.conf
