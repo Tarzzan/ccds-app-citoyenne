@@ -1,26 +1,35 @@
 <?php
-
 declare(strict_types=1);
-
 use Phinx\Migration\AbstractMigration;
 
 /**
  * Migration v1.7 — Correction des colonnes manquantes
  *
- * Problèmes détectés par analyse statique :
- * 1. categories.service — colonne utilisée dans CategoryController mais absente de la migration 001
- * 2. status_history.note — IncidentController utilise 'note' mais la migration 001 a créé 'comment'
+ * Colonnes détectées comme manquantes par analyse statique + tests locaux :
+ * 1. incidents.priority        — utilisé dans IncidentController (filtre + tri)
+ * 2. categories.service        — utilisé dans CategoryController
+ * 3. status_history.note       — IncidentController utilise 'note', migration 001 a 'comment'
+ * 4. push_tokens.updated_at    — utilisé dans PushNotificationService
  *
- * Cette migration :
- * - Ajoute categories.service (string nullable)
- * - Ajoute status_history.note (alias de comment, pour compatibilité)
- *   Note : on ajoute 'note' comme nouvelle colonne et on migre les données de 'comment'
+ * Idempotente : chaque colonne est ajoutée uniquement si elle n'existe pas déjà.
  */
 final class V17FixMissingColumns extends AbstractMigration
 {
     public function change(): void
     {
-        // ── 1. Ajouter categories.service ─────────────────────────────────────
+        // ── 1. incidents.priority ─────────────────────────────────────────────
+        $incidents = $this->table('incidents');
+        if (!$incidents->hasColumn('priority')) {
+            $incidents->addColumn('priority', 'string', [
+                'limit'   => 20,
+                'null'    => true,
+                'default' => null,
+                'comment' => 'Priorité : low, medium, high, urgent',
+                'after'   => 'status',
+            ])->save();
+        }
+
+        // ── 2. categories.service ─────────────────────────────────────────────
         $categories = $this->table('categories');
         if (!$categories->hasColumn('service')) {
             $categories->addColumn('service', 'string', [
@@ -32,9 +41,7 @@ final class V17FixMissingColumns extends AbstractMigration
             ])->save();
         }
 
-        // ── 2. Ajouter status_history.note (renommage de comment) ─────────────
-        // La migration 001 a créé 'comment', mais les contrôleurs utilisent 'note'.
-        // On ajoute 'note' et on copie les données existantes de 'comment'.
+        // ── 3. status_history.note ────────────────────────────────────────────
         $history = $this->table('status_history');
         if (!$history->hasColumn('note')) {
             $history->addColumn('note', 'text', [
@@ -43,9 +50,20 @@ final class V17FixMissingColumns extends AbstractMigration
                 'comment' => 'Note optionnelle sur le changement de statut',
                 'after'   => 'new_status',
             ])->save();
+            $this->execute(
+                'UPDATE status_history SET note = `comment` WHERE note IS NULL AND `comment` IS NOT NULL'
+            );
+        }
 
-            // Copier les données existantes de 'comment' vers 'note'
-            $this->execute('UPDATE status_history SET note = comment WHERE note IS NULL AND comment IS NOT NULL');
+        // ── 4. push_tokens.updated_at ─────────────────────────────────────────
+        $pushTokens = $this->table('push_tokens');
+        if (!$pushTokens->hasColumn('updated_at')) {
+            $pushTokens->addColumn('updated_at', 'datetime', [
+                'null'    => true,
+                'default' => null,
+                'comment' => 'Date de dernière mise à jour du token',
+                'after'   => 'created_at',
+            ])->save();
         }
     }
 }

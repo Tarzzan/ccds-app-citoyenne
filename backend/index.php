@@ -99,7 +99,7 @@ switch ($resource) {
                 $method === 'POST'   && $authAct === 'verify'     => $ctrl->verify(),
                 $method === 'DELETE' && $authAct === 'disable'    => $ctrl->disable(),
                 $method === 'POST'   && $authAct === 'send-email' => $ctrl->sendEmailCode(),
-                $method === 'POST'   && $authAct === 'validate'   => $ctrl->validate(),
+                $method === 'POST'   && $authAct === 'validate'   => $ctrl->validateCode(),
                 default => (function() { http_response_code(405); echo json_encode(['success' => false, 'message' => 'Méthode non autorisée.']); })()
             };
         } else {

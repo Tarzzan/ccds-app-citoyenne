@@ -171,7 +171,7 @@ class TwoFactorController extends BaseController
     // Valide le code lors de la connexion (TOTP ou email)
     // ─────────────────────────────────────────────────────────────────────────
 
-    public function validate(): void
+    public function validateCode(): void
     {
         $body   = $this->getJsonBody();
         $userId = (int) ($body['user_id'] ?? 0);

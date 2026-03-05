@@ -143,6 +143,21 @@ php -r "
     }
 " 2>&1
 
+# ── Forcer la réapplication des migrations idempotentes ─────────────────────
+# La migration v1.7 est idempotente (hasColumn guards) — on la supprime de
+# phinxlog pour s'assurer qu'elle tourne à chaque déploiement et ajoute
+# les colonnes manquantes si elles n'existent pas encore.
+echo "🔄 Forçage de la migration v1.7 (idempotente)..."
+php -r "
+    try {
+        \$pdo = new PDO('mysql:host=${RESOLVED_HOST};port=${RESOLVED_PORT};dbname=${RESOLVED_NAME}', '${RESOLVED_USER}', '${RESOLVED_PASS}');
+        \$pdo->exec(\"DELETE FROM phinxlog WHERE version IN (20260305000008)\");
+        echo 'Migration v1.7 supprimée de phinxlog (sera réappliquée)' . PHP_EOL;
+    } catch (Exception \$e) {
+        echo 'Note: ' . \$e->getMessage() . PHP_EOL;
+    }
+" 2>&1
+
 # ── Lancer les migrations Phinx ───────────────────────────────────────────────
 echo "🗄️  Exécution des migrations..."
 cd /var/www/backend && \
