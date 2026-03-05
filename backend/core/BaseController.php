@@ -13,7 +13,7 @@ abstract class BaseController
 
     public function __construct()
     {
-        $this->db          = Database::getInstance()->getConnection();
+        $this->db          = Database::getInstance();
         $this->rateLimiter = new RateLimiter();
     }
 
