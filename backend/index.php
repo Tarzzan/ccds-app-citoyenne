@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS v1.3 — Point d'entrée de l'API REST
+ * CCDS v1.6 — Point d'entrée de l'API REST
  * Architecture OO complète — tous les endpoints passent par des contrôleurs.
  * TECH-02 : Suppression des anciens fichiers procéduraux backend/api/
  */
@@ -9,17 +9,25 @@
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/config/Database.php';
 require_once __DIR__ . '/config/helpers.php';
+require_once __DIR__ . '/config/PushNotificationService.php';
+require_once __DIR__ . '/config/PdfReportService.php';
 
-// --- Noyau v1.2 ---
+// --- Autoload Composer (FPDF, Phinx, etc.) ---
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
+
+// --- Noyau ---
 require_once __DIR__ . '/core/Security.php';
 require_once __DIR__ . '/core/Permissions.php';
+require_once __DIR__ . '/core/RateLimiter.php';
 require_once __DIR__ . '/core/BaseController.php';
 
 // --- En-têtes globaux ---
 header('Content-Type: application/json; charset=UTF-8');
 header('Access-Control-Allow-Origin: '  . CORS_ORIGINS);
 header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Key');
 
 // Appliquer les en-têtes de sécurité HTTP
 Security::applySecurityHeaders();
@@ -65,7 +73,7 @@ switch ($resource) {
         if ($sub === 'password' && $method === 'PUT') {
             $ctrl->changePassword();
         } elseif ($sub === 'stats' && $method === 'GET') {
-            $ctrl->getStats(); // v1.5 — Tableau de bord citoyen (UX-07)
+            $ctrl->getStats();
         } elseif ($method === 'GET') {
             $ctrl->getProfile();
         } elseif ($method === 'PUT') {
@@ -77,12 +85,12 @@ switch ($resource) {
         break;
 
     // ----------------------------------------------------------------
-    // 2FA (v1.5 — SEC-03)
+    // 2FA (SEC-03)
     // ----------------------------------------------------------------
     case 'auth':
         require_once __DIR__ . '/controllers/TwoFactorController.php';
-        $authSub = $segments[1] ?? ''; // '2fa'
-        $authAct = $segments[2] ?? ''; // 'setup', 'verify', 'disable', 'send-email', 'validate', 'status'
+        $authSub = $segments[1] ?? '';
+        $authAct = $segments[2] ?? '';
         if ($authSub === '2fa') {
             $ctrl = new TwoFactorController();
             match(true) {
@@ -122,34 +130,24 @@ switch ($resource) {
         require_once __DIR__ . '/controllers/IncidentController.php';
         require_once __DIR__ . '/controllers/CommentController.php';
         require_once __DIR__ . '/controllers/VoteController.php';
+        require_once __DIR__ . '/controllers/PhotoController.php';
+        require_once __DIR__ . '/controllers/ReportController.php';
 
         if ($id && $sub === 'comments') {
-            // GET /incidents/{id}/comments ou POST /incidents/{id}/comments
             $ctrl = new CommentController();
-            match($method) {
-                'GET'  => $ctrl->list((int)$id),
-                'POST' => $ctrl->create((int)$id),
-                default => http_response_code(405),
-            };
-        } elseif ($id && $sub === 'comments') {
-            // Commentaires v1.4 (UX-05) : GET, POST, PUT /{cid}, DELETE /{cid}, POST /{cid}/reply
-            require_once __DIR__ . '/controllers/CommentController.php';
-            $ctrl = new CommentController();
-            $cid  = (int)($segments[4] ?? 0);
-            $csub = $segments[5] ?? '';
+            $cid  = (int)($segments[3] ?? 0);
+            $csub = $segments[4] ?? '';
             match(true) {
-                $method === 'GET'  && !$cid             => $ctrl->list((int)$id),
-                $method === 'POST' && !$cid             => $ctrl->create((int)$id),
-                $method === 'PUT'  && $cid > 0          => $ctrl->update((int)$id, $cid),
-                $method === 'DELETE' && $cid > 0        => $ctrl->delete((int)$id, $cid),
-                $method === 'POST' && $cid > 0 && $csub === 'reply' => $ctrl->create((int)$id), // parent_id dans le body
-                default                                 => http_response_code(405),
+                $method === 'GET'    && !$cid                           => $ctrl->list((int)$id),
+                $method === 'POST'   && !$cid                           => $ctrl->create((int)$id),
+                $method === 'PUT'    && $cid > 0                        => $ctrl->update((int)$id, $cid),
+                $method === 'DELETE' && $cid > 0                        => $ctrl->delete((int)$id, $cid),
+                $method === 'POST'   && $cid > 0 && $csub === 'reply'   => $ctrl->create((int)$id),
+                default                                                  => http_response_code(405),
             };
         } elseif ($id && $sub === 'photos') {
-            // GET/POST /incidents/{id}/photos  et  DELETE /incidents/{id}/photos/{pid}
-            require_once __DIR__ . '/controllers/PhotoController.php';
             $ctrl = new PhotoController();
-            $pid  = (int)($segments[4] ?? 0); // /incidents/{id}/photos/{pid}
+            $pid  = (int)($segments[3] ?? 0);
             match(true) {
                 $method === 'GET'                  => $ctrl->list((int)$id),
                 $method === 'POST'                 => $ctrl->upload((int)$id),
@@ -157,11 +155,8 @@ switch ($resource) {
                 default                            => http_response_code(405),
             };
         } elseif ($id && $sub === 'report' && $method === 'GET') {
-            // GET /incidents/{id}/report → Télécharger le PDF (ADMIN-05)
-            require_once __DIR__ . '/controllers/ReportController.php';
             (new ReportController())->downloadPdf((int)$id);
-        } elseif ($id && $sub === 'vote') {
-            // POST /incidents/{id}/vote ou DELETE /incidents/{id}/vote ou GET /incidents/{id}/votes
+        } elseif ($id && ($sub === 'vote' || $sub === 'votes')) {
             $ctrl = new VoteController();
             match($method) {
                 'GET'    => $ctrl->getState((int)$id),
@@ -169,9 +164,6 @@ switch ($resource) {
                 'DELETE' => $ctrl->removeVote((int)$id),
                 default  => http_response_code(405),
             };
-        } elseif ($id && $sub === 'votes') {
-            require_once __DIR__ . '/controllers/VoteController.php';
-            (new VoteController())->getState((int)$id);
         } else {
             $ctrl = new IncidentController();
             if ($id) {
@@ -230,7 +222,7 @@ switch ($resource) {
         break;
 
     // ----------------------------------------------------------------
-    // Gamification (v1.3 — GAMIF-01)
+    // Gamification (GAMIF-01)
     // ----------------------------------------------------------------
     case 'gamification':
         require_once __DIR__ . '/controllers/GamificationController.php';
@@ -245,7 +237,128 @@ switch ($resource) {
         break;
 
     // ----------------------------------------------------------------
-    // Admin — Utilisateurs (v1.4 — ADMIN-04 + API-01)
+    // Sondages (v1.6)
+    // GET    /api/polls
+    // POST   /api/polls
+    // POST   /api/polls/{id}/vote
+    // GET    /api/polls/{id}/results
+    // ----------------------------------------------------------------
+    case 'polls':
+        require_once __DIR__ . '/controllers/PollController.php';
+        $ctrl = new PollController();
+        if ($id && $sub === 'vote' && $method === 'POST') {
+            $ctrl->vote((int)$id);
+        } elseif ($id && $sub === 'results' && $method === 'GET') {
+            $ctrl->results((int)$id);
+        } elseif (!$id) {
+            match($method) {
+                'GET'  => $ctrl->index(),
+                'POST' => $ctrl->create(),
+                default => http_response_code(405),
+            };
+        } else {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Endpoint polls introuvable.']);
+        }
+        break;
+
+    // ----------------------------------------------------------------
+    // Événements (v1.6)
+    // GET    /api/events
+    // POST   /api/events
+    // GET    /api/events/{id}
+    // POST   /api/events/{id}/rsvp
+    // ----------------------------------------------------------------
+    case 'events':
+        require_once __DIR__ . '/controllers/EventController.php';
+        $ctrl = new EventController();
+        if ($id && $sub === 'rsvp' && $method === 'POST') {
+            $ctrl->rsvp((int)$id);
+        } elseif ($id && $method === 'GET') {
+            $ctrl->show((int)$id);
+        } elseif (!$id) {
+            match($method) {
+                'GET'  => $ctrl->index(),
+                'POST' => $ctrl->create(),
+                default => http_response_code(405),
+            };
+        } else {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Endpoint events introuvable.']);
+        }
+        break;
+
+    // ----------------------------------------------------------------
+    // Webhooks (v1.6)
+    // GET    /api/webhooks
+    // POST   /api/webhooks
+    // PUT    /api/webhooks/{id}
+    // DELETE /api/webhooks/{id}
+    // POST   /api/webhooks/{id}/test
+    // ----------------------------------------------------------------
+    case 'webhooks':
+        require_once __DIR__ . '/controllers/WebhookController.php';
+        $ctrl = new WebhookController();
+        if ($id && $sub === 'test' && $method === 'POST') {
+            $ctrl->test((int)$id);
+        } elseif ($id) {
+            match($method) {
+                'PUT'    => $ctrl->update((int)$id),
+                'DELETE' => $ctrl->delete((int)$id),
+                default  => http_response_code(405),
+            };
+        } else {
+            match($method) {
+                'GET'  => $ctrl->index(),
+                'POST' => $ctrl->create(),
+                default => http_response_code(405),
+            };
+        }
+        break;
+
+    // ----------------------------------------------------------------
+    // API Publique (clé API)
+    // GET    /api/public/incidents
+    // GET    /api/public/stats
+    // GET    /api/public/categories
+    // ----------------------------------------------------------------
+    case 'public':
+        require_once __DIR__ . '/controllers/PublicApiController.php';
+        $ctrl      = new PublicApiController();
+        $publicSub = $segments[1] ?? '';
+        match($publicSub) {
+            'incidents'  => $ctrl->incidents(),
+            'stats'      => $ctrl->stats(),
+            'categories' => $ctrl->categories(),
+            default      => (function() { http_response_code(404); echo json_encode(['success' => false, 'message' => 'Endpoint public introuvable.']); })(),
+        };
+        break;
+
+    // ----------------------------------------------------------------
+    // RGPD (v1.6)
+    // POST   /api/gdpr/export
+    // GET    /api/gdpr/download/{filename}
+    // DELETE /api/gdpr/account
+    // ----------------------------------------------------------------
+    case 'gdpr':
+        require_once __DIR__ . '/controllers/GdprController.php';
+        $ctrl    = new GdprController();
+        $gdprSub = $segments[1] ?? '';
+        if ($gdprSub === 'export' && $method === 'POST') {
+            $ctrl->requestExport();
+        } elseif ($gdprSub === 'download' && $method === 'GET') {
+            $filename = $segments[2] ?? '';
+            $ctrl->download($filename);
+        } elseif ($gdprSub === 'account' && $method === 'DELETE') {
+            $ctrl->deleteAccount();
+        } else {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Endpoint RGPD introuvable.']);
+        }
+        break;
+
+    // ----------------------------------------------------------------
+    // Admin — Utilisateurs (ADMIN-04 + API-01)
     // GET    /api/admin/users
     // GET    /api/admin/users/{id}
     // PUT    /api/admin/users/{id}
