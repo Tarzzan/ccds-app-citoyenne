@@ -1,14 +1,15 @@
 /**
  * CCDS — Application Citoyenne de Signalement
  * Point d'entrée principal de l'application React Native.
- * v1.4 : gestion explicite des mises à jour OTA + reload automatique
+ * v1.5 : GestureHandlerRootView requis pour react-native-gesture-handler v2
  */
 
 import 'react-native-gesture-handler';
 import React, { useEffect, useRef } from 'react';
+import { StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
-import * as Updates from 'expo-updates';
 
 import { AuthProvider, useAuth } from './src/services/AuthContext';
 import RootNavigator             from './src/navigation/RootNavigator';
@@ -22,23 +23,6 @@ import { OfflineQueue } from './src/services/OfflineQueue';
 function AppWithNotifications() {
   const { isAuthenticated } = useAuth();
   const notifResponseListener = useRef<Notifications.Subscription | null>(null);
-
-  useEffect(() => {
-    // Vérifier et appliquer les mises à jour OTA au démarrage
-    (async () => {
-      try {
-        if (!__DEV__) {
-          const update = await Updates.checkForUpdateAsync();
-          if (update.isAvailable) {
-            await Updates.fetchUpdateAsync();
-            await Updates.reloadAsync();
-          }
-        }
-      } catch {
-        // Ignorer les erreurs de mise à jour (pas de connexion, etc.)
-      }
-    })();
-  }, []);
 
   useEffect(() => {
     // Initialiser les notifications push après connexion
@@ -72,9 +56,17 @@ function AppWithNotifications() {
 // ── Composant racine ─────────────────────────────────────────────────────────
 export default function App() {
   return (
-    <AuthProvider>
-      <StatusBar style="auto" />
-      <AppWithNotifications />
-    </AuthProvider>
+    // GestureHandlerRootView est OBLIGATOIRE pour react-native-gesture-handler v2
+    // Sans ce wrapper, l'app crash silencieusement sur iOS (écran blanc)
+    <GestureHandlerRootView style={styles.root}>
+      <AuthProvider>
+        <StatusBar style="auto" />
+        <AppWithNotifications />
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+});
