@@ -38,7 +38,7 @@ class PushNotificationService
     {
         // Récupérer le signalement et son auteur
         $stmt = $this->db->prepare("
-            SELECT i.user_id, i.title, i.reference, u.first_name
+            SELECT i.user_id, i.title, i.reference, u.full_name
             FROM incidents i
             JOIN users u ON i.user_id = u.id
             WHERE i.id = ?
@@ -59,7 +59,7 @@ class PushNotificationService
 
         $label = $statusLabels[$new_status] ?? $new_status;
         $title = "Mise à jour de votre signalement";
-        $body  = "Bonjour {$incident['first_name']}, votre signalement \"{$incident['title']}\" est maintenant : {$label}.";
+        $body  = "Bonjour {$incident['full_name']}, votre signalement \"{$incident['title']}\" est maintenant : {$label}.";
 
         // Enregistrer en base
         $this->saveNotification($incident['user_id'], $incident_id, 'status_change', $title, $body);

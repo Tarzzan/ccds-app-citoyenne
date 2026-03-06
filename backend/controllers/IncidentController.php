@@ -159,7 +159,7 @@ class IncidentController extends BaseController
         $stmtH = $this->db->prepare("
             SELECT sh.old_status, sh.new_status, sh.note, sh.changed_at, u.full_name AS changed_by
             FROM status_history sh
-            JOIN users u ON u.id = sh.user_id
+            JOIN users u ON u.id = sh.changed_by
             WHERE sh.incident_id = ?
             ORDER BY sh.changed_at ASC
         ");
@@ -221,7 +221,7 @@ class IncidentController extends BaseController
                  ->execute([$reference, $incidentId]);
 
         $this->db->prepare(
-            'INSERT INTO status_history (incident_id, user_id, old_status, new_status, note) VALUES (?, ?, NULL, ?, ?)'
+            'INSERT INTO status_history (incident_id, changed_by, old_status, new_status, note) VALUES (?, ?, NULL, ?, ?)'
         )->execute([$incidentId, $auth['sub'], 'submitted', 'Signalement créé par le citoyen.']);
 
         // Upload photo
@@ -299,7 +299,7 @@ class IncidentController extends BaseController
                  ->execute($params);
 
         $this->db->prepare(
-            'INSERT INTO status_history (incident_id, user_id, old_status, new_status, note) VALUES (?, ?, ?, ?, ?)'
+            'INSERT INTO status_history (incident_id, changed_by, old_status, new_status, note) VALUES (?, ?, ?, ?, ?)'
         )->execute([$id, $auth['sub'], $oldStatus, $newStatus, $note ?: null]);
 
         $this->success(['id' => $id, 'status' => $newStatus], 200, 'Signalement mis à jour.');

@@ -43,7 +43,7 @@ class AuthController extends BaseController
         $hash = password_hash($body['password'], PASSWORD_BCRYPT, ['cost' => 12]);
 
         $stmt = $this->db->prepare(
-            'INSERT INTO users (email, password_hash, full_name, phone) VALUES (?, ?, ?, ?)'
+            'INSERT INTO users (email, password, full_name, phone) VALUES (?, ?, ?, ?)'
         );
         $stmt->execute([
             $email,
@@ -86,12 +86,12 @@ class AuthController extends BaseController
         $email = strtolower(trim($body['email']));
 
         $stmt = $this->db->prepare(
-            'SELECT id, email, password_hash, full_name, role, is_active FROM users WHERE email = ? LIMIT 1'
+            'SELECT id, email, password, full_name, role, is_active FROM users WHERE email = ? LIMIT 1'
         );
         $stmt->execute([$email]);
         $user = $stmt->fetch();
 
-        if (!$user || !password_verify($body['password'], $user['password_hash'])) {
+        if (!$user || !password_verify($body['password'], $user['password'])) {
             $this->error('Email ou mot de passe incorrect.', 401);
         }
 
@@ -211,17 +211,17 @@ class AuthController extends BaseController
         ]);
 
         // Vérifier l'ancien mot de passe
-        $stmt = $this->db->prepare('SELECT password_hash FROM users WHERE id = ? LIMIT 1');
+        $stmt = $this->db->prepare('SELECT password FROM users WHERE id = ? LIMIT 1');
         $stmt->execute([$auth['sub']]);
         $user = $stmt->fetch();
 
-        if (!$user || !password_verify($body['current_password'], $user['password_hash'])) {
+        if (!$user || !password_verify($body['current_password'], $user['password'])) {
             $this->error('Mot de passe actuel incorrect.', 401);
         }
 
         $newHash = password_hash($body['new_password'], PASSWORD_BCRYPT, ['cost' => 12]);
 
-        $stmt = $this->db->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
+        $stmt = $this->db->prepare('UPDATE users SET password = ? WHERE id = ?');
         $stmt->execute([$newHash, $auth['sub']]);
 
         $this->success(['updated' => true], 200, 'Mot de passe modifié avec succès.');

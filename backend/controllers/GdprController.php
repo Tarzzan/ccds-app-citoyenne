@@ -40,8 +40,8 @@ class GdprController extends BaseController
 
         // Enregistrer la demande d'export en base
         $stmt = $this->db->prepare("
-            INSERT INTO gdpr_exports (user_id, filename, created_at)
-            VALUES (?, ?, NOW())
+            INSERT INTO gdpr_export_requests (user_id, status, file_path, requested_at)
+            VALUES (?, 'completed', ?, NOW())
         ");
         $stmt->execute([$userId, $filename]);
 
@@ -66,9 +66,9 @@ class GdprController extends BaseController
 
         // Vérifier que le fichier appartient à cet utilisateur
         $stmt = $this->db->prepare("
-            SELECT * FROM gdpr_exports
-            WHERE user_id = ? AND filename = ?
-            AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)
+            SELECT * FROM gdpr_export_requests
+            WHERE user_id = ? AND file_path = ?
+            AND requested_at > DATE_SUB(NOW(), INTERVAL 7 DAY)
         ");
         $stmt->execute([$userId, $filename]);
         $export = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -104,24 +104,22 @@ class GdprController extends BaseController
         }
 
         // Vérifier le mot de passe
-        $stmt = $this->db->prepare("SELECT password_hash FROM users WHERE id = ?");
+        $stmt = $this->db->prepare("SELECT password FROM users WHERE id = ?");
         $stmt->execute([$userId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$row || !password_verify($input['password'], $row['password_hash'])) {
+        if (!$row || !password_verify($input['password'], $row['password'])) {
             $this->error('Mot de passe incorrect.', 401);
         }
 
         // Anonymiser plutôt que supprimer pour conserver l'intégrité des signalements
         $stmt = $this->db->prepare("
             UPDATE users SET
-                name          = 'Utilisateur supprimé',
-                email         = CONCAT('deleted_', id, '@ccds.deleted'),
-                password_hash = '',
-                phone         = NULL,
-                avatar        = NULL,
-                is_active     = 0,
-                deleted_at    = NOW()
+                full_name = 'Utilisateur supprimé',
+                email     = CONCAT('deleted_', id, '@ccds.deleted'),
+                password  = '',
+                phone     = NULL,
+                is_active = 0
             WHERE id = ?
         ");
         $stmt->execute([$userId]);
@@ -130,7 +128,7 @@ class GdprController extends BaseController
         $this->db->prepare("DELETE FROM push_tokens WHERE user_id = ?")->execute([$userId]);
 
         // Supprimer les exports RGPD
-        $exports = $this->db->prepare("SELECT filename FROM gdpr_exports WHERE user_id = ?");
+        $exports = $this->db->prepare("SELECT file_path FROM gdpr_export_requests WHERE user_id = ?");
         $exports->execute([$userId]);
         foreach ($exports->fetchAll(PDO::FETCH_COLUMN) as $filename) {
             $filepath = __DIR__ . '/../exports/' . basename($filename);
@@ -138,7 +136,7 @@ class GdprController extends BaseController
                 unlink($filepath);
             }
         }
-        $this->db->prepare("DELETE FROM gdpr_exports WHERE user_id = ?")->execute([$userId]);
+        $this->db->prepare("DELETE FROM gdpr_export_requests WHERE user_id = ?")->execute([$userId]);
 
         $this->success(null, 200, 'Votre compte a été supprimé avec succès.');
     }
@@ -160,7 +158,7 @@ class GdprController extends BaseController
     private function getProfile(int $userId): array
     {
         $stmt = $this->db->prepare("
-            SELECT id, name, email, phone, created_at, last_login_at
+            SELECT id, full_name AS name, email, phone, created_at
             FROM users WHERE id = ?
         ");
         $stmt->execute([$userId]);

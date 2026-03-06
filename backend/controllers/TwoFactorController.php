@@ -25,13 +25,15 @@ class TwoFactorController extends BaseController
 
     public function getStatus(): void
     {
-        $userId = $this->requireAuth();
-        $user   = $this->db->fetchOne(
-            'SELECT two_factor_method, two_factor_secret FROM users WHERE id = ?',
-            [$userId]
+        $auth   = $this->requireAuth();
+        $userId = (int) $auth['sub'];
+        $stmt = $this->db->prepare(
+            'SELECT two_factor_method, two_factor_secret FROM users WHERE id = ?'
         );
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
 
-        $this->jsonResponse([
+        $this->success([
             'two_factor_enabled' => $user['two_factor_method'] !== 'none',
             'two_factor_method'  => $user['two_factor_method'] ?? 'none',
         ]);
@@ -44,24 +46,29 @@ class TwoFactorController extends BaseController
 
     public function setup(): void
     {
-        $userId = $this->requireAuth();
-        $user   = $this->db->fetchOne('SELECT email FROM users WHERE id = ?', [$userId]);
+        $auth   = $this->requireAuth();
+        $userId = (int) $auth['sub'];
+        $stmt = $this->db->prepare(
+            'SELECT email FROM users WHERE id = ?'
+        );
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
 
         // Générer un secret TOTP (Base32, 160 bits)
         $secret = $this->generateTotpSecret();
 
         // Stocker le secret temporairement (non activé tant que verify() n'est pas appelé)
-        $this->db->execute(
-            'UPDATE users SET two_factor_secret = ?, two_factor_method = "pending_totp" WHERE id = ?',
-            [$secret, $userId]
+        $stmt = $this->db->prepare(
+            'UPDATE users SET two_factor_secret = ?, two_factor_method = "pending_totp" WHERE id = ?'
         );
+        $stmt->execute([$secret, $userId]);
 
         // Générer les codes de récupération
         $backupCodes = $this->generateBackupCodes();
-        $this->db->execute(
-            'UPDATE users SET two_factor_recovery_codes = ? WHERE id = ?',
-            [json_encode(array_map('password_hash', $backupCodes, array_fill(0, 8, PASSWORD_BCRYPT))), $userId]
-        );
+        $stmt = $this->db->prepare(
+                'UPDATE users SET two_factor_recovery_codes = ? WHERE id = ?'
+            );
+            $stmt->execute([json_encode(array_map(fn($c) => password_hash($c, PASSWORD_BCRYPT), $backupCodes)), $userId]);
 
         // URL otpauth:// pour le QR code
         $issuer   = urlencode('CCDS Citoyen');
@@ -69,7 +76,7 @@ class TwoFactorController extends BaseController
         $otpUrl   = "otpauth://totp/{$issuer}:{$label}?secret={$secret}&issuer={$issuer}&algorithm=SHA1&digits=6&period=30";
         $qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" . urlencode($otpUrl);
 
-        $this->jsonResponse([
+        $this->success([
             'secret'       => $secret,
             'qr_code_url'  => $qrCodeUrl,
             'backup_codes' => $backupCodes,
@@ -83,36 +90,38 @@ class TwoFactorController extends BaseController
 
     public function verify(): void
     {
-        $userId = $this->requireAuth();
-        $body   = $this->getJsonBody();
+        $auth   = $this->requireAuth();
+        $userId = (int) $auth['sub'];
+        $body   = json_decode(file_get_contents('php://input'), true) ?? [];
         $code   = trim($body['code'] ?? '');
 
         if (empty($code) || !ctype_digit($code) || strlen($code) !== 6) {
-            $this->errorResponse('Code invalide — 6 chiffres requis.', 422);
+            $this->error('Code invalide — 6 chiffres requis.', 422);
             return;
         }
 
-        $user = $this->db->fetchOne(
-            'SELECT two_factor_secret, two_factor_method FROM users WHERE id = ?',
-            [$userId]
+        $stmt = $this->db->prepare(
+            'SELECT two_factor_secret, two_factor_method FROM users WHERE id = ?'
         );
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
 
         if ($user['two_factor_method'] !== 'pending_totp') {
-            $this->errorResponse('Aucune configuration 2FA en attente.', 400);
+            $this->error('Aucune configuration 2FA en attente.', 400);
             return;
         }
 
         if (!$this->verifyTotp($user['two_factor_secret'], $code)) {
-            $this->errorResponse('Code incorrect. Vérifiez l\'heure de votre appareil.', 401);
+            $this->error('Code incorrect. Vérifiez l\'heure de votre appareil.', 401);
             return;
         }
 
-        $this->db->execute(
-            'UPDATE users SET two_factor_method = "totp" WHERE id = ?',
-            [$userId]
+        $stmt = $this->db->prepare(
+            'UPDATE users SET two_factor_method = "totp" WHERE id = ?'
         );
+        $stmt->execute([$userId]);
 
-        $this->jsonResponse(['enabled' => true, 'method' => 'totp']);
+        $this->success(['enabled' => true, 'method' => 'totp']);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -121,22 +130,27 @@ class TwoFactorController extends BaseController
 
     public function disable(): void
     {
-        $userId = $this->requireAuth();
-        $body   = $this->getJsonBody();
+        $auth   = $this->requireAuth();
+        $userId = (int) $auth['sub'];
+        $body   = json_decode(file_get_contents('php://input'), true) ?? [];
 
-        $user = $this->db->fetchOne('SELECT password_hash FROM users WHERE id = ?', [$userId]);
+        $stmt = $this->db->prepare(
+            'SELECT password FROM users WHERE id = ?'
+        );
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
 
-        if (!password_verify($body['password'] ?? '', $user['password_hash'])) {
-            $this->errorResponse('Mot de passe incorrect.', 401);
+        if (!password_verify($body['password'] ?? '', $user['password'])) {
+            $this->error('Mot de passe incorrect.', 401);
             return;
         }
 
-        $this->db->execute(
-            'UPDATE users SET two_factor_method = "none", two_factor_secret = NULL, two_factor_recovery_codes = NULL WHERE id = ?',
-            [$userId]
+        $stmt = $this->db->prepare(
+            'UPDATE users SET two_factor_method = "none", two_factor_secret = NULL, two_factor_recovery_codes = NULL WHERE id = ?'
         );
+        $stmt->execute([$userId]);
 
-        $this->jsonResponse(['disabled' => true]);
+        $this->success(['disabled' => true]);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -146,24 +160,29 @@ class TwoFactorController extends BaseController
 
     public function sendEmailCode(): void
     {
-        $userId = $this->requireAuth();
-        $user   = $this->db->fetchOne('SELECT email, full_name FROM users WHERE id = ?', [$userId]);
+        $auth   = $this->requireAuth();
+        $userId = (int) $auth['sub'];
+        $stmt = $this->db->prepare(
+            'SELECT email, full_name FROM users WHERE id = ?'
+        );
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
 
         $code    = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $expires = date('Y-m-d H:i:s', time() + 600); // 10 minutes
 
         // Stocker le code haché avec expiration
-        $this->db->execute(
-            'UPDATE users SET two_factor_secret = ?, two_factor_method = "email" WHERE id = ?',
-            [password_hash($code, PASSWORD_BCRYPT) . '|' . $expires, $userId]
+        $stmt = $this->db->prepare(
+            'UPDATE users SET two_factor_secret = ?, two_factor_method = "email" WHERE id = ?'
         );
+        $stmt->execute([password_hash($code, PASSWORD_BCRYPT) . '|' . $expires, $userId]);
 
         // Envoyer l'email
         $subject = '[CCDS] Votre code de vérification';
         $message = "Bonjour {$user['full_name']},\n\nVotre code de vérification est : {$code}\n\nCe code expire dans 10 minutes.\n\nSi vous n'avez pas demandé ce code, ignorez cet email.";
         mail($user['email'], $subject, $message, 'From: noreply@ccds.fr');
 
-        $this->jsonResponse(['sent' => true, 'expires_in' => 600]);
+        $this->success(['sent' => true, 'expires_in' => 600]);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -173,19 +192,20 @@ class TwoFactorController extends BaseController
 
     public function validateCode(): void
     {
-        $body   = $this->getJsonBody();
+        $body   = json_decode(file_get_contents('php://input'), true) ?? [];
         $userId = (int) ($body['user_id'] ?? 0);
         $code   = trim($body['code'] ?? '');
 
         if (!$userId || empty($code)) {
-            $this->errorResponse('Paramètres manquants.', 422);
+            $this->error('Paramètres manquants.', 422);
             return;
         }
 
-        $user = $this->db->fetchOne(
-            'SELECT two_factor_method, two_factor_secret, two_factor_recovery_codes FROM users WHERE id = ?',
-            [$userId]
+        $stmt = $this->db->prepare(
+            'SELECT two_factor_method, two_factor_secret, two_factor_recovery_codes FROM users WHERE id = ?'
         );
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
 
         $valid = false;
 
@@ -199,10 +219,10 @@ class TwoFactorController extends BaseController
                 if (strtotime($expires) > time() && password_verify($code, $hashedCode)) {
                     $valid = true;
                     // Invalider le code après utilisation
-                    $this->db->execute(
-                        'UPDATE users SET two_factor_secret = NULL WHERE id = ?',
-                        [$userId]
-                    );
+                    $stmt = $this->db->prepare(
+                'UPDATE users SET two_factor_secret = NULL WHERE id = ?'
+            );
+            $stmt->execute([$userId]);
                 }
                 break;
         }
@@ -215,21 +235,21 @@ class TwoFactorController extends BaseController
                     $valid = true;
                     // Supprimer le code utilisé
                     unset($backupCodes[$i]);
-                    $this->db->execute(
-                        'UPDATE users SET two_factor_recovery_codes = ? WHERE id = ?',
-                        [json_encode(array_values($backupCodes)), $userId]
-                    );
+                    $stmt = $this->db->prepare(
+                'UPDATE users SET two_factor_recovery_codes = ? WHERE id = ?'
+            );
+            $stmt->execute([json_encode(array_values($backupCodes)), $userId]);
                     break;
                 }
             }
         }
 
         if (!$valid) {
-            $this->errorResponse('Code incorrect ou expiré.', 401);
+            $this->error('Code incorrect ou expiré.', 401);
             return;
         }
 
-        $this->jsonResponse(['valid' => true]);
+        $this->success(['valid' => true]);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
