@@ -1,25 +1,19 @@
-const { withGradleProperties, withAppBuildGradle } = require('expo/config-plugins');
+const { withAppBuildGradle } = require('expo/config-plugins');
 
-function withKotlinVersion(config) {
-  // 1. Inject kotlinVersion into gradle.properties
-  config = withGradleProperties(config, (config) => {
-    config.modResults = config.modResults.filter(
-      (item) => !(item.type === 'property' && item.key === 'kotlinVersion')
-    );
-    config.modResults.push({
-      type: 'property',
-      key: 'kotlinVersion',
-      value: '2.0.0',
-    });
-    return config;
-  });
-
-  // 2. Remove enableBundleCompression from app/build.gradle (deprecated in RN 0.74+)
+/**
+ * Config plugin that removes the deprecated 'enableBundleCompression' property
+ * from the generated android/app/build.gradle file.
+ * This property was removed in React Native 0.74+ and causes build failures.
+ * 
+ * NOTE: Do NOT override kotlinVersion - Expo SDK 54 requires Kotlin 1.9.x
+ */
+function withFixBuildGradle(config) {
   config = withAppBuildGradle(config, (config) => {
     if (config.modResults.contents) {
+      // Remove enableBundleCompression line (any variation)
       config.modResults.contents = config.modResults.contents.replace(
-        /\s*enableBundleCompression\s*=\s*.*\n?/g,
-        '\n'
+        /.*enableBundleCompression.*\n?/g,
+        ''
       );
     }
     return config;
@@ -28,4 +22,4 @@ function withKotlinVersion(config) {
   return config;
 }
 
-module.exports = withKotlinVersion;
+module.exports = withFixBuildGradle;
