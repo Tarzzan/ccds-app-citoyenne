@@ -50,14 +50,7 @@
           "locationAlwaysAndWhenInUsePermission": "CCDS utilise votre position pour localiser vos signalements."
         }
       ],
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "kotlinVersion": "2.0.0"
-          }
-        }
-      ]
+      "./plugins/withKotlinVersion.js"
     ],
     "scheme": "ccds",
     "extra": {
