@@ -79,6 +79,7 @@
       "url": "https://u.expo.dev/a7334d51-b12a-46eb-bc2d-c9b847551f66",
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0
-    }
+    },
+    "runtimeVersion": "exposdk:54.0.0"
   }
 }
