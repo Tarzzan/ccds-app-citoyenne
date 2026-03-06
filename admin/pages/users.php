@@ -7,7 +7,7 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 $admin      = require_admin_auth();
 $page_title = 'Utilisateurs';
 $active_nav = 'users';
-$db = Database::getInstance()->getConnection();
+$db = Database::getInstance();
 
 // ── Actions POST ─────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

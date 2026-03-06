@@ -9,7 +9,7 @@ $admin      = require_admin_auth();
 $page_title = 'Signalements';
 $active_nav = 'incidents';
 
-$db = Database::getInstance()->getConnection();
+$db = Database::getInstance();
 
 // --- Paramètres de filtre et pagination ---
 $per_page   = 20;

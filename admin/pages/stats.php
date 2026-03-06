@@ -10,7 +10,7 @@ $admin      = require_admin_auth();
 $page_title = 'Statistiques';
 $active_nav = 'stats';
 
-$db = Database::getInstance()->getConnection();
+$db = Database::getInstance();
 
 // --- Période ---
 $period = (int)($_GET['period'] ?? 30);

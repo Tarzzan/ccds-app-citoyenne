@@ -11,7 +11,7 @@ $page_title  = $page_title  ?? 'Back-Office CCDS';
 $active_nav  = $active_nav  ?? '';
 
 // Compter les signalements en attente pour le badge sidebar
-$db = Database::getInstance()->getConnection();
+$db = Database::getInstance();
 $pending_count = 0;
 try {
     $stmt = $db->query("SELECT COUNT(*) FROM incidents WHERE status = 'submitted'");

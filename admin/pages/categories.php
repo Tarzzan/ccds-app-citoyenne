@@ -9,7 +9,7 @@ $admin      = require_admin_auth();
 $page_title = 'Catégories';
 $active_nav = 'categories';
 
-$db = Database::getInstance()->getConnection();
+$db = Database::getInstance();
 
 $success = '';
 $error   = '';

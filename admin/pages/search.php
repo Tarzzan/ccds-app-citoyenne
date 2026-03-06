@@ -7,7 +7,7 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 $admin      = require_admin_auth();
 $page_title = 'Recherche';
 $active_nav = 'search';
-$db = Database::getInstance()->getConnection();
+$db = Database::getInstance();
 
 $query   = trim($_GET['q'] ?? '');
 $results = ['incidents' => [], 'users' => [], 'categories' => []];

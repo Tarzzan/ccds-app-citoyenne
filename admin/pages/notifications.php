@@ -6,7 +6,7 @@
 require_once __DIR__ . '/../includes/bootstrap.php';
 $admin = require_admin_auth();
 
-$db = Database::getInstance()->getConnection();
+$db = Database::getInstance();
 
 // --- Traitement POST : envoi d'une notification manuelle ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

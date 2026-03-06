@@ -7,7 +7,7 @@ $admin      = require_admin_auth();
 $page_title = 'Carte des signalements';
 $active_nav = 'map';
 
-$db = Database::getInstance()->getConnection();
+$db = Database::getInstance();
 
 // Récupérer tous les signalements avec coordonnées
 $incidents = $db->query("

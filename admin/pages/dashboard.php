@@ -7,7 +7,7 @@ $admin      = require_admin_auth();
 $page_title = 'Tableau de bord';
 $active_nav = 'dashboard';
 
-$db = Database::getInstance()->getConnection();
+$db = Database::getInstance();
 
 // --- KPIs globaux ---
 $kpis = $db->query("

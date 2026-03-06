@@ -2,6 +2,7 @@
   "expo": {
     "name": "CCDS Citoyen",
     "slug": "ccds-app-citoyenne",
+    "owner": "william.meri",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -31,7 +32,20 @@
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -53,10 +67,18 @@
     ],
     "scheme": "ccds",
     "extra": {
-      "API_BASE_URL": "https://votre-domaine.com/api",
+      "API_BASE_URL": "https://ccds-app-citoyenne-production.up.railway.app/api",
       "APP_TERRITORY": "Kourou, Sinnamary, Iracoubo, Saint-Élie",
-      "APP_REGION": "Guyane Française"
+      "APP_REGION": "Guyane Française",
+      "eas": {
+        "projectId": "a7334d51-b12a-46eb-bc2d-c9b847551f66"
+      }
     },
-    "sdkVersion": "54.0.0"
+    "sdkVersion": "54.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/a7334d51-b12a-46eb-bc2d-c9b847551f66",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    }
   }
 }

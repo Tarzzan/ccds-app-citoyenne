@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Veuillez renseigner votre email et votre mot de passe.';
     } else {
         try {
-            $db   = Database::getInstance()->getConnection();
+            $db   = Database::getInstance();
             $stmt = $db->prepare("SELECT * FROM users WHERE email = ? AND role IN ('admin','agent') AND is_active = 1");
             $stmt->execute([$email]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);

@@ -9,7 +9,7 @@ $admin = require_admin_auth();
 $id = (int)($_GET['id'] ?? 0);
 if (!$id) render_error(400, 'Identifiant de signalement manquant.');
 
-$db = Database::getInstance()->getConnection();
+$db = Database::getInstance();
 
 // Charger le signalement
 $stmt = $db->prepare("
