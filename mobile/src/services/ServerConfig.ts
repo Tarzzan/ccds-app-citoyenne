@@ -34,14 +34,11 @@ export const ServerConfig = {
 
   /**
    * Vérifie si un serveur est déjà configuré.
+   * Retourne toujours true car l'URL Railway par défaut est utilisée
+   * si aucune URL personnalisée n'est stockée.
    */
   async isConfigured(): Promise<boolean> {
-    try {
-      const url = await AsyncStorage.getItem(SERVER_URL_KEY);
-      return url !== null && url.trim().length > 0;
-    } catch {
-      return false;
-    }
+    return true;
   },
 
   /**
@@ -61,7 +58,7 @@ export const ServerConfig = {
       const controller = new AbortController();
       const timeout    = setTimeout(() => controller.abort(), 8000);
 
-      const response = await fetch(`${clean}/categories.php`, {
+      const response = await fetch(`${clean}/categories`, {
         method:  'GET',
         signal:  controller.signal,
         headers: { 'Content-Type': 'application/json' },
