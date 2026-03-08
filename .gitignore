@@ -32,3 +32,4 @@ Thumbs.db
 
 # Composer
 vendor/
+backend/index.php.bak

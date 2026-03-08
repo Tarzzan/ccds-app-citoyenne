@@ -44,7 +44,7 @@ Security::checkRateLimit();
 // --- Routeur ---
 $method   = $_SERVER['REQUEST_METHOD'];
 $uri      = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$uri      = preg_replace('#^/api#', '', $uri);
+$uri      = preg_replace('#^/(mc-api|api)#', '', $uri);
 $uri      = rtrim($uri, '/') ?: '/';
 $segments = array_values(array_filter(explode('/', $uri)));
 $resource = $segments[0] ?? '';
@@ -389,6 +389,42 @@ switch ($resource) {
             }
         } elseif ($adminResource === 'stats' && ($segments[2] ?? '') === 'users') {
             (new UserController())->stats();
+        // ----------------------------------------------------------------
+        // Admin — Logs d'audit (ADMIN-08)
+        // GET  /api/admin/audit-logs
+        // GET  /api/admin/audit-logs/export
+        // ----------------------------------------------------------------
+        } elseif ($adminResource === 'audit-logs') {
+            require_once __DIR__ . '/controllers/AuditLogController.php';
+            $auditCtrl = new AuditLogController();
+            if ($adminId === 'export' && $method === 'GET') {
+                $auditCtrl->exportCsv();
+            } elseif ($method === 'GET') {
+                $auditCtrl->index();
+            } else {
+                http_response_code(405);
+            }
+        // ----------------------------------------------------------------
+        // Admin — Modération des commentaires (ADMIN-07)
+        // GET  /api/admin/moderation/reports
+        // PUT  /api/admin/moderation/reports/{id}
+        // GET  /api/admin/moderation/stats
+        // ----------------------------------------------------------------
+        } elseif ($adminResource === 'moderation') {
+            require_once __DIR__ . '/controllers/ModerationController.php';
+            $modCtrl = new ModerationController();
+            $modSub  = $segments[2] ?? '';
+            $modId   = isset($segments[3]) ? Security::sanitizeId($segments[3]) : null;
+            if ($modSub === 'stats' && $method === 'GET') {
+                $modCtrl->getStats();
+            } elseif ($modSub === 'reports' && $modId && $method === 'PUT') {
+                $modCtrl->reviewReport((int)$modId);
+            } elseif ($modSub === 'reports' && $method === 'GET') {
+                $modCtrl->getReports();
+            } else {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Endpoint moderation introuvable.']);
+            }
         } else {
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => "Ressource admin '$adminResource' introuvable."]);
