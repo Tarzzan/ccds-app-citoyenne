@@ -125,7 +125,7 @@ class WebhookController extends BaseController
         $payload = [
             'event'     => 'webhook.test',
             'timestamp' => date('c'),
-            'data'      => ['message' => 'Ceci est un événement de test CCDS Citoyen.'],
+            'data'      => ['message' => 'Ceci est un événement de test ' . (defined('APP_NAME') ? APP_NAME : 'Ma Commune') . '.'],
         ];
 
         $result = $this->dispatch($webhook, $payload);
@@ -183,9 +183,9 @@ class WebhookController extends BaseController
             CURLOPT_TIMEOUT        => 10,
             CURLOPT_HTTPHEADER     => [
                 'Content-Type: application/json',
-                'X-CCDS-Signature: sha256=' . $signature,
-                'X-CCDS-Event: ' . $payload['event'],
-                'User-Agent: CCDS-Webhook/1.6',
+                'X-' . strtoupper(defined('APP_SHORT_NAME') ? APP_SHORT_NAME : 'MACOMMUNE') . '-Signature: sha256=' . $signature,
+                'X-' . strtoupper(defined('APP_SHORT_NAME') ? APP_SHORT_NAME : 'MACOMMUNE') . '-Event: ' . $payload['event'],
+                'User-Agent: ' . (defined('APP_SHORT_NAME') ? APP_SHORT_NAME : 'MaCommune') . '-Webhook/' . (defined('APP_VERSION') ? APP_VERSION : '1.0.0'),
             ],
         ]);
 
@@ -226,9 +226,9 @@ class WebhookController extends BaseController
             CURLOPT_TIMEOUT        => 5,
             CURLOPT_HTTPHEADER     => [
                 'Content-Type: application/json',
-                'X-CCDS-Signature: sha256=' . $signature,
-                'X-CCDS-Event: ' . $payload['event'],
-                'User-Agent: CCDS-Webhook/1.6',
+                'X-' . strtoupper(defined('APP_SHORT_NAME') ? APP_SHORT_NAME : 'MACOMMUNE') . '-Signature: sha256=' . $signature,
+                'X-' . strtoupper(defined('APP_SHORT_NAME') ? APP_SHORT_NAME : 'MACOMMUNE') . '-Event: ' . $payload['event'],
+                'User-Agent: ' . (defined('APP_SHORT_NAME') ? APP_SHORT_NAME : 'MaCommune') . '-Webhook/' . (defined('APP_VERSION') ? APP_VERSION : '1.0.0'),
             ],
         ]);
         curl_exec($ch);

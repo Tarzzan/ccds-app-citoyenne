@@ -27,12 +27,12 @@ class GdprController extends BaseController
             mkdir($exportDir, 0700, true);
         }
 
-        $filename   = "ccds_export_user_{$userId}_" . date('Ymd_His') . '.json';
+        $filename   = "" . (defined('APP_SLUG') ? APP_SLUG : 'ma_commune') . "_export_user_{$userId}_" . date('Ymd_His') . '.json';
         $filepath   = $exportDir . $filename;
         $exportData = [
             'generated_at'  => date('c'),
             'user_id'       => $userId,
-            'ccds_version'  => '1.6.0',
+            'app_version'  => (defined('APP_VERSION') ? APP_VERSION : '1.0.0'),
             'data'          => $data,
         ];
 
@@ -46,7 +46,7 @@ class GdprController extends BaseController
         $stmt->execute([$userId, $filename]);
 
         // En production : envoyer un email avec le lien de téléchargement
-        // mail($user['email'], 'Votre export RGPD CCDS', "Votre archive est disponible...");
+        // mail($user['email'], 'Votre export RGPD ' . (defined('APP_NAME') ? APP_NAME : 'Ma Commune'), "Votre archive est disponible...");
 
         $this->success([
             'message'    => 'Votre archive de données a été générée.',
@@ -116,7 +116,7 @@ class GdprController extends BaseController
         $stmt = $this->db->prepare("
             UPDATE users SET
                 full_name = 'Utilisateur supprimé',
-                email     = CONCAT('deleted_', id, '@ccds.deleted'),
+                email     = CONCAT('deleted_', id, '@" . (defined('APP_SLUG') ? APP_SLUG : 'ma_commune') . ".deleted'),
                 password  = '',
                 phone     = NULL,
                 is_active = 0

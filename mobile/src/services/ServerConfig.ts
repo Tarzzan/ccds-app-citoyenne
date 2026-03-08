@@ -1,13 +1,13 @@
 /**
- * CCDS — Service de Configuration Serveur
+ * Ma Commune — Service de Configuration Serveur
  * Gère la persistance de l'URL du serveur API via AsyncStorage.
- * Permet à l'application de fonctionner avec n'importe quel serveur CCDS.
+ * Permet à l'application de fonctionner avec n'importe quel serveur Ma Commune.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SERVER_URL_KEY = 'ccds_server_url';
-const DEFAULT_URL    = 'https://ccds-app-citoyenne-production.up.railway.app/api';
+const SERVER_URL_KEY = 'ma_commune_server_url';
+const DEFAULT_URL    = process.env.EXPO_PUBLIC_API_URL ?? 'https://votre-domaine.com/api';
 
 export const ServerConfig = {
 

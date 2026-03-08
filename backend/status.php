@@ -84,7 +84,7 @@ $incidents = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Statut des services — CCDS Citoyen</title>
+    <title>Statut des services — <?= defined('APP_NAME') ? htmlspecialchars(APP_NAME) : 'Ma Commune' ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -127,8 +127,8 @@ $incidents = [
     <!-- En-tête -->
     <div class="header">
         <div class="logo">🌿</div>
-        <div class="site-name">CCDS Citoyen — Statut des services</div>
-        <div class="site-sub">Guyane Française · Mis à jour le <?= date('d/m/Y à H:i') ?></div>
+        <div class="site-name"><?= defined('APP_NAME') ? htmlspecialchars(APP_NAME) : 'Ma Commune' ?> — Statut des services</div>
+        <div class="site-sub">Mis à jour le <?= date('d/m/Y à H:i') ?></div>
     </div>
 
     <!-- Statut global -->
@@ -193,7 +193,7 @@ $incidents = [
 
     <div class="refresh-note">
         Cette page se rafraîchit automatiquement toutes les 60 secondes.
-        <br>Pour signaler un problème : <a href="mailto:support@ccds.fr">support@ccds.fr</a>
+        <br>Pour signaler un problème : <a href="mailto:<?= defined('APP_EMAIL_FROM') ? htmlspecialchars(APP_EMAIL_FROM) : 'support@votre-domaine.com' ?>">Contacter le support</a>
     </div>
 </div>
 

@@ -87,7 +87,7 @@ class Security
     {
         $ip      = self::getClientIp();
         $key     = 'rl_' . md5($ip);
-        $dir     = sys_get_temp_dir() . '/ccds_rl/';
+        $dir     = sys_get_temp_dir() . '/' . (defined('APP_SLUG') ? APP_SLUG : 'ma_commune') . '_rl/';
 
         if (!is_dir($dir)) {
             @mkdir($dir, 0700, true);

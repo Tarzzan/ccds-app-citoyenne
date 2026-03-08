@@ -106,7 +106,7 @@ class PushNotificationService
             'data'  => $data,
             'sound' => 'default',
             'badge' => 1,
-            'channelId' => 'ccds-notifications',
+            'channelId' => (defined('APP_SLUG') ? str_replace('_', '-', APP_SLUG) : 'ma-commune') . '-notifications',
         ], $tokens);
 
         $ch = curl_init(self::EXPO_PUSH_URL);

@@ -42,8 +42,8 @@ class PdfReportService
 
         // ── En-tête ───────────────────────────────────────────
         $pdf->SetFont('Arial', 'B', 18);
-        $pdf->SetTextColor(37, 99, 235); // bleu CCDS
-        $pdf->Cell(0, 10, 'Rapport d\'Incident — CCDS Citoyen', 0, 1, 'C');
+        $pdf->SetTextColor(37, 99, 235); // couleur principale
+        $pdf->Cell(0, 10, 'Rapport d\'Incident — ' . (defined('APP_NAME') ? APP_NAME : 'Ma Commune'), 0, 1, 'C');
 
         $pdf->SetFont('Arial', '', 10);
         $pdf->SetTextColor(107, 114, 128);
@@ -166,10 +166,10 @@ class PdfReportService
         $pdf->SetY(-20);
         $pdf->SetFont('Arial', 'I', 8);
         $pdf->SetTextColor(156, 163, 175);
-        $pdf->Cell(0, 6, 'CCDS Citoyen — Rapport confidentiel — ' . date('d/m/Y'), 0, 0, 'C');
+        $pdf->Cell(0, 6, (defined('APP_NAME') ? APP_NAME : 'Ma Commune') . ' — Rapport confidentiel — ' . date('d/m/Y'), 0, 0, 'C');
 
         // ── Envoi ─────────────────────────────────────────────
-        $filename = 'CCDS_Incident_' . $incident['reference'] . '_' . date('Ymd') . '.pdf';
+        $filename = (defined('APP_REFERENCE_PREFIX') ? APP_REFERENCE_PREFIX : 'MC') . '_Incident_' . $incident['reference'] . '_' . date('Ymd') . '.pdf';
         $pdf->Output('D', $filename);
     }
 

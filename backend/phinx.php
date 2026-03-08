@@ -7,9 +7,9 @@
 // Railway: MYSQLHOST, MYSQLDATABASE, MYSQLUSER, MYSQLPASSWORD, MYSQLPORT
 // Dev local: DB_HOST, DB_NAME, DB_USER, DB_PASS, DB_PORT
 $dbHost = getenv('MYSQLHOST')     ?: getenv('DB_HOST') ?: 'localhost';
-$dbName = getenv('MYSQLDATABASE') ?: getenv('DB_NAME') ?: 'ccds_db';
-$dbUser = getenv('MYSQLUSER')     ?: getenv('DB_USER') ?: 'ccds_user';
-$dbPass = getenv('MYSQLPASSWORD') ?: getenv('DB_PASS') ?: 'ccds_pass';
+$dbName = getenv('MYSQLDATABASE') ?: getenv('DB_NAME') ?: 'ma_commune_db';
+$dbUser = getenv('MYSQLUSER')     ?: getenv('DB_USER') ?: 'ma_commune_user';
+$dbPass = getenv('MYSQLPASSWORD') ?: getenv('DB_PASS') ?: 'ma_commune_pass';
 $dbPort = getenv('MYSQLPORT')     ?: getenv('DB_PORT') ?: '3306';
 
 return [

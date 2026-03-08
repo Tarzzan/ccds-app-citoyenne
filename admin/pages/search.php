@@ -85,7 +85,7 @@ require_once __DIR__ . '/../includes/layout.php';
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Recherche — CCDS Admin</title>
+<title>Recherche — <?= defined('APP_SHORT_NAME') ? e(APP_SHORT_NAME) : 'MaCommune' ?> Admin</title>
 <style>
 .search-hero{background:linear-gradient(135deg,#1d4ed8,#3b82f6);border-radius:12px;padding:28px;margin-bottom:24px;color:#fff}
 .search-hero h2{margin:0 0 12px;font-size:1.4rem}

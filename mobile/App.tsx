@@ -45,7 +45,7 @@ function AppWithNotifications() {
   useEffect(() => {
     OfflineQueue.sync().then(({ synced }) => {
       if (synced > 0) {
-        console.log(`[CCDS] ${synced} signalement(s) hors-ligne synchronisé(s) au démarrage`);
+        console.log(`[${process.env.EXPO_PUBLIC_APP_NAME ?? 'Ma Commune'}] ${synced} signalement(s) hors-ligne synchronisé(s) au démarrage`);
       }
     });
   }, []);

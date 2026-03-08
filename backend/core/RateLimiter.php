@@ -42,7 +42,7 @@ class RateLimiter
 
     public function __construct()
     {
-        $this->storageDir = sys_get_temp_dir() . '/ccds_ratelimit/';
+        $this->storageDir = sys_get_temp_dir() . '/' . (defined('APP_SLUG') ? APP_SLUG : 'ma_commune') . '_ratelimit/';
         if (!is_dir($this->storageDir)) {
             mkdir($this->storageDir, 0700, true);
         }

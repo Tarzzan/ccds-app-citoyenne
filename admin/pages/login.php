@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Connexion — CCDS Admin</title>
+  <title>Connexion — <?= defined('APP_SHORT_NAME') ? e(APP_SHORT_NAME) : 'MaCommune' ?> Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/admin/assets/css/admin.css">
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="login-card">
     <div class="login-logo">
       <div class="logo-icon">🏛️</div>
-      <div class="logo-name">CCDS</div>
+      <div class="logo-name"><?= defined('APP_SHORT_NAME') ? e(APP_SHORT_NAME) : 'MaCommune' ?></div>
       <div class="logo-sub">Espace Administration</div>
     </div>
 

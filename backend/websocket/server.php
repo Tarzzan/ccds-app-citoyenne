@@ -27,7 +27,7 @@ use Ratchet\Server\IoServer;
 use Ratchet\Http\HttpServer;
 use Ratchet\WebSocket\WsServer;
 
-class CCDSRealtimeServer implements MessageComponentInterface
+class MaCommuneRealtimeServer implements MessageComponentInterface
 {
     /** @var \SplObjectStorage<ConnectionInterface, array> */
     protected \SplObjectStorage $clients;
@@ -35,7 +35,7 @@ class CCDSRealtimeServer implements MessageComponentInterface
     public function __construct()
     {
         $this->clients = new \SplObjectStorage();
-        echo "[CCDS WebSocket] Serveur démarré — en attente de connexions...\n";
+        echo "[MaCommune WebSocket] Serveur démarré — en attente de connexions...\n";
     }
 
     public function onOpen(ConnectionInterface $conn): void
@@ -63,7 +63,7 @@ class CCDSRealtimeServer implements MessageComponentInterface
             'clients' => count($this->clients),
         ]));
 
-        echo "[CCDS WS] Nouvelle connexion : user_id={$payload['user_id']} (total: " . count($this->clients) . ")\n";
+        echo "[MaCommune WS] Nouvelle connexion : user_id={$payload['user_id']} (total: " . count($this->clients) . ")\n";
     }
 
     public function onMessage(ConnectionInterface $from, $msg): void
@@ -90,12 +90,12 @@ class CCDSRealtimeServer implements MessageComponentInterface
     public function onClose(ConnectionInterface $conn): void
     {
         $this->clients->detach($conn);
-        echo "[CCDS WS] Déconnexion (total: " . count($this->clients) . ")\n";
+        echo "[MaCommune WS] Déconnexion (total: " . count($this->clients) . ")\n";
     }
 
     public function onError(ConnectionInterface $conn, \Exception $e): void
     {
-        echo "[CCDS WS] Erreur : " . $e->getMessage() . "\n";
+        echo "[MaCommune WS] Erreur : " . $e->getMessage() . "\n";
         $conn->close();
     }
 
@@ -110,7 +110,7 @@ class CCDSRealtimeServer implements MessageComponentInterface
             $client->send($message);
             $count++;
         }
-        echo "[CCDS WS] Broadcast '$event' → $count clients\n";
+        echo "[MaCommune WS] Broadcast '$event' → $count clients\n";
     }
 }
 
@@ -119,11 +119,11 @@ $port   = defined('WS_PORT') ? WS_PORT : 8080;
 $server = IoServer::factory(
     new HttpServer(
         new WsServer(
-            new CCDSRealtimeServer()
+            new MaCommuneRealtimeServer()
         )
     ),
     $port
 );
 
-echo "[CCDS WebSocket] Écoute sur le port $port\n";
+echo "[MaCommune WebSocket] Écoute sur le port $port\n";
 $server->run();

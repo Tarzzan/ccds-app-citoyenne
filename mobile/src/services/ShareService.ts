@@ -20,7 +20,7 @@ export interface ShareableIncident {
   photo_url?: string;
 }
 
-const APP_URL = 'https://ccds.guyane.fr';
+const APP_URL = process.env.EXPO_PUBLIC_APP_URL ?? 'https://votre-domaine.com';
 
 const STATUS_LABELS: Record<string, string> = {
   submitted:   'Soumis',
@@ -39,14 +39,14 @@ export async function shareIncident(incident: ShareableIncident): Promise<void> 
   const votesLine   = incident.votes_count > 0 ? `👍 ${incident.votes_count} citoyen${incident.votes_count > 1 ? 's' : ''} concerné${incident.votes_count > 1 ? 's' : ''}\n` : '';
 
   const message = [
-    `🌿 CCDS Citoyen — Signalement`,
+    `📍 ${process.env.EXPO_PUBLIC_APP_NAME ?? 'Ma Commune'} — Signalement`,
     ``,
     `${incident.title}`,
     ``,
     `${addressLine}${votesLine}📋 Statut : ${statusLabel}`,
     `🔖 Réf. : ${incident.reference}`,
     ``,
-    `Signalez aussi les problèmes de votre quartier sur l'application CCDS Citoyen.`,
+    `Signalez aussi les problèmes de votre quartier sur l'application ${process.env.EXPO_PUBLIC_APP_NAME ?? 'Ma Commune'}.`,
     `${APP_URL}`,
   ].join('\n');
 
@@ -72,13 +72,13 @@ export async function shareIncident(incident: ShareableIncident): Promise<void> 
   // Partage texte natif
   await Share.share(
     {
-      title:   `Signalement CCDS — ${incident.reference}`,
+      title:   `Signalement ${process.env.EXPO_PUBLIC_APP_NAME ?? 'Ma Commune'} — ${incident.reference}`,
       message: Platform.OS === 'ios' ? message : message,
       url:     Platform.OS === 'ios' ? `${APP_URL}/incidents/${incident.id}` : undefined,
     },
     {
       dialogTitle:   `Partager : ${incident.title}`,
-      subject:       `Signalement CCDS — ${incident.reference}`,
+      subject:       `Signalement ${process.env.EXPO_PUBLIC_APP_NAME ?? 'Ma Commune'} — ${incident.reference}`,
       tintColor:     '#2563eb',
     }
   );
@@ -90,7 +90,8 @@ export async function shareIncident(incident: ShareableIncident): Promise<void> 
  */
 async function downloadPhotoForSharing(url: string, reference: string): Promise<string | null> {
   try {
-    const fileName = `ccds_share_${reference.replace(/[^a-z0-9]/gi, '_')}.jpg`;
+    const appSlug = (process.env.EXPO_PUBLIC_APP_NAME ?? 'ma_commune').toLowerCase().replace(/[^a-z0-9]/gi, '_');
+    const fileName = `${appSlug}_share_${reference.replace(/[^a-z0-9]/gi, '_')}.jpg`;
     const localUri = FileSystem.cacheDirectory + fileName;
 
     const info = await FileSystem.getInfoAsync(localUri);

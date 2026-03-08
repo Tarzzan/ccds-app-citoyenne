@@ -71,7 +71,7 @@ class TwoFactorController extends BaseController
             $stmt->execute([json_encode(array_map(fn($c) => password_hash($c, PASSWORD_BCRYPT), $backupCodes)), $userId]);
 
         // URL otpauth:// pour le QR code
-        $issuer   = urlencode('CCDS Citoyen');
+        $issuer   = urlencode(defined('APP_NAME') ? APP_NAME : 'Ma Commune');
         $label    = urlencode($user['email']);
         $otpUrl   = "otpauth://totp/{$issuer}:{$label}?secret={$secret}&issuer={$issuer}&algorithm=SHA1&digits=6&period=30";
         $qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" . urlencode($otpUrl);
@@ -178,9 +178,9 @@ class TwoFactorController extends BaseController
         $stmt->execute([password_hash($code, PASSWORD_BCRYPT) . '|' . $expires, $userId]);
 
         // Envoyer l'email
-        $subject = '[CCDS] Votre code de vérification';
+        $subject = '[' . (defined('APP_SHORT_NAME') ? APP_SHORT_NAME : 'MaCommune') . '] Votre code de vérification';
         $message = "Bonjour {$user['full_name']},\n\nVotre code de vérification est : {$code}\n\nCe code expire dans 10 minutes.\n\nSi vous n'avez pas demandé ce code, ignorez cet email.";
-        mail($user['email'], $subject, $message, 'From: noreply@ccds.fr');
+        mail($user['email'], $subject, $message, 'From: ' . (defined('APP_EMAIL_FROM') ? APP_EMAIL_FROM : 'noreply@votre-domaine.com'));
 
         $this->success(['sent' => true, 'expires_in' => 600]);
     }

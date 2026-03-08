@@ -152,7 +152,7 @@ function validate(array $data, array $rules): array
  */
 function generate_reference(int $id): string
 {
-    return 'CCDS-' . date('Y') . '-' . str_pad($id, 5, '0', STR_PAD_LEFT);
+    return (defined('APP_REFERENCE_PREFIX') ? APP_REFERENCE_PREFIX : 'MC') . '-' . date('Y') . '-' . str_pad($id, 5, '0', STR_PAD_LEFT);
 }
 
 /**

@@ -7,7 +7,7 @@
  */
 
 $admin = current_admin();
-$page_title  = $page_title  ?? 'Back-Office CCDS';
+$page_title  = $page_title  ?? (defined('APP_NAME') ? APP_NAME . ' Admin' : 'Ma Commune Admin');
 $active_nav  = $active_nav  ?? '';
 
 // Compter les signalements en attente pour le badge sidebar
@@ -29,7 +29,7 @@ try {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= e($page_title) ?> — CCDS Admin</title>
+  <title><?= e($page_title) ?> — <?= defined('APP_SHORT_NAME') ? e(APP_SHORT_NAME) : 'MaCommune' ?> Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/admin/assets/css/admin.css">
@@ -43,8 +43,8 @@ try {
     <div class="sidebar-brand">
       <span class="brand-icon">🌿</span>
       <div>
-        <div class="brand-name">CCDS Citoyen</div>
-        <div class="brand-sub">Guyane — Administration</div>
+        <div class="brand-name"><?= defined('APP_NAME') ? e(APP_NAME) : 'Ma Commune' ?></div>
+        <div class="brand-sub"><?= defined('APP_SUBTITLE') ? e(APP_SUBTITLE) : 'Administration' ?></div>
       </div>
     </div>
 

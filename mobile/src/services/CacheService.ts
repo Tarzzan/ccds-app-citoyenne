@@ -34,7 +34,7 @@ class CacheService {
 
     // 2. Vérifier AsyncStorage
     try {
-      const raw = await AsyncStorage.getItem(`@ccds_cache_${key}`);
+      const raw = await AsyncStorage.getItem(`@${(process.env.EXPO_PUBLIC_APP_SLUG ?? 'ma_commune')}_cache_${key}`);
       if (raw) {
         const entry: CacheEntry<T> = JSON.parse(raw);
         if (this.isValid(entry)) {
@@ -43,7 +43,7 @@ class CacheService {
           return entry.data;
         }
         // Entrée expirée — nettoyer
-        await AsyncStorage.removeItem(`@ccds_cache_${key}`);
+        await AsyncStorage.removeItem(`@${(process.env.EXPO_PUBLIC_APP_SLUG ?? 'ma_commune')}_cache_${key}`);
       }
     } catch {
       // Ignorer les erreurs de cache
@@ -67,7 +67,7 @@ class CacheService {
 
     // AsyncStorage (pour la persistance entre sessions)
     try {
-      await AsyncStorage.setItem(`@ccds_cache_${key}`, JSON.stringify(entry));
+      await AsyncStorage.setItem(`@${(process.env.EXPO_PUBLIC_APP_SLUG ?? 'ma_commune')}_cache_${key}`, JSON.stringify(entry));
     } catch {
       // Ignorer les erreurs d'écriture
     }
@@ -79,7 +79,7 @@ class CacheService {
   async invalidate(key: string): Promise<void> {
     this.memoryCache.delete(key);
     try {
-      await AsyncStorage.removeItem(`@ccds_cache_${key}`);
+      await AsyncStorage.removeItem(`@${(process.env.EXPO_PUBLIC_APP_SLUG ?? 'ma_commune')}_cache_${key}`);
     } catch {
       // Ignorer
     }
@@ -99,7 +99,7 @@ class CacheService {
     // AsyncStorage
     try {
       const allKeys = await AsyncStorage.getAllKeys();
-      const toDelete = allKeys.filter(k => k.startsWith(`@ccds_cache_${prefix}`));
+      const toDelete = allKeys.filter(k => k.startsWith(`@${(process.env.EXPO_PUBLIC_APP_SLUG ?? 'ma_commune')}_cache_${prefix}`));
       if (toDelete.length > 0) {
         await AsyncStorage.multiRemove(toDelete);
       }
@@ -115,7 +115,7 @@ class CacheService {
     this.memoryCache.clear();
     try {
       const allKeys = await AsyncStorage.getAllKeys();
-      const cacheKeys = allKeys.filter(k => k.startsWith('@ccds_cache_'));
+      const cacheKeys = allKeys.filter(k => k.startsWith(`@${(process.env.EXPO_PUBLIC_APP_SLUG ?? 'ma_commune')}_cache_`));
       if (cacheKeys.length > 0) {
         await AsyncStorage.multiRemove(cacheKeys);
       }

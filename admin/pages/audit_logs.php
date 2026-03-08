@@ -75,7 +75,7 @@ $actionLabels = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logs d'audit — CCDS Admin</title>
+    <title>Logs d'audit — <?= defined('APP_SHORT_NAME') ? e(APP_SHORT_NAME) : 'MaCommune' ?> Admin</title>
     <link rel="stylesheet" href="/admin/assets/css/admin.css">
     <style>
         .filters-bar { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.06); display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }

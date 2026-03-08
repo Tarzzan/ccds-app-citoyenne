@@ -203,7 +203,7 @@ require_once __DIR__ . '/../includes/layout.php';
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Utilisateurs — CCDS Admin</title>
+<title>Utilisateurs — <?= defined('APP_SHORT_NAME') ? e(APP_SHORT_NAME) : 'MaCommune' ?> Admin</title>
 <style>
 .kpi-row14{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:24px}
 .kpi14{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center}

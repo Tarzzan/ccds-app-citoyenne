@@ -91,7 +91,7 @@ class PublicApiController extends BaseController
                 'total_pages' => (int) ceil($totalCount / $perPage),
             ],
             'meta' => [
-                'source'    => 'CCDS Citoyen — Guyane',
+                'source'    => defined('APP_NAME') ? APP_NAME : 'Ma Commune',
                 'license'   => 'Open Data Commons Attribution License (ODC-By)',
                 'generated' => date('c'),
             ],

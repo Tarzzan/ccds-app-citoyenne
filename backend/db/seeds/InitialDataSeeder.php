@@ -27,9 +27,9 @@ class InitialDataSeeder extends AbstractSeed
         // ── Utilisateur admin par défaut ───────────────────────
         $this->table('users')->insert([
             [
-                'full_name'  => 'Administrateur CCDS',
-                'email'      => 'admin@ccds.gf',
-                'password'   => password_hash('Admin@CCDS2026!', PASSWORD_DEFAULT),
+                'full_name'  => 'Administrateur',
+                'email'      => 'admin@votre-domaine.com',
+                'password'   => password_hash('Admin@MaCommune2026!', PASSWORD_DEFAULT),
                 'role'       => 'admin',
                 'is_active'  => 1,
                 'created_at' => date('Y-m-d H:i:s'),
