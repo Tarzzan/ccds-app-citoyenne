@@ -426,6 +426,21 @@ switch ($resource) {
                 http_response_code(404);
                 echo json_encode(['success' => false, 'message' => 'Endpoint moderation introuvable.']);
             }
+        // ----------------------------------------------------------------
+        // Admin — Export global CSV/PDF (ADMIN-05)
+        // GET  /api/admin/reports/export?format=csv
+        // GET  /api/admin/reports/export?format=pdf
+        // ----------------------------------------------------------------
+        } elseif ($adminResource === 'reports') {
+            require_once __DIR__ . '/controllers/ExportController.php';
+            $exportCtrl = new ExportController();
+            $exportSub  = $segments[2] ?? '';
+            if ($exportSub === 'export' && $method === 'GET') {
+                $exportCtrl->export();
+            } else {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Endpoint reports introuvable.']);
+            }
         } else {
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => "Ressource admin '$adminResource' introuvable."]);
