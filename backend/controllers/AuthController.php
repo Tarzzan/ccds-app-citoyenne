@@ -196,6 +196,125 @@ class AuthController extends BaseController
     }
 
     // ----------------------------------------------------------------
+    // GET /api/profile/stats  (UX-07 — Tableau de bord citoyen)
+    // ----------------------------------------------------------------
+    public function getStats(): void
+    {
+        $auth   = $this->requireAuth();
+        $userId = (int) $auth['sub'];
+
+        // KPIs de base
+        $stmt = $this->db->prepare('
+            SELECT
+                COUNT(*)                                             AS incidents_count,
+                SUM(status = "resolved")                            AS resolved_count,
+                SUM(status = "in_progress")                         AS in_progress_count,
+                SUM(status = "submitted" OR status = "acknowledged") AS pending_count,
+                ROUND(
+                    AVG(CASE WHEN status = "resolved"
+                        THEN TIMESTAMPDIFF(HOUR, i.created_at,
+                            (SELECT sh.changed_at FROM status_history sh
+                             WHERE sh.incident_id = i.id AND sh.new_status = "resolved"
+                             ORDER BY sh.changed_at ASC LIMIT 1))
+                        ELSE NULL END
+                    ), 1
+                ) AS avg_resolution_hours
+            FROM incidents i
+            WHERE user_id = ?
+        ');
+        $stmt->execute([$userId]);
+        $kpis = $stmt->fetch();
+
+        // Points et rang
+        $stmtPoints = $this->db->prepare(
+            'SELECT COALESCE(SUM(points), 0) AS total_points FROM user_points WHERE user_id = ?'
+        );
+        $stmtPoints->execute([$userId]);
+        $totalPoints = (int) $stmtPoints->fetchColumn();
+
+        $stmtRank = $this->db->prepare('
+            SELECT COUNT(*) + 1 AS user_rank
+            FROM (
+                SELECT user_id, SUM(points) AS pts
+                FROM user_points
+                GROUP BY user_id
+                HAVING pts > ?
+            ) ranked
+        ');
+        $stmtRank->execute([$totalPoints]);
+        $rank = (int) $stmtRank->fetchColumn();
+
+        $totalUsers = (int) $this->db->query(
+            'SELECT COUNT(*) FROM users WHERE is_active = 1'
+        )->fetchColumn();
+
+        // Votes et commentaires
+        $stmtVotes = $this->db->prepare('SELECT COUNT(*) FROM votes WHERE user_id = ?');
+        $stmtVotes->execute([$userId]);
+        $votesCount = (int) $stmtVotes->fetchColumn();
+
+        $stmtComments = $this->db->prepare('SELECT COUNT(*) FROM comments WHERE user_id = ?');
+        $stmtComments->execute([$userId]);
+        $commentsCount = (int) $stmtComments->fetchColumn();
+
+        // Badges récents
+        $stmtBadges = $this->db->prepare('
+            SELECT b.name AS label, b.icon, ub.earned_at
+            FROM user_badges ub
+            JOIN badges b ON b.id = ub.badge_id
+            WHERE ub.user_id = ?
+            ORDER BY ub.earned_at DESC
+            LIMIT 5
+        ');
+        $stmtBadges->execute([$userId]);
+        $badges = $stmtBadges->fetchAll();
+
+        // Signalements récents
+        $stmtRecent = $this->db->prepare('
+            SELECT i.id, i.title, i.status, i.reference,
+                   c.icon AS category_icon
+            FROM incidents i
+            LEFT JOIN categories c ON c.id = i.category_id
+            WHERE i.user_id = ?
+            ORDER BY i.created_at DESC
+            LIMIT 5
+        ');
+        $stmtRecent->execute([$userId]);
+        $recentIncidents = $stmtRecent->fetchAll();
+
+        // Évolution mensuelle (6 derniers mois)
+        $stmtMonthly = $this->db->prepare('
+            SELECT
+                DATE_FORMAT(created_at, "%Y-%m") AS month,
+                COUNT(*)                          AS count
+            FROM incidents
+            WHERE user_id = ?
+              AND created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+            GROUP BY month
+            ORDER BY month ASC
+        ');
+        $stmtMonthly->execute([$userId]);
+        $monthly = $stmtMonthly->fetchAll();
+
+        $this->success([
+            'incidents_count'      => (int)  $kpis['incidents_count'],
+            'resolved_count'       => (int)  $kpis['resolved_count'],
+            'in_progress_count'    => (int)  $kpis['in_progress_count'],
+            'pending_count'        => (int)  $kpis['pending_count'],
+            'avg_resolution_hours' => $kpis['avg_resolution_hours'] !== null
+                                        ? (float) $kpis['avg_resolution_hours'] : null,
+            'points'               => $totalPoints,
+            'rank'                 => $rank,
+            'total_users'          => $totalUsers,
+            'votes_cast'           => $votesCount,
+            'comments_count'       => $commentsCount,
+            'badges'               => $badges,
+            'recent_incidents'     => $recentIncidents,
+            'monthly_activity'     => $monthly,
+        ]);
+    }
+
+    // ----------------------------------------------------------------
     // PUT /api/profile/password  (UX-03)
     // ----------------------------------------------------------------
     public function changePassword(): void

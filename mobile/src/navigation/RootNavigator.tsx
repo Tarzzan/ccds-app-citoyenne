@@ -14,6 +14,7 @@ import { ServerConfig }  from '../services/ServerConfig';
 
 // Écrans
 import ServerConfigScreen   from '../screens/ServerConfigScreen';
+import OnboardingScreen, { checkOnboardingDone } from '../screens/OnboardingScreen';
 import LoginScreen          from '../screens/LoginScreen';
 import RegisterScreen       from '../screens/RegisterScreen';
 import MapScreen            from '../screens/MapScreen';
@@ -23,6 +24,8 @@ import IncidentDetailScreen from '../screens/IncidentDetailScreen';
 import NotificationsScreen  from '../screens/NotificationsScreen';
 import EditIncidentScreen   from '../screens/EditIncidentScreen';
 import ProfileScreen        from '../screens/ProfileScreen';
+import DashboardScreen      from '../screens/DashboardScreen';
+import ImpactScreen         from '../screens/ImpactScreen';
 
 // ----------------------------------------------------------------
 // Types de navigation
@@ -36,6 +39,7 @@ export type AppTabParamList = {
   Map:           undefined;
   MyIncidents:   undefined;
   Notifications: undefined;
+  Dashboard:     undefined;
 };
 
 export type AppStackParamList = {
@@ -44,6 +48,7 @@ export type AppStackParamList = {
   IncidentDetail: { id: number; reference?: string };
   EditIncident:   { id: number };
   Profile:        undefined;
+  Impact:         undefined;
   ServerConfig:   undefined;
 };
 
@@ -79,6 +84,11 @@ function AppTabs() {
         name="Notifications"
         component={NotificationsScreen}
         options={{ title: 'Notifications', tabBarIcon: ({ color }) => <TabIcon label="🔔" color={color} /> }}
+      />
+      <Tab.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{ title: 'Mon bilan', tabBarIcon: ({ color }) => <TabIcon label="📊" color={color} /> }}
       />
     </Tab.Navigator>
   );
@@ -125,6 +135,11 @@ function AppNavigator() {
       />
 
       <AppStack.Screen
+        name="Impact"
+        component={ImpactScreen}
+        options={{ headerShown: true, title: 'Impact citoyen', ...headerOpts }}
+      />
+      <AppStack.Screen
         name="ServerConfig"
         options={{ headerShown: true, title: 'Configuration serveur', ...headerOpts, presentation: 'modal' }}
       >
@@ -156,12 +171,14 @@ function AuthNavigator() {
 export default function RootNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
   const [serverConfigured, setServerConfigured] = useState<boolean | null>(null);
+  const [onboardingDone, setOnboardingDone]     = useState<boolean | null>(null);
 
   useEffect(() => {
     ServerConfig.isConfigured().then(setServerConfigured);
+    checkOnboardingDone().then(setOnboardingDone);
   }, []);
 
-  if (isLoading || serverConfigured === null) {
+  if (isLoading || serverConfigured === null || onboardingDone === null) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f4c2a' }}>
         <Text style={{ fontSize: 48, marginBottom: 16 }}>🌿</Text>
@@ -179,6 +196,13 @@ export default function RootNavigator() {
         isFirstLaunch={true}
         onConfigured={() => setServerConfigured(true)}
       />
+    );
+  }
+
+  // Afficher l'onboarding au premier lancement (après config serveur)
+  if (!onboardingDone) {
+    return (
+      <OnboardingScreen onComplete={() => setOnboardingDone(true)} />
     );
   }
 

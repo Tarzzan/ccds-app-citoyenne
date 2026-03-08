@@ -70,9 +70,10 @@ switch ($resource) {
     case 'profile':
         require_once __DIR__ . '/controllers/AuthController.php';
         $ctrl = new AuthController();
-        if ($sub === 'password' && $method === 'PUT') {
+        $profileSub = $segments[1] ?? null;  // sous-route textuelle (/profile/{sub})
+        if ($profileSub === 'password' && $method === 'PUT') {
             $ctrl->changePassword();
-        } elseif ($sub === 'stats' && $method === 'GET') {
+        } elseif ($profileSub === 'stats' && $method === 'GET') {
             $ctrl->getStats();
         } elseif ($method === 'GET') {
             $ctrl->getProfile();
