@@ -53,8 +53,8 @@ export default function RegisterScreen({ navigation }: Props) {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
 
-        <View style={styles.header}>
-          <Text style={styles.logo}>🌿</Text>
+        <View style={styles.header} accessibilityRole="header">
+          <Text style={styles.logo} accessibilityLabel="Logo CCDS Citoyen" accessibilityRole="image">🌿</Text>
           <Text style={styles.appName}>CCDS Citoyen</Text>
           <Text style={{ fontSize: 12, color: '#6ee7b7', marginTop: 2 }}>Guyane Française</Text>
         </View>
@@ -71,6 +71,9 @@ export default function RegisterScreen({ navigation }: Props) {
             autoCapitalize="words"
             autoComplete="name"
             error={errors.fullName}
+            accessibilityLabel="Nom complet"
+            accessibilityHint="Entrez votre prénom et nom de famille"
+            accessibilityRequired={true}
           />
 
           <Input
@@ -82,6 +85,9 @@ export default function RegisterScreen({ navigation }: Props) {
             autoCapitalize="none"
             autoComplete="email"
             error={errors.email}
+            accessibilityLabel="Adresse email"
+            accessibilityHint="Entrez une adresse email valide"
+            accessibilityRequired={true}
           />
 
           <Input
@@ -91,6 +97,9 @@ export default function RegisterScreen({ navigation }: Props) {
             onChangeText={setPassword}
             secureTextEntry
             error={errors.password}
+            accessibilityLabel="Mot de passe"
+            accessibilityHint="Minimum 8 caractères"
+            accessibilityRequired={true}
           />
 
           <Input
@@ -100,6 +109,9 @@ export default function RegisterScreen({ navigation }: Props) {
             onChangeText={setConfirm}
             secureTextEntry
             error={errors.confirm}
+            accessibilityLabel="Confirmer le mot de passe"
+            accessibilityHint="Saisissez à nouveau votre mot de passe pour confirmation"
+            accessibilityRequired={true}
           />
 
           <Button
@@ -107,11 +119,17 @@ export default function RegisterScreen({ navigation }: Props) {
             onPress={handleRegister}
             loading={loading}
             style={{ marginTop: 8 }}
+            accessibilityLabel={loading ? 'Création du compte en cours...' : 'Créer mon compte'}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: loading, busy: loading }}
           />
 
           <TouchableOpacity
             style={styles.linkRow}
             onPress={() => navigation.goBack()}
+            accessibilityLabel="Se connecter"
+            accessibilityRole="link"
+            accessibilityHint="Retourner à l'écran de connexion"
           >
             <Text style={styles.linkText}>
               Déjà un compte ?{' '}

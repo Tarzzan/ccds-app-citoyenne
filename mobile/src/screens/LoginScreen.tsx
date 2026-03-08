@@ -46,8 +46,8 @@ export default function LoginScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
 
         {/* En-tête */}
-        <View style={styles.header}>
-          <Text style={styles.logo}>🌿</Text>
+        <View style={styles.header} accessibilityRole="header">
+          <Text style={styles.logo} accessibilityLabel="Logo CCDS Citoyen" accessibilityRole="image">🌿</Text>
           <Text style={styles.appName}>CCDS Citoyen</Text>
           <Text style={styles.tagline}>Kourou · Sinnamary · Iracoubo</Text>
           <Text style={styles.subTagline}>Signalez. Suivez. Améliorez.</Text>
@@ -66,6 +66,9 @@ export default function LoginScreen({ navigation }: Props) {
             autoCapitalize="none"
             autoComplete="email"
             error={errors.email}
+            accessibilityLabel="Adresse email"
+            accessibilityHint="Entrez votre adresse email pour vous connecter"
+            accessibilityRequired={true}
           />
 
           <Input
@@ -76,6 +79,9 @@ export default function LoginScreen({ navigation }: Props) {
             secureTextEntry
             autoComplete="password"
             error={errors.password}
+            accessibilityLabel="Mot de passe"
+            accessibilityHint="Entrez votre mot de passe"
+            accessibilityRequired={true}
           />
 
           <Button
@@ -83,11 +89,17 @@ export default function LoginScreen({ navigation }: Props) {
             onPress={handleLogin}
             loading={loading}
             style={{ marginTop: 8 }}
+            accessibilityLabel={loading ? 'Connexion en cours...' : 'Se connecter'}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: loading, busy: loading }}
           />
 
           <TouchableOpacity
             style={styles.linkRow}
             onPress={() => navigation.navigate('Register')}
+            accessibilityLabel="Créer un compte"
+            accessibilityRole="link"
+            accessibilityHint="Navigue vers l'écran de création de compte"
           >
             <Text style={styles.linkText}>
               Pas encore de compte ?{' '}

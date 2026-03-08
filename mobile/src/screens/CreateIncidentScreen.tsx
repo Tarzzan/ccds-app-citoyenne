@@ -244,8 +244,14 @@ export default function CreateIncidentScreen() {
       {/* Bannière hors-ligne (v1.1) */}
       <OfflineBanner />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn}>
+      <View style={styles.header} accessibilityRole="header">
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.closeBtn}
+          accessibilityLabel="Fermer"
+          accessibilityRole="button"
+          accessibilityHint="Retourner à l'écran précédent"
+        >
           <Text style={styles.closeText}>✕</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Nouveau signalement</Text>
@@ -268,6 +274,9 @@ export default function CreateIncidentScreen() {
         <TouchableOpacity
           style={[styles.photoBox, photo ? styles.photoBoxFilled : {}]}
           onPress={showPhotoPicker}
+          accessibilityLabel={photo ? 'Modifier la photo du signalement' : 'Ajouter une photo du signalement'}
+          accessibilityRole="button"
+          accessibilityHint="Ouvre la caméra ou la galerie photo"
         >
           {photo
             ? <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
@@ -281,7 +290,12 @@ export default function CreateIncidentScreen() {
           }
         </TouchableOpacity>
         {photo && (
-          <TouchableOpacity onPress={() => setPhoto(null)} style={styles.removePhoto}>
+          <TouchableOpacity
+            onPress={() => setPhoto(null)}
+            style={styles.removePhoto}
+            accessibilityLabel="Supprimer la photo"
+            accessibilityRole="button"
+          >
             <Text style={styles.removePhotoText}>Supprimer la photo</Text>
           </TouchableOpacity>
         )}
@@ -300,6 +314,9 @@ export default function CreateIncidentScreen() {
                 categoryId === cat.id && { backgroundColor: cat.color, borderColor: cat.color },
               ]}
               onPress={() => setCategoryId(cat.id)}
+              accessibilityLabel={`Catégorie ${cat.name}`}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: categoryId === cat.id }}
             >
               <Text style={[styles.catChipText, categoryId === cat.id && { color: COLORS.white }]}>
                 {cat.name}
@@ -318,6 +335,9 @@ export default function CreateIncidentScreen() {
           numberOfLines={4}
           style={{ minHeight: 100, textAlignVertical: 'top' }}
           error={errors.description}
+          accessibilityLabel="Description du problème"
+          accessibilityHint="Décrivez en détail le problème que vous signalez"
+          accessibilityRequired={true}
         />
 
         {/* Titre optionnel */}
@@ -326,6 +346,8 @@ export default function CreateIncidentScreen() {
           placeholder="Ex: Nid-de-poule dangereux rue de la Paix"
           value={title}
           onChangeText={setTitle}
+          accessibilityLabel="Titre du signalement (optionnel)"
+          accessibilityHint="Donnez un titre court et descriptif à votre signalement"
         />
 
         {/* Localisation */}
@@ -346,13 +368,23 @@ export default function CreateIncidentScreen() {
                       {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
                     </Text>
                   </View>
-                  <TouchableOpacity onPress={getLocation}>
+                  <TouchableOpacity
+                    onPress={getLocation}
+                    accessibilityLabel="Actualiser la position"
+                    accessibilityRole="button"
+                  >
                     <Text style={styles.refreshLocation}>🔄</Text>
                   </TouchableOpacity>
                 </View>
               )
               : (
-                <TouchableOpacity style={styles.locationBtn} onPress={getLocation}>
+                <TouchableOpacity
+                  style={styles.locationBtn}
+                  onPress={getLocation}
+                  accessibilityLabel="Obtenir ma position GPS"
+                  accessibilityRole="button"
+                  accessibilityHint="Utilise le GPS de votre appareil pour déterminer votre position"
+                >
                   <Text style={styles.locationBtnText}>📍 Obtenir ma position</Text>
                 </TouchableOpacity>
               )
@@ -365,6 +397,12 @@ export default function CreateIncidentScreen() {
           onPress={handleSubmit}
           loading={loading}
           style={{ marginTop: 24, marginBottom: 40 }}
+          accessibilityLabel={
+            loading ? 'Envoi en cours...' :
+            isConnected ? 'Envoyer le signalement' : 'Sauvegarder le signalement hors-ligne'
+          }
+          accessibilityRole="button"
+          accessibilityState={{ disabled: loading, busy: loading }}
         />
 
       </ScrollView>
