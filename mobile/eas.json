@@ -12,8 +12,19 @@
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "ios": {
+        "credentialsSource": "remote"
       }
     }
   },
-  "submit": {}
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "william.meri@gmail.com",
+        "ascAppId": "6760270672",
+        "appleTeamId": "R4BHRKAMFC"
+      }
+    }
+  }
 }
