@@ -5,8 +5,8 @@ const path = require('path');
 /**
  * Config plugin that:
  * 1. Removes the deprecated 'enableBundleCompression' from app/build.gradle
- * 2. Forces Gradle wrapper to 8.10.2
- * 3. Sets kotlinVersion=1.9.24 in gradle.properties (1.9.24 is in the kspVersionsMap of expo-modules-core)
+ * 2. Forces Gradle wrapper to 8.13 (required by RN 0.81.5)
+ * 3. Sets kotlinVersion=2.0.21 in gradle.properties (required by RN 0.81.5)
  */
 function withFixBuildGradle(config) {
   // 1. Remove enableBundleCompression from app/build.gradle
@@ -20,7 +20,7 @@ function withFixBuildGradle(config) {
     return config;
   });
 
-  // 2. Force Gradle wrapper to 8.10.2 + set kotlinVersion=1.9.24
+  // 2. Force Gradle wrapper to 8.13 + set kotlinVersion=2.0.21
   config = withDangerousMod(config, [
     'android',
     async (config) => {
@@ -37,23 +37,23 @@ function withFixBuildGradle(config) {
         let contents = fs.readFileSync(wrapperPropsPath, 'utf-8');
         contents = contents.replace(
           /gradle-[\d.]+-bin\.zip/,
-          'gradle-8.10.2-bin.zip'
+          'gradle-8.13-bin.zip'
         );
         fs.writeFileSync(wrapperPropsPath, contents);
-        console.log('[withFixBuildGradle] Forced Gradle 8.10.2');
+        console.log('[withFixBuildGradle] Forced Gradle 8.13');
       }
 
-      // Set kotlinVersion=1.9.24 in gradle.properties
-      // 1.9.24 is explicitly listed in expo-modules-core kspVersionsMap → ksp 1.9.24-1.0.20
+      // Set kotlinVersion=2.0.21 in gradle.properties
+      // RN 0.81.5 requires Kotlin 2.0.x
       const gradlePropsPath = path.join(androidRoot, 'gradle.properties');
       if (fs.existsSync(gradlePropsPath)) {
         let contents = fs.readFileSync(gradlePropsPath, 'utf-8');
         // Remove any existing kotlinVersion line
         contents = contents.replace(/^kotlinVersion=.*$/m, '');
-        // Add kotlinVersion=1.9.24
-        contents = contents.trim() + '\nkotlinVersion=1.9.24\n';
+        // Add kotlinVersion=2.0.21
+        contents = contents.trim() + '\nkotlinVersion=2.0.21\n';
         fs.writeFileSync(gradlePropsPath, contents);
-        console.log('[withFixBuildGradle] Set kotlinVersion=1.9.24');
+        console.log('[withFixBuildGradle] Set kotlinVersion=2.0.21');
       }
 
       return config;
