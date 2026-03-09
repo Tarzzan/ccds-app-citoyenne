@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "CCDS Citoyen",
-    "slug": "ccds-app-citoyenne",
-    "version": "1.0.0",
+    "name": "Ma Commune Guyane",
+    "slug": "ma-commune-guyane",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -13,19 +13,20 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.ccds.app",
+      "bundleIdentifier": "com.netetfix.macommune",
       "infoPlist": {
-        "NSCameraUsageDescription": "CCDS a besoin d'accéder à votre caméra pour photographier les anomalies à signaler.",
-        "NSPhotoLibraryUsageDescription": "CCDS a besoin d'accéder à vos photos pour joindre une image à votre signalement.",
-        "NSLocationWhenInUseUsageDescription": "CCDS utilise votre position pour localiser précisément les anomalies que vous signalez."
-      }
+        "NSCameraUsageDescription": "CCDS a besoin d'acc\u00e9der \u00e0 votre cam\u00e9ra pour photographier les anomalies \u00e0 signaler.",
+        "NSPhotoLibraryUsageDescription": "CCDS a besoin d'acc\u00e9der \u00e0 vos photos pour joindre une image \u00e0 votre signalement.",
+        "NSLocationWhenInUseUsageDescription": "CCDS utilise votre position pour localiser pr\u00e9cis\u00e9ment les anomalies que vous signalez."
+      },
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f4c2a"
       },
-      "package": "com.ccds.app",
+      "package": "com.netetfix.macommune",
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
@@ -41,7 +42,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "CCDS a besoin d'accéder à votre caméra pour photographier les anomalies."
+          "cameraPermission": "CCDS a besoin d'acc\u00e9der \u00e0 votre cam\u00e9ra pour photographier les anomalies."
         }
       ],
       [
@@ -55,10 +56,10 @@
     "scheme": "ccds",
     "extra": {
       "API_BASE_URL": "https://votre-domaine.com/api",
-      "APP_TERRITORY": "Kourou, Sinnamary, Iracoubo, Saint-Élie",
-      "APP_REGION": "Guyane Française",
+      "APP_TERRITORY": "Kourou, Sinnamary, Iracoubo, Saint-\u00c9lie",
+      "APP_REGION": "Guyane Fran\u00e7aise",
       "eas": {
-        "projectId": "a7334d51-b12a-46eb-bc2d-c9b847551f66"
+        "projectId": "b3d38760-9ace-47eb-b84f-37419e550824"
       }
     },
     "sdkVersion": "54.0.0",
