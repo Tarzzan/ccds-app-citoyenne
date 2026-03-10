@@ -416,3 +416,29 @@ Ce module n'existe pas dans le runtime JavaScript de React Native (Hermes/JSC) s
 - Commit : `33ec300`
 
 **Décision :** Pour les futurs services utilisant un pattern pub/sub, toujours utiliser une implémentation maison ou `eventemitter3` (compatible RN) plutôt que le module Node.js `events`.
+
+---
+
+## Journal des correctifs — 09/03/2026 (Audit dépendances complet)
+
+### Audit pré-build complet
+
+**Vérifications effectuées avant le build :**
+
+| Vérification | Résultat |
+|---|---|
+| `expo install --check` (versions SDK 54) | ✅ "Dependencies are up to date" |
+| TypeScript `--noEmit` | ✅ 0 erreur |
+| `pnpm install` (peer deps) | ✅ 0 warning |
+| Imports code source vs. package.json | ✅ 0 import manquant (16 packages couverts) |
+| Versions natives vs. RN 0.81.5 | ✅ Toutes compatibles |
+
+**Corrections appliquées :**
+- `expo-clipboard` : 55.0.8 → 8.0.8 (version correcte pour SDK 54)
+- `TwoFactorScreen` : `Clipboard` de `react-native` (déprécié) → `expo-clipboard.setStringAsync()`
+- `pnpm.peerDependencyRules` : `react-native-web` ignoré (optionnel, web uniquement)
+
+**Build résultant :**
+- Build ID : `a9ca9988-8fe4-41b3-9bba-720c69914089`
+- APK : https://expo.dev/artifacts/eas/mY4wJPaWPwAuZ6mgKtbhyH.apk
+- Commit : `2f7b3ce`
