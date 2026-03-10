@@ -394,3 +394,25 @@ CREATE TABLE user_badges (
 - APK : https://expo.dev/artifacts/eas/m9n4vhKFGron1GDJspRmUX.apk
 - Durée : ~53 minutes (file d'attente plan gratuit)
 - Commit : `758ce61`
+
+---
+
+## 🐛 Correctif Crash Android au Lancement — 09 Mars 2026
+
+**Symptôme :** L'APK s'installait correctement mais crashait immédiatement au lancement (écran noir/blanc, sortie immédiate).
+
+**Cause racine :** `mobile/src/services/RealtimeService.ts` importait `EventEmitter` depuis le module Node.js `'events'` :
+```ts
+import { EventEmitter } from 'events'; // ❌ Module Node.js — absent dans RN
+```
+Ce module n'existe pas dans le runtime JavaScript de React Native (Hermes/JSC) sans polyfill explicite. Comme `RealtimeService` est un **singleton instancié au chargement du module** (`export const realtimeService = RealtimeService.getInstance()`), le crash se produisait avant même que le premier composant React soit monté.
+
+**Correction :** Remplacement par une implémentation `EventEmitter` maison, sans dépendance externe, entièrement compatible React Native Android/iOS.
+
+**Résultat :**
+- Build ID : `0ab6e8da-392f-47ec-b999-8d9be2727f10`
+- APK : https://expo.dev/artifacts/eas/2jJP2mkGkrMcbZdDqVdVRj.apk
+- Statut : ✅ `finished` — 09 Mars 2026 20:28
+- Commit : `33ec300`
+
+**Décision :** Pour les futurs services utilisant un pattern pub/sub, toujours utiliser une implémentation maison ou `eventemitter3` (compatible RN) plutôt que le module Node.js `events`.
