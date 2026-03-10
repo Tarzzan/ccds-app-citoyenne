@@ -6,8 +6,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator, Image, Clipboard,
+  ScrollView, Alert, ActivityIndicator, Image,
 } from 'react-native';
+import * as ExpoClipboard from 'expo-clipboard';
 import { authApi } from '../services/api';
 
 type Step = 'status' | 'setup' | 'verify' | 'backup_codes' | 'active';
@@ -105,8 +106,8 @@ export default function TwoFactorScreen() {
     );
   };
 
-  const copyToClipboard = (text: string) => {
-    Clipboard.setString(text);
+  const copyToClipboard = async (text: string) => {
+    await ExpoClipboard.setStringAsync(text);
     Alert.alert('Copié !', 'Le secret a été copié dans le presse-papiers.');
   };
 
