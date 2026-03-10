@@ -369,3 +369,28 @@ CREATE TABLE user_badges (
 | API-03 | Webhooks sortants configurables | Interopérabilité | P2 |
 
 > Voir le document complet : `docs/planning/v1.6_PLANIFICATION.md`
+
+---
+
+## 🔧 Correctif Build Mobile — 09 Mars 2026
+
+**Problème résolu :** Incompatibilités de dépendances empêchant le build Android EAS.
+
+| Fichier | Avant | Après |
+|---|---|---|
+| `react-native` | 0.81.5 (mauvaise version pour SDK 54) | 0.81.5 ✅ (corrigé avec pnpm overrides) |
+| `react` | 18.3.1 | 19.1.0 |
+| `@types/react` | ~18.3.12 | ~19.1.0 |
+| `babel-preset-expo` | ~13.0.0 | ~54.0.10 |
+| `react-native-gesture-handler` | ~2.20.2 | ~2.28.0 |
+| `react-native-safe-area-context` | 4.12.0 | ~5.6.0 |
+| `react-native-screens` | ~4.4.0 | ~4.16.0 |
+| `react-native-maps` | 1.18.0 | 1.20.1 |
+| `plugins/withKotlinVersion.js` | Gradle 8.10.2 / Kotlin 1.9.24 | Gradle 8.13 / Kotlin 2.0.21 |
+| Package manager | npm (package-lock.json) | pnpm (pnpm-lock.yaml) |
+
+**Résultat :** Build Android EAS `preview` réussi ✅
+- Build ID : `a321b3ca-ad2d-4afa-8dd9-2319014aba27`
+- APK : https://expo.dev/artifacts/eas/m9n4vhKFGron1GDJspRmUX.apk
+- Durée : ~53 minutes (file d'attente plan gratuit)
+- Commit : `758ce61`
