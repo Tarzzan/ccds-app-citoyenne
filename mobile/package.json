@@ -22,8 +22,6 @@
     "expo-image-manipulator": "~14.0.8",
     "expo-image-picker": "~17.0.10",
     "expo-location": "~19.0.8",
-    "expo-modules-autolinking": "~3.0.22",
-    "expo-modules-core": "~3.0.29",
     "expo-notifications": "~0.32.16",
     "expo-secure-store": "~15.0.8",
     "expo-sharing": "~14.0.8",
@@ -39,6 +37,7 @@
     "@babel/core": "^7.25.2",
     "@types/react": "~19.1.0",
     "babel-preset-expo": "~54.0.10",
+    "expo-modules-core": "~3.0.29",
     "typescript": "^5.3.3"
   },
   "pnpm": {
@@ -46,7 +45,9 @@
       "@types/react": "~19.1.0"
     },
     "peerDependencyRules": {
-      "ignoreMissing": ["react-native-web"]
+      "ignoreMissing": [
+        "react-native-web"
+      ]
     }
   }
 }

@@ -1,5 +1,7 @@
 /**
- * Service de Notifications Push — CCDS Citoyen v1.1
+ * Service de Notifications Push — CCDS Citoyen v1.2
+ * IMPORTANT : expo-notifications 0.32+ retourne { granted: boolean }
+ * et non plus { status: 'granted' | 'denied' | 'undetermined' }
  * Utilise Expo Notifications pour iOS et Android
  * Documentation : https://docs.expo.dev/push-notifications/overview/
  */
@@ -28,16 +30,17 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
   }
 
   // Vérifier les permissions existantes
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
+  // expo-notifications 0.32+ : retourne { granted: boolean, ... }
+  const existingPermissions = await Notifications.getPermissionsAsync();
+  let isGranted = existingPermissions.granted;
 
   // Demander les permissions si pas encore accordées
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
+  if (!isGranted) {
+    const newPermissions = await Notifications.requestPermissionsAsync();
+    isGranted = newPermissions.granted;
   }
 
-  if (finalStatus !== 'granted') {
+  if (!isGranted) {
     console.log('[Push] Permission refusée par l\'utilisateur');
     return null;
   }
