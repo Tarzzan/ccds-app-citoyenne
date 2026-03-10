@@ -2,8 +2,46 @@
  * CCDS v1.3 — RealtimeService (RT-01)
  * Service WebSocket pour les mises à jour en temps réel de la carte.
  * Gestion : reconnexion automatique, backoff exponentiel, heartbeat.
+ *
+ * NOTE: EventEmitter implémenté manuellement (pas d'import Node.js 'events')
+ * pour compatibilité React Native Android/iOS sans polyfill.
  */
-import { EventEmitter } from 'events';
+
+// ── EventEmitter maison — compatible React Native ────────────────────────────
+type Listener = (...args: any[]) => void;
+
+class EventEmitter {
+  private _listeners: Map<string, Listener[]> = new Map();
+
+  on(event: string, listener: Listener): this {
+    if (!this._listeners.has(event)) this._listeners.set(event, []);
+    this._listeners.get(event)!.push(listener);
+    return this;
+  }
+
+  off(event: string, listener: Listener): this {
+    const list = this._listeners.get(event);
+    if (list) this._listeners.set(event, list.filter(l => l !== listener));
+    return this;
+  }
+
+  emit(event: string, ...args: any[]): boolean {
+    const list = this._listeners.get(event);
+    if (!list || list.length === 0) return false;
+    list.forEach(l => {
+      try { l(...args); } catch { /* ne pas laisser un listener planter le service */ }
+    });
+    return true;
+  }
+
+  removeAllListeners(event?: string): this {
+    if (event) this._listeners.delete(event);
+    else this._listeners.clear();
+    return this;
+  }
+}
+
+// ── Types ────────────────────────────────────────────────────────────────────
 
 export interface RealtimeIncident {
   id: number;
@@ -20,6 +58,8 @@ export interface RealtimeIncident {
 }
 
 type RealtimeEvent = 'incident:new' | 'incident:updated' | 'incident:resolved' | 'connected' | 'disconnected' | 'error';
+
+// ── Service ──────────────────────────────────────────────────────────────────
 
 class RealtimeService extends EventEmitter {
   private static instance: RealtimeService;
