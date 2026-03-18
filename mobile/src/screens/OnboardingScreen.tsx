@@ -5,55 +5,57 @@
 
 import React, { useState, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, FlatList,
+  View, Text, StyleSheet, TouchableOpacity, FlatList, Image,
   Dimensions, Animated, StatusBar,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
 const { width, height } = Dimensions.get('window');
-const ONBOARDING_KEY = 'ccds_onboarding_done';
+const ONBOARDING_KEY = 'ma_commune_onboarding_done';
+const LEGACY_ONBOARDING_KEY = 'ccds_onboarding_done';
 
 interface Slide {
   id: string;
-  icon: string;
+  eyebrow: string;
+  marker: string;
   title: string;
   description: string;
-  color: string;
-  accentColor: string;
+  cardTint: string;
 }
 
 const slides: Slide[] = [
   {
     id: '1',
-    icon: '🌿',
-    title: 'Bienvenue sur CCDS Citoyen',
-    description: 'L\'application officielle pour signaler les problèmes de votre quartier en Guyane. Ensemble, améliorons notre cadre de vie.',
-    color: '#1B5E20',
-    accentColor: '#4CAF50',
+    eyebrow: 'Territoire',
+    marker: '01',
+    title: 'Un outil civique pensé pour la Guyane.',
+    description: 'Ma Commune aide les habitants à signaler ce qui abime le cadre de vie, tout en rendant visible la reponse des services publics.',
+    cardTint: '#F1E7D5',
   },
   {
     id: '2',
-    icon: '📍',
-    title: 'Signalez en quelques secondes',
-    description: 'Prenez une photo, localisez le problème sur la carte et décrivez-le. Votre signalement est transmis immédiatement aux services compétents.',
-    color: '#1565C0',
-    accentColor: '#42A5F5',
+    eyebrow: 'Action',
+    marker: '02',
+    title: 'Signaler vite, même sur le terrain.',
+    description: 'Photo, position, description claire: en quelques gestes, le bon problème arrive à la bonne équipe avec assez d\'informations pour agir.',
+    cardTint: '#DDE8E8',
   },
   {
     id: '3',
-    icon: '🔔',
-    title: 'Suivez vos signalements',
-    description: 'Recevez des notifications à chaque avancement. Votez pour les signalements de vos voisins et montrez que vous n\'êtes pas seul.',
-    color: '#4A148C',
-    accentColor: '#AB47BC',
+    eyebrow: 'Confiance',
+    marker: '03',
+    title: 'Suivre le traitement, pas seulement déposer une alerte.',
+    description: 'Chaque statut, chaque commentaire et chaque étape de traitement rendent la réponse publique plus lisible pour les habitants comme pour les services.',
+    cardTint: '#EADFD1',
   },
   {
     id: '4',
-    icon: '🏆',
-    title: 'Devenez un Citoyen Actif',
-    description: 'Gagnez des points et des badges pour chaque contribution. Rejoignez la communauté de citoyens engagés qui font avancer les choses.',
-    color: '#E65100',
-    accentColor: '#FFA726',
+    eyebrow: 'Engagement',
+    marker: '04',
+    title: 'Participer, c\'est protéger le commun.',
+    description: 'L\'ambition de Ma Commune est simple : faire du signalement un geste utile, visible et respectueux du devoir citoyen.',
+    cardTint: '#E7D8C6',
   },
 ];
 
@@ -77,17 +79,38 @@ export default function OnboardingScreen({ onComplete }: Props) {
 
   const handleComplete = async () => {
     await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+    await AsyncStorage.removeItem(LEGACY_ONBOARDING_KEY);
     onComplete();
   };
 
   const renderSlide = ({ item }: { item: Slide }) => (
-    <View style={[styles.slide, { backgroundColor: item.color, width }]}>
+    <View style={[styles.slide, { width }]}>
       <View style={styles.slideContent}>
-        <View style={[styles.iconCircle, { backgroundColor: item.accentColor + '33' }]}>
-          <Text style={styles.slideIcon}>{item.icon}</Text>
+        <View style={styles.heroTop}>
+          <Image source={require('../../assets/icon.png')} style={styles.heroLogo} />
+          <Text style={styles.heroBrand}>{BRAND.name}</Text>
+          <Text style={styles.heroTerritory}>{BRAND.territory}</Text>
         </View>
-        <Text style={styles.slideTitle}>{item.title}</Text>
-        <Text style={styles.slideDescription}>{item.description}</Text>
+        <View style={[styles.storyCard, { backgroundColor: item.cardTint }]}>
+          <View style={styles.storyHeader}>
+            <Text style={styles.storyEyebrow}>{item.eyebrow}</Text>
+            <Text style={styles.storyMarker}>{item.marker}</Text>
+          </View>
+          <Text style={styles.slideTitle}>{item.title}</Text>
+          <Text style={styles.slideDescription}>{item.description}</Text>
+          <View style={styles.storyFooter}>
+            <View style={[styles.storyPill, { backgroundColor: '#0E3127' }]}>
+              <Text style={styles.storyPillText}>Service public</Text>
+            </View>
+            <View style={[styles.storyPill, { backgroundColor: '#2D6F86' }]}>
+              <Text style={styles.storyPillText}>Suivi public</Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.heroStatement}>
+          <Text style={styles.heroStatementLabel}>{BRAND.missionLabel}</Text>
+          <Text style={styles.heroStatementText}>{BRAND.copy.heroBody}</Text>
+        </View>
       </View>
     </View>
   );
@@ -95,8 +118,11 @@ export default function OnboardingScreen({ onComplete }: Props) {
   const currentSlide = slides[currentIndex];
 
   return (
-    <View style={[styles.container, { backgroundColor: currentSlide.color }]}>
-      <StatusBar barStyle="light-content" backgroundColor={currentSlide.color} />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={BRAND.colors.canopyDeep} />
+      <View style={styles.backgroundTop} />
+      <View style={styles.backgroundRiver} />
+      <View style={styles.backgroundEarth} />
 
       {/* Bouton Skip */}
       {currentIndex < slides.length - 1 && (
@@ -147,11 +173,11 @@ export default function OnboardingScreen({ onComplete }: Props) {
 
         {/* Bouton principal */}
         <TouchableOpacity
-          style={[styles.nextBtn, { backgroundColor: currentSlide.accentColor }]}
+          style={styles.nextBtn}
           onPress={handleNext}
         >
           <Text style={styles.nextBtnText}>
-            {currentIndex === slides.length - 1 ? 'Commencer 🚀' : 'Suivant →'}
+            {currentIndex === slides.length - 1 ? 'Entrer dans l’espace citoyen' : 'Suivant →'}
           </Text>
         </TouchableOpacity>
 
@@ -170,26 +196,60 @@ export default function OnboardingScreen({ onComplete }: Props) {
 }
 
 export const checkOnboardingDone = async (): Promise<boolean> => {
-  const val = await AsyncStorage.getItem(ONBOARDING_KEY);
-  return val === 'true';
+  const val = await AsyncStorage.getItem(ONBOARDING_KEY)
+    ?? await AsyncStorage.getItem(LEGACY_ONBOARDING_KEY);
+
+  if (val === 'true') {
+    await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+    await AsyncStorage.removeItem(LEGACY_ONBOARDING_KEY);
+    return true;
+  }
+
+  return false;
 };
 
 const styles = StyleSheet.create({
-  container:       { flex: 1 },
+  container:       { flex: 1, backgroundColor: BRAND.colors.mist },
+  backgroundTop:   { position: 'absolute', top: 0, left: 0, right: 0, height: height * 0.42, backgroundColor: BRAND.colors.canopyDeep },
+  backgroundRiver: { position: 'absolute', top: height * 0.34, right: -60, width: 220, height: 220, borderRadius: 110, backgroundColor: '#2D6F8622' },
+  backgroundEarth: { position: 'absolute', top: height * 0.18, left: -40, width: 180, height: 180, borderRadius: 90, backgroundColor: '#A64B2A22' },
   skipBtn:         { position: 'absolute', top: 52, right: 24, zIndex: 10, padding: 8 },
-  skipText:        { color: 'rgba(255,255,255,.7)', fontSize: 15, fontWeight: '600' },
-  slide:           { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-  slideContent:    { alignItems: 'center', maxWidth: 340 },
-  iconCircle:      { width: 140, height: 140, borderRadius: 70, alignItems: 'center', justifyContent: 'center', marginBottom: 40 },
-  slideIcon:       { fontSize: 64 },
-  slideTitle:      { fontSize: 26, fontWeight: '800', color: '#FFF', textAlign: 'center', marginBottom: 16, lineHeight: 34 },
-  slideDescription:{ fontSize: 16, color: 'rgba(255,255,255,.8)', textAlign: 'center', lineHeight: 24 },
+  skipText:        { color: '#E8EFE9', fontSize: 15, fontWeight: '700' },
+  slide:           { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
+  slideContent:    { width: '100%', maxWidth: 360 },
+  heroTop:         { marginBottom: 22 },
+  heroLogo: {
+    width: 76,
+    height: 76,
+    borderRadius: 20,
+    marginBottom: 16,
+  },
+  heroBrand:       { fontSize: 30, fontWeight: '800', color: BRAND.colors.white, fontFamily: BRAND.displayFont },
+  heroTerritory:   { marginTop: 6, color: '#D8E7DD', fontSize: 13, letterSpacing: 0.4 },
+  storyCard: {
+    borderRadius: 28,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#FFFFFF55',
+    ...BRAND_SHADOW,
+  },
+  storyHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  storyEyebrow:    { fontSize: 12, fontWeight: '800', color: BRAND.colors.canopy, textTransform: 'uppercase', letterSpacing: 1.2 },
+  storyMarker:     { fontSize: 18, fontWeight: '800', color: BRAND.colors.laterite, fontFamily: 'monospace' },
+  slideTitle:      { fontSize: 29, fontWeight: '800', color: BRAND.colors.ink, marginBottom: 14, lineHeight: 36, fontFamily: BRAND.displayFont },
+  slideDescription:{ fontSize: 16, color: '#355248', lineHeight: 25 },
+  storyFooter:     { flexDirection: 'row', gap: 10, marginTop: 20 },
+  storyPill:       { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
+  storyPillText:   { color: BRAND.colors.white, fontSize: 12, fontWeight: '700' },
+  heroStatement:   { marginTop: 18, paddingHorizontal: 4 },
+  heroStatementLabel: { color: '#D2A13A', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 6 },
+  heroStatementText:  { color: '#E8EFE9', fontSize: 14, lineHeight: 22 },
   footer:          { paddingHorizontal: 32, paddingBottom: 48, alignItems: 'center' },
   dots:            { flexDirection: 'row', gap: 6, marginBottom: 32 },
-  dot:             { height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,.8)' },
-  nextBtn:         { width: '100%', padding: 18, borderRadius: 16, alignItems: 'center', marginBottom: 16 },
-  nextBtnText:     { color: '#FFF', fontSize: 17, fontWeight: '800' },
+  dot:             { height: 8, borderRadius: 4, backgroundColor: BRAND.colors.canopy },
+  nextBtn:         { width: '100%', padding: 18, borderRadius: 18, alignItems: 'center', marginBottom: 16, backgroundColor: BRAND.colors.awara, ...BRAND_SHADOW },
+  nextBtnText:     { color: BRAND.colors.canopyDeep, fontSize: 17, fontWeight: '800' },
   authRow:         { flexDirection: 'row', alignItems: 'center' },
-  authText:        { color: 'rgba(255,255,255,.7)', fontSize: 14 },
-  authLink:        { color: '#FFF', fontSize: 14, fontWeight: '700', textDecorationLine: 'underline' },
+  authText:        { color: BRAND.colors.slate, fontSize: 14 },
+  authLink:        { color: BRAND.colors.canopy, fontSize: 14, fontWeight: '700', textDecorationLine: 'underline' },
 });

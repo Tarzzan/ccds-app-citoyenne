@@ -3,7 +3,7 @@
  * WebhookController — Webhooks sortants configurables (API-03)
  *
  * Permet aux administrateurs de configurer des webhooks pour notifier
- * des systèmes externes lors d'événements CCDS.
+ * des systèmes externes lors d'événements Ma Commune.
  *
  * Événements supportés :
  *   - incident.created
@@ -34,8 +34,9 @@ class WebhookController extends BaseController
     public function create(): void
     {
         $user = $this->requireAuth();
+        $userId = $this->getAuthUserId($user);
         $this->requireAdmin($user);
-        $this->applyRateLimit('default', $user['id']);
+        $this->applyRateLimit('default', $userId);
 
         $input = json_decode(file_get_contents('php://input'), true);
 
@@ -114,8 +115,9 @@ class WebhookController extends BaseController
     public function test(int $id): void
     {
         $user = $this->requireAuth();
+        $userId = $this->getAuthUserId($user);
         $this->requireAdmin($user);
-        $this->applyRateLimit('webhook_test', $user['id']);
+        $this->applyRateLimit('webhook_test', $userId);
 
         $stmt = $this->db->prepare("SELECT * FROM webhooks WHERE id = ?");
         $stmt->execute([$id]);
@@ -233,12 +235,5 @@ class WebhookController extends BaseController
         ]);
         curl_exec($ch);
         curl_close($ch);
-    }
-
-    private function requireAdmin(array $user): void
-    {
-        if ($user['role'] !== 'admin') {
-            $this->error('Accès réservé aux administrateurs.', 403);
-        }
     }
 }

@@ -1,5 +1,5 @@
 /**
- * CCDS — Composants UI réutilisables
+ * Ma Commune — Composants UI réutilisables
  */
 
 import React from 'react';
@@ -7,34 +7,35 @@ import {
   TouchableOpacity, Text, TextInput, View, ActivityIndicator,
   StyleSheet, TextInputProps, ViewStyle, TextStyle,
 } from 'react-native';
+import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
 // ----------------------------------------------------------------
-// Palette de couleurs CCDS
+// Palette de couleurs Ma Commune
 // ----------------------------------------------------------------
 export const COLORS = {
-  primary:      '#1a7a42',   // Vert forêt CCDS Guyane
-  primaryDark:  '#0f4c2a',   // Vert profond Amazonie
-  primaryLight: '#dcfce7',   // Vert clair
-  secondary:    '#22c55e',   // Vert secondaire
-  success:      '#22c55e',
-  warning:      '#f59e0b',
-  danger:       '#ef4444',
-  gray:         '#6b7280',
-  lightGray:    '#f3f4f6',
-  white:        '#ffffff',
-  dark:         '#111827',
-  border:       '#e5e7eb',
-  light:         '#f9fafb',
-  textSecondary: '#6b7280',
+  primary:       BRAND.colors.canopy,
+  primaryDark:   BRAND.colors.canopyDeep,
+  primaryLight:  '#DCEBDD',
+  secondary:     BRAND.colors.river,
+  success:       BRAND.colors.success,
+  warning:       BRAND.colors.warning,
+  danger:        BRAND.colors.danger,
+  gray:          BRAND.colors.slate,
+  lightGray:     '#F1ECE0',
+  white:         BRAND.colors.white,
+  dark:          BRAND.colors.ink,
+  border:        BRAND.colors.border,
+  light:         BRAND.colors.cloud,
+  textSecondary: BRAND.colors.slate,
 };
 
 // Couleurs par statut de signalement
 export const STATUS_COLORS: Record<string, string> = {
-  submitted:    '#6b7280',
-  acknowledged: '#1a7a42',
-  in_progress:  '#f59e0b',
-  resolved:     '#22c55e',
-  rejected:     '#ef4444',
+  submitted:    BRAND.status.submitted,
+  acknowledged: BRAND.status.acknowledged,
+  in_progress:  BRAND.status.in_progress,
+  resolved:     BRAND.status.resolved,
+  rejected:     BRAND.status.rejected,
 };
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -43,6 +44,20 @@ export const STATUS_LABELS: Record<string, string> = {
   in_progress:  'En cours',
   resolved:     'Résolu',
   rejected:     'Rejeté',
+};
+
+export const PRIORITY_COLORS: Record<string, string> = {
+  low: '#5E6C67',
+  medium: '#D48B2C',
+  high: '#A64B2A',
+  critical: '#C94B3C',
+};
+
+export const PRIORITY_LABELS: Record<string, string> = {
+  low: 'Faible',
+  medium: 'Normale',
+  high: 'Haute',
+  critical: 'Critique',
 };
 
 // ----------------------------------------------------------------
@@ -130,12 +145,18 @@ interface IncidentCardProps {
   categoryName: string;
   categoryColor: string;
   date: string;
+  priority?: string;
+  assignedToName?: string | null;
+  address?: string;
   onPress: () => void;
 }
 
 export function IncidentCard({
-  reference, title, description, status, categoryName, categoryColor, date, onPress,
+  reference, title, description, status, categoryName, categoryColor, date, priority, assignedToName, address, onPress,
 }: IncidentCardProps) {
+  const priorityColor = priority ? (PRIORITY_COLORS[priority] ?? COLORS.gray) : null;
+  const priorityLabel = priority ? (PRIORITY_LABELS[priority] ?? priority) : null;
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.cardHeader}>
@@ -146,6 +167,27 @@ export function IncidentCard({
       <Text style={styles.cardRef}>{reference}</Text>
       {title ? <Text style={styles.cardTitle}>{title}</Text> : null}
       <Text style={styles.cardDesc} numberOfLines={2}>{description}</Text>
+      {(priorityLabel || assignedToName || address) ? (
+        <View style={styles.cardMetaWrap}>
+          {priorityLabel ? (
+            <View style={[styles.metaPill, { backgroundColor: `${priorityColor}18` }]}>
+              <Text style={[styles.metaPillText, { color: priorityColor! }]}>
+                Priorité {priorityLabel}
+              </Text>
+            </View>
+          ) : null}
+          {assignedToName ? (
+            <View style={styles.metaPill}>
+              <Text style={styles.metaPillText}>Assigné à {assignedToName}</Text>
+            </View>
+          ) : null}
+          {address ? (
+            <Text style={styles.cardAddress} numberOfLines={1}>
+              📍 {address}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
       <Text style={styles.cardDate}>{new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}</Text>
     </TouchableOpacity>
   );
@@ -156,16 +198,18 @@ export function IncidentCard({
 // ----------------------------------------------------------------
 const styles = StyleSheet.create({
   btn: {
-    paddingVertical: 14,
+    paddingVertical: 15,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 50,
+    minHeight: 54,
+    ...BRAND_SHADOW,
   },
   btnText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   label: {
     fontSize: 14,
@@ -176,12 +220,12 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1.5,
     borderColor: COLORS.border,
-    borderRadius: 10,
+    borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 14,
     fontSize: 15,
     color: COLORS.dark,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFDF8',
   },
   errorText: {
     color: COLORS.danger,
@@ -199,15 +243,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   card: {
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
+    backgroundColor: '#FFFDF8',
+    borderRadius: 18,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#ECE4D5',
+    ...BRAND_SHADOW,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -231,6 +273,7 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
     marginBottom: 4,
     fontFamily: 'monospace',
+    letterSpacing: 0.2,
   },
   cardTitle: {
     fontSize: 16,
@@ -240,9 +283,29 @@ const styles = StyleSheet.create({
   },
   cardDesc: {
     fontSize: 14,
-    color: '#374151',
+    color: '#345046',
     lineHeight: 20,
     marginBottom: 8,
+  },
+  cardMetaWrap: {
+    gap: 8,
+    marginBottom: 8,
+  },
+  metaPill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#F3EEE2',
+  },
+  metaPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.gray,
+  },
+  cardAddress: {
+    fontSize: 12,
+    color: COLORS.gray,
   },
   cardDate: {
     fontSize: 12,

@@ -66,6 +66,7 @@ export default function PollsScreen() {
 
         {/* Méta */}
         <Text style={[styles.meta, { color: theme.textSecondary }]}>
+          Consultation a choix unique · {' '}
           {totalVotes} vote{totalVotes !== 1 ? 's' : ''}
           {item.ends_at ? ` · Jusqu'au ${new Date(item.ends_at).toLocaleDateString('fr-FR')}` : ''}
         </Text>

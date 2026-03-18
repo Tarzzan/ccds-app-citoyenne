@@ -1,5 +1,5 @@
 import { PhotoItem } from '../components/PhotoPicker';
-import { getAuthToken, API_BASE_URL } from './api';
+import { getAuthToken, getBaseUrl } from './api';
 
 /**
  * PhotoUploadService — Upload de photos multiples pour un incident (UX-04)
@@ -84,6 +84,7 @@ async function uploadSinglePhoto(
   sortOrder: number
 ): Promise<number> {
   const token = await getAuthToken();
+  const baseUrl = await getBaseUrl();
   const formData = new FormData();
 
   // React Native FormData accepte un objet { uri, name, type }
@@ -94,7 +95,7 @@ async function uploadSinglePhoto(
   } as any);
   formData.append('sort_order', String(sortOrder));
 
-  const response = await fetch(`${API_BASE_URL}/incidents/${incidentId}/photos`, {
+  const response = await fetch(`${baseUrl}/incidents/${incidentId}/photos`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -117,7 +118,8 @@ async function uploadSinglePhoto(
  */
 export async function deletePhoto(incidentId: number, photoId: number): Promise<void> {
   const token = await getAuthToken();
-  const response = await fetch(`${API_BASE_URL}/incidents/${incidentId}/photos/${photoId}`, {
+  const baseUrl = await getBaseUrl();
+  const response = await fetch(`${baseUrl}/incidents/${incidentId}/photos/${photoId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -133,7 +135,8 @@ export async function deletePhoto(incidentId: number, photoId: number): Promise<
  */
 export async function getIncidentPhotos(incidentId: number): Promise<PhotoItem[]> {
   const token = await getAuthToken();
-  const response = await fetch(`${API_BASE_URL}/incidents/${incidentId}/photos`, {
+  const baseUrl = await getBaseUrl();
+  const response = await fetch(`${baseUrl}/incidents/${incidentId}/photos`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 

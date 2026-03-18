@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS — Page de statut publique (UX-09)
+ * Ma Commune — Page de statut publique (UX-09)
  * Affiche l'état des services en temps réel.
  * Accessible sans authentification sur /status
  */
@@ -33,7 +33,7 @@ $services = [
 
     checkService('Base de données', function () {
         require_once __DIR__ . '/config/Database.php';
-        $db = Database::getInstance()->getConnection();
+        $db = Database::getInstance();
         $db->query('SELECT 1');
         return true;
     }),
@@ -45,7 +45,8 @@ $services = [
 
     checkService('Serveur WebSocket', function () {
         // Tenter une connexion TCP sur le port WebSocket
-        $sock = @fsockopen('127.0.0.1', 8080, $errno, $errstr, 1);
+        $port = (int)($_ENV['WS_PORT'] ?? getenv('WS_PORT') ?: 8081);
+        $sock = @fsockopen('127.0.0.1', $port, $errno, $errstr, 1);
         if ($sock) { fclose($sock); return true; }
         return false; // Dégradé si non disponible
     }),
@@ -193,7 +194,7 @@ $incidents = [
 
     <div class="refresh-note">
         Cette page se rafraîchit automatiquement toutes les 60 secondes.
-        <br>Pour signaler un problème : <a href="mailto:<?= defined('APP_EMAIL_FROM') ? htmlspecialchars(APP_EMAIL_FROM) : 'support@votre-domaine.com' ?>">Contacter le support</a>
+        <br>Pour signaler un problème : <a href="mailto:<?= defined('APP_EMAIL_FROM') ? htmlspecialchars(APP_EMAIL_FROM) : 'contact@ma-commune.local' ?>">Contacter le support</a>
     </div>
 </div>
 

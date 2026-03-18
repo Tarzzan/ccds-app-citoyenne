@@ -1,5 +1,5 @@
 /**
- * CCDS v1.2 — Écran Mon Profil (UX-03)
+ * Ma Commune v1.2 — Écran Mon Profil (UX-03)
  *
  * - Affichage et modification du nom, téléphone
  * - Changement de mot de passe
@@ -20,7 +20,7 @@ import { COLORS } from '../components/ui';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
-  const { user, logout } = useAuth();
+  const { user, logout, updateCurrentUser } = useAuth();
 
   const [loading,    setLoading]    = useState(true);
   const [saving,     setSaving]     = useState(false);
@@ -83,6 +83,10 @@ export default function ProfileScreen() {
           new_comment:     notifNewComment,
           vote_milestone:  notifVoteMilestone,
         },
+      });
+      await updateCurrentUser({
+        full_name: fullName.trim(),
+        phone: phone.trim(),
       });
       Alert.alert('Succès', 'Profil mis à jour.');
     } catch (err: any) {

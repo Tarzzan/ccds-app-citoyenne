@@ -1,18 +1,18 @@
 #!/bin/sh
 # ─────────────────────────────────────────────────────────────────────────────
-# CCDS — Script de démarrage Railway
+# Ma Commune — Script de démarrage Railway
 # Génère config.php depuis les variables d'environnement, puis lance supervisord
 # Variables Railway attendues : DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -e
 
-echo "🌿 CCDS — Démarrage du backend..."
+echo "🌿 Ma Commune — Démarrage du backend..."
 
 # ── Résoudre les variables de connexion (DB_PASS ou DB_PASSWORD) ─────────────
 RESOLVED_HOST="${MYSQLHOST:-${DB_HOST:-localhost}}"
 RESOLVED_PORT="${MYSQLPORT:-${DB_PORT:-3306}}"
-RESOLVED_NAME="${MYSQLDATABASE:-${DB_NAME:-ccds_db}}"
+RESOLVED_NAME="${MYSQLDATABASE:-${DB_NAME:-ma_commune_db}}"
 RESOLVED_USER="${MYSQLUSER:-${DB_USER:-root}}"
 RESOLVED_PASS="${MYSQLPASSWORD:-${DB_PASS:-${DB_PASSWORD:-}}}"
 
@@ -20,7 +20,7 @@ RESOLVED_PASS="${MYSQLPASSWORD:-${DB_PASS:-${DB_PASSWORD:-}}}"
 cat > /var/www/backend/config/config.php << EOF
 <?php
 /**
- * CCDS — Configuration de production (générée automatiquement au démarrage)
+ * Ma Commune — Configuration de production (générée automatiquement au démarrage)
  * Ne pas modifier manuellement — éditer les variables d'environnement Railway.
  */
 
@@ -47,16 +47,21 @@ define('JWT_ALGORITHM', 'HS256');
 define('UPLOAD_DIR',      '/var/www/backend/uploads/');
 define('UPLOAD_MAX_SIZE', 5 * 1024 * 1024);
 define('UPLOAD_ALLOWED',  ['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-define('UPLOAD_BASE_URL', getenv('APP_URL') ? getenv('APP_URL') . '/uploads/' : 'https://ccds-app-citoyenne-production.up.railway.app/uploads/');
+define('UPLOAD_BASE_URL', getenv('APP_URL') ? getenv('APP_URL') . '/uploads/' : 'https://ma-commune.example/uploads/');
 
 // =============================================================
 // Application
 // =============================================================
-define('APP_NAME',    'CCDS — Application Citoyenne');
-define('APP_VERSION', '1.6.2');
-define('APP_ENV',     'production');
-define('APP_DEBUG',   false);
-define('APP_URL',     getenv('APP_URL') ?: 'https://ccds-app-citoyenne-production.up.railway.app');
+define('APP_NAME',             getenv('APP_NAME') ?: 'Ma Commune');
+define('APP_SHORT_NAME',       getenv('APP_SHORT_NAME') ?: 'MACOMMUNE');
+define('APP_SLUG',             getenv('APP_SLUG') ?: 'ma-commune');
+define('APP_SUBTITLE',         getenv('APP_SUBTITLE') ?: 'Veille civique territoriale');
+define('APP_REFERENCE_PREFIX', getenv('APP_REFERENCE_PREFIX') ?: 'MC');
+define('APP_EMAIL_FROM',       getenv('APP_EMAIL_FROM') ?: 'noreply@macommune.local');
+define('APP_VERSION',          getenv('APP_VERSION') ?: '1.6.3');
+define('APP_ENV',              'production');
+define('APP_DEBUG',            false);
+define('APP_URL',              getenv('APP_URL') ?: 'https://ma-commune.example');
 
 // =============================================================
 // CORS

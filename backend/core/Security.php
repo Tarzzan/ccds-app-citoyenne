@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS v1.2 — Classe de sécurité centralisée (SEC-01)
+ * Ma Commune v1.2 — Classe de sécurité centralisée (SEC-01)
  *
  * Protections :
  * - Sanitisation XSS sur toutes les entrées

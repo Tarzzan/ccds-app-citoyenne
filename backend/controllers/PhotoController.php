@@ -1,7 +1,7 @@
 <?php
 
 /**
- * CCDS — PhotoController
+ * Ma Commune — PhotoController
  * Gestion des photos multiples pour un incident (v1.4 — UX-04).
  *
  * Routes :
@@ -15,17 +15,25 @@ class PhotoController extends BaseController
     private const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 Mo
     private const ALLOWED_TYPES  = ['image/jpeg', 'image/png', 'image/webp'];
     private const UPLOAD_DIR     = __DIR__ . '/../uploads/incidents/';
+    private ?bool $hasSortOrderColumn = null;
 
     // ── GET /incidents/{id}/photos ────────────────────────────
     public function list(int $incidentId): void
     {
-        $this->requireAuth();
-        $this->assertIncidentAccess($incidentId);
+        $auth = $this->requireAuth();
+        $this->assertIncidentAccess($incidentId, $auth);
 
-        $stmt = $this->db->prepare("
-            SELECT id, file_path, file_name, mime_type, file_size, sort_order, created_at
-            FROM photos WHERE incident_id = ? ORDER BY sort_order, id
-        ");
+        if ($this->hasSortOrderColumn()) {
+            $stmt = $this->db->prepare("
+                SELECT id, file_path, file_name, mime_type, file_size, sort_order, uploaded_at AS created_at
+                FROM photos WHERE incident_id = ? ORDER BY sort_order, id
+            ");
+        } else {
+            $stmt = $this->db->prepare("
+                SELECT id, file_path, file_name, mime_type, file_size, 0 AS sort_order, uploaded_at AS created_at
+                FROM photos WHERE incident_id = ? ORDER BY id
+            ");
+        }
         $stmt->execute([$incidentId]);
         $photos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -40,12 +48,8 @@ class PhotoController extends BaseController
     // ── POST /incidents/{id}/photos ───────────────────────────
     public function upload(int $incidentId): void
     {
-        $this->requireAuth();
-        $this->assertIncidentAccess($incidentId, true); // owner ou admin/agent
-
-        // Vérifier le nombre de photos existantes
-        $count = (int)$this->db->prepare("SELECT COUNT(*) FROM photos WHERE incident_id = ?")
-                               ->execute([$incidentId]) ? $this->db->query("SELECT COUNT(*) FROM photos WHERE incident_id = $incidentId")->fetchColumn() : 0;
+        $auth = $this->requireAuth();
+        $this->assertIncidentAccess($incidentId, $auth, true); // owner ou admin/agent
 
         // Compter via requête préparée
         $stmtCount = $this->db->prepare("SELECT COUNT(*) FROM photos WHERE incident_id = ?");
@@ -91,14 +95,22 @@ class PhotoController extends BaseController
             $this->optimizeImage($filePath, $mimeType);
         }
 
-        $sortOrder = (int)($_POST['sort_order'] ?? $count);
         $origName  = basename($file['name'] ?? $fileName);
 
-        $stmt = $this->db->prepare("
-            INSERT INTO photos (incident_id, file_path, file_name, mime_type, file_size, sort_order, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, NOW())
-        ");
-        $stmt->execute([$incidentId, $fileName, $origName, $mimeType, filesize($filePath), $sortOrder]);
+        if ($this->hasSortOrderColumn()) {
+            $sortOrder = (int)($_POST['sort_order'] ?? $count);
+            $stmt = $this->db->prepare("
+                INSERT INTO photos (incident_id, file_path, file_name, mime_type, file_size, sort_order, uploaded_at)
+                VALUES (?, ?, ?, ?, ?, ?, NOW())
+            ");
+            $stmt->execute([$incidentId, $fileName, $origName, $mimeType, filesize($filePath), $sortOrder]);
+        } else {
+            $stmt = $this->db->prepare("
+                INSERT INTO photos (incident_id, file_path, file_name, mime_type, file_size, uploaded_at)
+                VALUES (?, ?, ?, ?, ?, NOW())
+            ");
+            $stmt->execute([$incidentId, $fileName, $origName, $mimeType, filesize($filePath)]);
+        }
         $photoId = (int)$this->db->lastInsertId();
 
         $base = rtrim($_ENV['APP_URL'] ?? (defined('APP_URL') ? APP_URL : 'https://votre-domaine.com'), '/');
@@ -112,8 +124,8 @@ class PhotoController extends BaseController
     // ── DELETE /incidents/{id}/photos/{pid} ───────────────────
     public function delete(int $incidentId, int $photoId): void
     {
-        $this->requireAuth();
-        $this->assertIncidentAccess($incidentId, true);
+        $auth = $this->requireAuth();
+        $this->assertIncidentAccess($incidentId, $auth, true);
 
         $stmt = $this->db->prepare("SELECT * FROM photos WHERE id = ? AND incident_id = ?");
         $stmt->execute([$photoId, $incidentId]);
@@ -140,7 +152,7 @@ class PhotoController extends BaseController
      * Vérifie que l'utilisateur a accès à l'incident.
      * Si $requireOwnerOrStaff = true, seul le propriétaire ou un agent/admin peut agir.
      */
-    private function assertIncidentAccess(int $incidentId, bool $requireOwnerOrStaff = false): void
+    private function assertIncidentAccess(int $incidentId, array $auth, bool $requireOwnerOrStaff = false): void
     {
         $stmt = $this->db->prepare("SELECT user_id, status FROM incidents WHERE id = ?");
         $stmt->execute([$incidentId]);
@@ -151,8 +163,8 @@ class PhotoController extends BaseController
         }
 
         if ($requireOwnerOrStaff) {
-            $isOwner = $incident['user_id'] === $this->user['id'];
-            $isStaff = in_array($this->user['role'], ['agent', 'admin']);
+            $isOwner = (int) $incident['user_id'] === (int) ($auth['sub'] ?? 0);
+            $isStaff = in_array($auth['role'] ?? '', ['agent', 'admin'], true);
             if (!$isOwner && !$isStaff) {
                 $this->error('Accès refusé.', 403);
             }
@@ -192,5 +204,24 @@ class PhotoController extends BaseController
         } catch (\Throwable $e) {
             // Silencieux — l'image originale est conservée
         }
+    }
+
+    private function hasSortOrderColumn(): bool
+    {
+        if ($this->hasSortOrderColumn !== null) {
+            return $this->hasSortOrderColumn;
+        }
+
+        try {
+            $stmt = $this->db->prepare(
+                'SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
+            );
+            $stmt->execute(['photos', 'sort_order']);
+            $this->hasSortOrderColumn = (int)$stmt->fetchColumn() > 0;
+        } catch (\Throwable $e) {
+            $this->hasSortOrderColumn = false;
+        }
+
+        return $this->hasSortOrderColumn;
     }
 }

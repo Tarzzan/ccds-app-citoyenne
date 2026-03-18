@@ -1,9 +1,9 @@
 <?php
 /**
- * CCDS v1.3 — Tests Unitaires : Permissions RBAC (TEST-01)
+ * Ma Commune v1.3 — Tests Unitaires : Permissions RBAC (TEST-01)
  * Couvre : matrice de permissions par rôle, vérifications fines.
  */
-namespace CCDS\Tests\Unit;
+namespace Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 

@@ -1,9 +1,9 @@
 <?php
 /**
- * CCDS — Tests Unitaires : Helpers (JWT, Validation, Formatage)
+ * Ma Commune — Tests Unitaires : Helpers (JWT, Validation, Formatage)
  */
 
-namespace CCDS\Tests\Unit;
+namespace Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 
@@ -166,10 +166,10 @@ class HelpersTest extends TestCase
      */
     public function reference_generation_follows_expected_format(): void
     {
-        // Format attendu : CCDS-YYYYMMDD-XXXXX (ex: CCDS-20260226-A1B2C)
-        $ref = 'CCDS-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
+        // Format attendu : MC-YYYYMMDD-XXXXX (ex: MC-20260226-A1B2C)
+        $ref = 'MC-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
         $this->assertMatchesRegularExpression(
-            '/^CCDS-\d{8}-[A-Z0-9]{5}$/',
+            '/^MC-\d{8}-[A-Z0-9]{5}$/',
             $ref,
             "La référence '$ref' ne correspond pas au format attendu."
         );

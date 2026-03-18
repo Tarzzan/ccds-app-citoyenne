@@ -1,8 +1,8 @@
-# Guide de Tests Mobiles — CCDS App Citoyenne
+# Guide de Tests Mobiles — Ma Commune
 
-> **Version :** 1.0 | **Date :** Février 2026 | **Plateformes :** iOS 15+ / Android 10+
+> **Version :** 1.1 | **Date :** Mars 2026 | **Plateformes :** Android prioritaire, iOS ensuite
 
-Ce guide décrit les procédures de tests manuels à effectuer sur l'application mobile avant chaque déploiement en production. Les tests sont organisés par fonctionnalité et doivent être exécutés sur un appareil physique (non simulateur) pour chaque plateforme.
+Ce guide décrit les procédures de tests manuels à effectuer sur l'application mobile avant chaque déploiement en production. Dans la phase actuelle, la validation prioritaire porte sur Android physique, avec configuration serveur dynamique et boucle citoyen -> agent -> admin.
 
 ---
 
@@ -21,14 +21,25 @@ Ce guide décrit les procédures de tests manuels à effectuer sur l'application
 
 Avant de commencer les tests, s'assurer que :
 
-- L'URL de l'API de test est correctement configurée dans `mobile/src/services/api.ts`
-- La base de données de test est initialisée avec les fixtures (`tests/Fixtures/test_database.sql`)
+- Le pré-vol local est vert via `bash scripts/audit_local_predeploy.sh`
+- Les données de démonstration sont prêtes via `bash scripts/seed_demo_local.sh`
+- L'APK cible appareil a été généré via `bash scripts/build_release_tablette.sh`
+- La tablette locale Samsung `SM-T590` remonte actuellement `armeabi-v7a`
+- L'URL serveur peut être configurée depuis l'écran `Configuration serveur`
 - Les permissions de l'application sont réinitialisées sur chaque appareil
 - La connexion réseau est active (Wi-Fi ou 4G)
 
 ---
 
-## 2. Checklist de Tests — Authentification
+## 2. Checklist de Tests — Configuration & Authentification
+
+### 2.0 Configuration serveur
+
+| # | Scénario | Étapes | Résultat attendu | iOS | Android |
+|---|---|---|---|---|---|
+| S01 | Configuration locale valide | Saisir `http://127.0.0.1:8080/api` → Tester → Enregistrer | Connexion réussie, écran suivant accessible | ☐ | ☐ |
+| S02 | URL invalide | Saisir une URL incorrecte → Tester | Message d'erreur clair, pas de sauvegarde | ☐ | ☐ |
+| S03 | Persistance URL | Configurer l'URL → Fermer l'app → Rouvrir | L'URL serveur reste active | ☐ | ☐ |
 
 ### 2.1 Inscription
 
@@ -64,8 +75,9 @@ Avant de commencer les tests, s'assurer que :
 | C06 | Sélection de catégorie | Appuyer sur le sélecteur → Choisir "Voirie" | Catégorie sélectionnée affichée | ☐ | ☐ |
 | C07 | Description obligatoire | Laisser la description vide → Envoyer | Validation, message d'erreur | ☐ | ☐ |
 | C08 | Envoi complet valide | Remplir tous les champs → Envoyer | Succès, référence affichée, retour à la liste | ☐ | ☐ |
-| C09 | Envoi hors connexion | Couper le réseau → Tenter d'envoyer | Message "Pas de connexion internet" | ☐ | ☐ |
+| C09 | Envoi hors connexion | Couper le réseau → Tenter d'envoyer | Message compréhensible ou mise en attente locale | ☐ | ☐ |
 | C10 | Indicateur de chargement | Appuyer sur "Envoyer" | Bouton désactivé + spinner pendant l'envoi | ☐ | ☐ |
+| C11 | Upload photo multiple | Joindre plusieurs photos | Toutes les photos sont visibles dans le dossier après envoi | ☐ | ☐ |
 
 ---
 
@@ -83,7 +95,7 @@ Avant de commencer les tests, s'assurer que :
 
 ---
 
-## 5. Checklist de Tests — Mes Signalements
+## 5. Checklist de Tests — Mes Signalements & Bilan
 
 | # | Scénario | Étapes | Résultat attendu | iOS | Android |
 |---|---|---|---|---|---|
@@ -93,6 +105,8 @@ Avant de commencer les tests, s'assurer que :
 | E04 | Filtre par statut | Appuyer sur un filtre de statut | Liste filtrée correctement | ☐ | ☐ |
 | E05 | Liste vide | Compte sans signalement | Message "Aucun signalement" affiché | ☐ | ☐ |
 | E06 | Badge de statut | Observer les cartes | Badge coloré selon le statut de chaque signalement | ☐ | ☐ |
+| E07 | Mon bilan citoyen | Ouvrir `Mon bilan` | Les compteurs et les dossiers récents se chargent sans erreur | ☐ | ☐ |
+| E08 | Navigation depuis une notification | Ouvrir une notification de statut | Retour sur le bon dossier ou la bonne surface | ☐ | ☐ |
 
 ---
 
@@ -106,10 +120,22 @@ Avant de commencer les tests, s'assurer que :
 | F04 | Commentaires publics | Signalement avec commentaires | Commentaires listés chronologiquement | ☐ | ☐ |
 | F05 | Ajout de commentaire | Saisir un commentaire → Envoyer | Commentaire ajouté en bas de liste | ☐ | ☐ |
 | F06 | Commentaire vide | Appuyer sur "Envoyer" sans texte | Validation, pas d'envoi | ☐ | ☐ |
+| F07 | Photos existantes | Ouvrir un signalement avec photos | Les images déjà envoyées sont relues correctement | ☐ | ☐ |
 
 ---
 
-## 7. Tests de Performance et UX
+## 7. Checklist de Tests — Couches Communauté
+
+| # | Scénario | Étapes | Résultat attendu | iOS | Android |
+|---|---|---|---|---|---|
+| G01 | Consultations actives | Ouvrir `Consultations` | La liste active se charge correctement | ☐ | ☐ |
+| G02 | Vote consultation | Voter sur une consultation | Le vote est pris en compte et l'état utilisateur est cohérent | ☐ | ☐ |
+| G03 | Agenda communal | Ouvrir `Agenda communal` | La liste des événements se charge | ☐ | ☐ |
+| G04 | RSVP événement | Répondre `Je participe` ou `Intéressé` | L'état RSVP est mis à jour sans erreur | ☐ | ☐ |
+
+---
+
+## 8. Tests de Performance et UX
 
 | # | Critère | Méthode de mesure | Seuil acceptable |
 |---|---|---|---|
@@ -117,22 +143,22 @@ Avant de commencer les tests, s'assurer que :
 | P02 | Temps de chargement de la carte | Chronométrer l'affichage des marqueurs | < 2 secondes |
 | P03 | Temps d'envoi d'un signalement | Chronométrer de "Envoyer" à la confirmation | < 5 secondes |
 | P04 | Fluidité du scroll | Scroller rapidement dans la liste | Pas de saccades (60 fps) |
-| P05 | Taille de l'APK/IPA | Vérifier la taille du build | < 50 Mo |
+| P05 | Taille du build test appareil | Vérifier la taille de l'APK cible appareil | < 50 Mo pour un APK ABI ciblé tablette |
 
 ---
 
-## 8. Tests d'Accessibilité
+## 9. Tests d'Accessibilité
 
 | # | Critère | iOS | Android |
 |---|---|---|---|
-| G01 | Taille de police dynamique (grande police) | ☐ | ☐ |
-| G02 | Mode sombre | ☐ | ☐ |
-| G03 | VoiceOver / TalkBack (navigation vocale) | ☐ | ☐ |
-| G04 | Contraste des couleurs (WCAG AA) | ☐ | ☐ |
+| H01 | Taille de police dynamique (grande police) | ☐ | ☐ |
+| H02 | Mode sombre | ☐ | ☐ |
+| H03 | VoiceOver / TalkBack (navigation vocale) | ☐ | ☐ |
+| H04 | Contraste des couleurs (WCAG AA) | ☐ | ☐ |
 
 ---
 
-## 9. Rapport de Test
+## 10. Rapport de Test
 
 Compléter ce tableau après chaque cycle de test :
 
@@ -150,4 +176,4 @@ Compléter ce tableau après chaque cycle de test :
 
 ---
 
-*Document maintenu par l'équipe CCDS — Mettre à jour à chaque nouvelle fonctionnalité.*
+*Document de validation terrain à maintenir avec l'état réel de `Ma Commune`.*

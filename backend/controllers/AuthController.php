@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS v1.2 — AuthController (TECH-01 + UX-03)
+ * Ma Commune v1.2 — AuthController (TECH-01 + UX-03)
  *
  * POST /api/register        → Inscription
  * POST /api/login           → Connexion
@@ -43,7 +43,7 @@ class AuthController extends BaseController
         $hash = password_hash($body['password'], PASSWORD_BCRYPT, ['cost' => 12]);
 
         $stmt = $this->db->prepare(
-            'INSERT INTO users (email, password, full_name, phone) VALUES (?, ?, ?, ?)'
+            'INSERT INTO users (email, password_hash, full_name, phone) VALUES (?, ?, ?, ?)'
         );
         $stmt->execute([
             $email,
@@ -86,12 +86,12 @@ class AuthController extends BaseController
         $email = strtolower(trim($body['email']));
 
         $stmt = $this->db->prepare(
-            'SELECT id, email, password, full_name, role, is_active FROM users WHERE email = ? LIMIT 1'
+            'SELECT id, email, password_hash, full_name, role, is_active FROM users WHERE email = ? LIMIT 1'
         );
         $stmt->execute([$email]);
         $user = $stmt->fetch();
 
-        if (!$user || !password_verify($body['password'], $user['password'])) {
+        if (!$user || !password_verify($body['password'], $user['password_hash'])) {
             $this->error('Email ou mot de passe incorrect.', 401);
         }
 
@@ -226,23 +226,27 @@ class AuthController extends BaseController
         $kpis = $stmt->fetch();
 
         // Points et rang
-        $stmtPoints = $this->db->prepare(
-            'SELECT COALESCE(SUM(points), 0) AS total_points FROM user_points WHERE user_id = ?'
-        );
-        $stmtPoints->execute([$userId]);
-        $totalPoints = (int) $stmtPoints->fetchColumn();
+        $totalPoints = 0;
+        $rank = 1;
+        if ($this->hasTable('user_points')) {
+            $stmtPoints = $this->db->prepare(
+                'SELECT COALESCE(SUM(points), 0) AS total_points FROM user_points WHERE user_id = ?'
+            );
+            $stmtPoints->execute([$userId]);
+            $totalPoints = (int) $stmtPoints->fetchColumn();
 
-        $stmtRank = $this->db->prepare('
-            SELECT COUNT(*) + 1 AS user_rank
-            FROM (
-                SELECT user_id, SUM(points) AS pts
-                FROM user_points
-                GROUP BY user_id
-                HAVING pts > ?
-            ) ranked
-        ');
-        $stmtRank->execute([$totalPoints]);
-        $rank = (int) $stmtRank->fetchColumn();
+            $stmtRank = $this->db->prepare('
+                SELECT COUNT(*) + 1 AS user_rank
+                FROM (
+                    SELECT user_id, SUM(points) AS pts
+                    FROM user_points
+                    GROUP BY user_id
+                    HAVING pts > ?
+                ) ranked
+            ');
+            $stmtRank->execute([$totalPoints]);
+            $rank = (int) $stmtRank->fetchColumn();
+        }
 
         $totalUsers = (int) $this->db->query(
             'SELECT COUNT(*) FROM users WHERE is_active = 1'
@@ -258,16 +262,19 @@ class AuthController extends BaseController
         $commentsCount = (int) $stmtComments->fetchColumn();
 
         // Badges récents
-        $stmtBadges = $this->db->prepare('
-            SELECT b.name AS label, b.icon, ub.earned_at
-            FROM user_badges ub
-            JOIN badges b ON b.id = ub.badge_id
-            WHERE ub.user_id = ?
-            ORDER BY ub.earned_at DESC
-            LIMIT 5
-        ');
-        $stmtBadges->execute([$userId]);
-        $badges = $stmtBadges->fetchAll();
+        $badges = [];
+        if ($this->hasTable('user_badges') && $this->hasTable('badges')) {
+            $stmtBadges = $this->db->prepare('
+                SELECT b.name AS label, b.icon, ub.earned_at
+                FROM user_badges ub
+                JOIN badges b ON b.id = ub.badge_id
+                WHERE ub.user_id = ?
+                ORDER BY ub.earned_at DESC
+                LIMIT 5
+            ');
+            $stmtBadges->execute([$userId]);
+            $badges = $stmtBadges->fetchAll();
+        }
 
         // Signalements récents
         $stmtRecent = $this->db->prepare('
@@ -330,17 +337,17 @@ class AuthController extends BaseController
         ]);
 
         // Vérifier l'ancien mot de passe
-        $stmt = $this->db->prepare('SELECT password FROM users WHERE id = ? LIMIT 1');
+        $stmt = $this->db->prepare('SELECT password_hash FROM users WHERE id = ? LIMIT 1');
         $stmt->execute([$auth['sub']]);
         $user = $stmt->fetch();
 
-        if (!$user || !password_verify($body['current_password'], $user['password'])) {
+        if (!$user || !password_verify($body['current_password'], $user['password_hash'])) {
             $this->error('Mot de passe actuel incorrect.', 401);
         }
 
         $newHash = password_hash($body['new_password'], PASSWORD_BCRYPT, ['cost' => 12]);
 
-        $stmt = $this->db->prepare('UPDATE users SET password = ? WHERE id = ?');
+        $stmt = $this->db->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
         $stmt->execute([$newHash, $auth['sub']]);
 
         $this->success(['updated' => true], 200, 'Mot de passe modifié avec succès.');

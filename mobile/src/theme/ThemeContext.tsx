@@ -1,5 +1,5 @@
 /**
- * CCDS v1.3 — ThemeContext (A11Y-02)
+ * Ma Commune — ThemeContext (A11Y-02)
  * Mode sombre synchronisé avec les préférences système.
  * Palette conforme WCAG 2.1 AA (ratio de contraste ≥ 4.5:1).
  */
@@ -104,7 +104,8 @@ const ThemeContext = createContext<ThemeContextValue>({
   setThemeMode: () => {},
 });
 
-const STORAGE_KEY = '@ccds_theme_mode';
+const STORAGE_KEY = '@ma_commune_theme_mode';
+const LEGACY_STORAGE_KEY = '@ccds_theme_mode';
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const systemScheme = useColorScheme();
@@ -112,11 +113,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Charger la préférence sauvegardée
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then(saved => {
+    void (async () => {
+      const saved = await AsyncStorage.getItem(STORAGE_KEY)
+        ?? await AsyncStorage.getItem(LEGACY_STORAGE_KEY);
+
       if (saved === 'light' || saved === 'dark' || saved === 'system') {
         setThemeModeState(saved);
+        await AsyncStorage.setItem(STORAGE_KEY, saved);
+        await AsyncStorage.removeItem(LEGACY_STORAGE_KEY);
       }
-    });
+    })();
   }, []);
 
   // Écouter les changements de thème système
@@ -132,7 +138,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setThemeMode = useCallback((mode: ThemeMode) => {
     setThemeModeState(mode);
-    AsyncStorage.setItem(STORAGE_KEY, mode);
+    void AsyncStorage.setItem(STORAGE_KEY, mode);
+    void AsyncStorage.removeItem(LEGACY_STORAGE_KEY);
   }, []);
 
   const isDark = themeMode === 'dark' || (themeMode === 'system' && systemScheme === 'dark');

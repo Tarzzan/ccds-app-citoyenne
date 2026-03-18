@@ -1,0 +1,92 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Ma Commune Guyane</title>
+  <desc>Icône Ma Commune avec fond végétal vert, silhouette blanche de la Guyane française et pictogramme de suivi technique jaune au centre.</desc>
+  <defs>
+    <linearGradient id="bg" x1="128" y1="104" x2="902" y2="926" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#155F35"/>
+      <stop offset="0.52" stop-color="#208043"/>
+      <stop offset="1" stop-color="#176737"/>
+    </linearGradient>
+    <radialGradient id="bgGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(766 190) rotate(135) scale(420)">
+      <stop stop-color="#76B84A" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#76B84A" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="river" x1="140" y1="674" x2="874" y2="674" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7CCCA4" stop-opacity="0"/>
+      <stop offset="0.24" stop-color="#BFEAD0" stop-opacity="0.18"/>
+      <stop offset="0.56" stop-color="#CBEFD7" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#7CCCA4" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="mapFill" x1="244" y1="214" x2="640" y2="842" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F1F3F2"/>
+    </linearGradient>
+    <filter id="outerShadow" x="68" y="82" width="888" height="888" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="8"/>
+      <feGaussianBlur stdDeviation="18"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.0352941 0 0 0 0 0.278431 0 0 0 0 0.145098 0 0 0 0.32 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_1" result="shape"/>
+    </filter>
+    <filter id="mapShadow" x="148" y="118" width="616" height="790" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="12"/>
+      <feGaussianBlur stdDeviation="16"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.054902 0 0 0 0 0.121569 0 0 0 0 0.0862745 0 0 0 0.34 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_1" result="shape"/>
+    </filter>
+    <filter id="bellShadow" x="298" y="320" width="430" height="374" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="10"/>
+      <feGaussianBlur stdDeviation="12"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.290196 0 0 0 0 0.196078 0 0 0 0 0.0196078 0 0 0 0.34 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_1" result="shape"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#outerShadow)">
+    <rect x="84" y="90" width="856" height="856" rx="118" fill="url(#bg)"/>
+    <rect x="84" y="90" width="856" height="856" rx="118" fill="url(#bgGlow)"/>
+    <rect x="84" y="90" width="856" height="856" rx="118" stroke="#2B8C55" stroke-width="8"/>
+  </g>
+
+  <g opacity="0.16">
+    <path d="M170 768C252 708 320 676 392 666C468 655 542 670 642 706C730 738 784 742 866 714" stroke="url(#river)" stroke-width="18" stroke-linecap="round"/>
+    <path d="M132 614C176 548 218 510 268 488C322 463 378 458 466 474" stroke="#BCE8C9" stroke-opacity="0.18" stroke-width="14" stroke-linecap="round"/>
+    <path d="M720 166C786 176 840 206 888 258" stroke="#9DD57D" stroke-opacity="0.22" stroke-width="16" stroke-linecap="round"/>
+  </g>
+
+  <g opacity="0.12" fill="#9DD57D">
+    <path d="M744 186C771 224 785 261 788 300C752 276 728 241 716 202C723 194 731 189 744 186Z"/>
+    <path d="M788 220C828 247 855 279 872 320C834 313 801 287 774 242L788 220Z"/>
+    <path d="M202 746C239 778 260 815 269 860C232 844 205 814 186 774L202 746Z"/>
+    <path d="M171 666C197 679 218 703 232 742C201 736 177 718 158 690L171 666Z"/>
+  </g>
+
+  <g filter="url(#mapShadow)">
+    <path d="M370 190L418 174L465 150L534 148L598 157L664 180L717 222L748 276L772 349L792 424L801 512L796 590L784 658L762 712L726 766L684 812L649 858L606 887L554 899L499 898L444 896L380 879L340 846L297 830L264 798L232 755L235 707L249 676L250 635L233 593L217 540L214 488L219 420L230 355L248 306L283 268L312 227L347 214L370 190Z" fill="url(#mapFill)"/>
+  </g>
+
+  <g opacity="0.08">
+    <path d="M280 448C364 465 446 510 524 598" stroke="#134F2F" stroke-width="14" stroke-linecap="round"/>
+    <path d="M272 640C342 705 417 748 510 784" stroke="#134F2F" stroke-width="12" stroke-linecap="round"/>
+  </g>
+
+  <g filter="url(#bellShadow)">
+    <path d="M461 390C461 353 491 323 528 323C565 323 595 353 595 390V424C642 452 673 499 680 557C681 564 679 570 675 576C670 581 664 585 657 585H399C392 585 386 582 381 576C377 570 375 564 376 557C383 499 414 452 461 424V390Z" fill="#FFD33E"/>
+    <path d="M528 614C508 614 492 602 487 584H569C564 602 548 614 528 614Z" fill="#F6B81D"/>
+    <path d="M475 392C475 362 499 338 528 338C557 338 581 362 581 392V432L589 437C628 462 654 501 661 548H395C402 501 428 462 467 437L475 432V392Z" fill="#117140"/>
+    <path d="M511 360C511 350 519 342 528 342C537 342 545 350 545 360V387H511V360Z" fill="#FFD33E"/>
+    <path d="M408 567H648" stroke="#FFD33E" stroke-width="18" stroke-linecap="round"/>
+    <path d="M499 493L461 531L484 554L522 515L560 553C564 557 570 559 576 559C582 559 588 556 592 552L612 532L585 505L566 524L528 486L550 464C558 456 563 445 563 434C563 424 559 414 552 407C537 392 513 392 499 406L480 425L507 452L526 433L499 460C491 468 487 479 487 489C487 491 487 492 488 494L499 493Z" fill="#F4F1E7"/>
+  </g>
+</svg>

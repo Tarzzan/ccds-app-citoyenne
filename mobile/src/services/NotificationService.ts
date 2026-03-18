@@ -1,5 +1,5 @@
 /**
- * Service de Notifications Push — CCDS Citoyen v1.2
+ * Service de Notifications Push — Ma Commune
  * IMPORTANT : expo-notifications 0.32+ retourne { granted: boolean }
  * et non plus { status: 'granted' | 'denied' | 'undetermined' }
  * Utilise Expo Notifications pour iOS et Android
@@ -10,6 +10,10 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { registerPushToken } from './api';
+
+const PUSH_ENABLED = process.env.EXPO_PUBLIC_ENABLE_PUSH === 'true';
+const EXPO_PROJECT_ID =
+  process.env.EXPO_PUBLIC_EXPO_PROJECT_ID ?? 'b3d38760-9ace-47eb-b84f-37419e550824';
 
 // ── Configuration du comportement des notifications ──────────────────────────
 Notifications.setNotificationHandler({
@@ -23,6 +27,11 @@ Notifications.setNotificationHandler({
 
 // ── Demander les permissions et enregistrer le token ────────────────────────
 export const registerForPushNotifications = async (): Promise<string | null> => {
+  if (!PUSH_ENABLED) {
+    console.log('[Push] Notifications désactivées pour cette version locale');
+    return null;
+  }
+
   // Les notifications push ne fonctionnent pas sur simulateur
   if (!Device.isDevice) {
     console.log('[Push] Notifications non disponibles sur simulateur');
@@ -47,19 +56,19 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
 
   // Configurer le canal Android
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('ccds-notifications', {
-      name:        'CCDS Citoyen',
+    await Notifications.setNotificationChannelAsync('ma-commune-notifications', {
+      name:        'Ma Commune',
       importance:  Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       lightColor:  '#1a7a42',
-      description: 'Notifications de l\'application CCDS Citoyen',
+      description: 'Notifications de l\'application Ma Commune',
     });
   }
 
   // Obtenir le token Expo Push
   try {
     const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: 'ccds-citoyen-guyane', // À remplacer par l'ID Expo réel
+      projectId: EXPO_PROJECT_ID,
     });
 
     const token = tokenData.data;
@@ -71,7 +80,7 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
     console.log('[Push] Token enregistré :', token);
     return token;
   } catch (error) {
-    console.error('[Push] Erreur lors de l\'obtention du token :', error);
+    console.log('[Push] Configuration push incomplète, enregistrement ignoré pour cette build');
     return null;
   }
 };

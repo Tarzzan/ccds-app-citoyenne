@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS — Fonctions utilitaires partagées par toute l'API
+ * Ma Commune — Fonctions utilitaires partagées par toute l'API
  */
 
 // =============================================================
@@ -148,7 +148,7 @@ function validate(array $data, array $rules): array
 // =============================================================
 
 /**
- * Génère une référence unique pour un signalement (ex: CCDS-2026-00042).
+ * Génère une référence unique pour un signalement (ex: MC-2026-00042).
  */
 function generate_reference(int $id): string
 {

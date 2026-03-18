@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS v1.2 — CategoryController (ADMIN-02 + TECH-01)
+ * Ma Commune v1.2 — CategoryController (ADMIN-02 + TECH-01)
  *
  * GET    /api/categories        → Liste des catégories actives
  * POST   /api/categories        → Créer une catégorie (admin)

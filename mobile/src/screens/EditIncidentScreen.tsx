@@ -1,5 +1,5 @@
 /**
- * CCDS v1.2 — Écran Édition d'un Signalement (UX-02)
+ * Ma Commune v1.2 — Écran d'édition d'un signalement (UX-02)
  *
  * Accessible uniquement si statut = 'submitted' et propriétaire.
  * Permet de modifier : titre, description, adresse.

@@ -1,5 +1,5 @@
 -- =============================================================
--- CCDS — Application Citoyenne de Signalement
+-- Ma Commune — Application citoyenne territoriale
 -- Schéma de la Base de Données MySQL
 -- Version : 1.0.0 | Date : 2026-02-26
 -- =============================================================
@@ -10,11 +10,11 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- -------------------------------------------------------------
 -- Base de données
 -- -------------------------------------------------------------
-CREATE DATABASE IF NOT EXISTS `ccds_db`
+CREATE DATABASE IF NOT EXISTS `ma_commune_db`
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-USE `ccds_db`;
+USE `ma_commune_db`;
 
 -- -------------------------------------------------------------
 -- Table : users
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS `categories` (
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `incidents` (
     `id`           INT UNSIGNED   NOT NULL AUTO_INCREMENT,
-    `reference`    VARCHAR(20)    NOT NULL COMMENT 'Référence lisible ex: CCDS-2026-00001',
+    `reference`    VARCHAR(20)    NOT NULL COMMENT 'Référence lisible ex: MC-2026-00001',
     `user_id`      INT UNSIGNED   NOT NULL,
     `category_id`  INT UNSIGNED   NOT NULL,
     `title`        VARCHAR(255)   NOT NULL DEFAULT '',
@@ -157,9 +157,9 @@ INSERT INTO `categories` (`name`, `slug`, `icon`, `color`, `description`, `sort_
 ('Signalisation',        'signalisation',  'triangle-alert','#f97316', 'Panneaux manquants, marquages au sol effacés, feux défaillants.', 7),
 ('Bâtiments Communaux',  'batiments',      'building-2',    '#6b7280', 'Dégradations sur les bâtiments et équipements municipaux.',      8);
 
--- Compte administrateur par défaut (mot de passe : Admin@CCDS2026 — à changer impérativement)
--- Hash bcrypt généré pour 'Admin@CCDS2026'
+-- Compte administrateur par défaut (mot de passe : Admin@MaCommune2026! — à changer impérativement)
+-- Hash bcrypt généré pour 'Admin@MaCommune2026!'
 INSERT INTO `users` (`email`, `password_hash`, `full_name`, `role`) VALUES
-('admin@ccds.local', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Administrateur CCDS', 'admin');
+('admin@macommune.local', '$2y$12$sVf4jg9gi7iI4T1C13fNt.pwxlifGxzijAzQb4AdK5YgaVV8RxjbW', 'Administrateur Ma Commune', 'admin');
 
 SET FOREIGN_KEY_CHECKS = 1;

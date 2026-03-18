@@ -1,20 +1,21 @@
 openapi: 3.0.3
 info:
-  title: CCDS Citoyen API
+  title: Ma Commune API
   description: |- 
-    API pour l'application mobile et le back-office de CCDS Citoyen.
-    Versions 1.0 à 1.4.
-  version: 1.4.0
+    API pour l'application mobile et le back-office de Ma Commune.
+    Cette specification couvre le socle V1 verifie localement :
+    signalements, suivi citoyen, notifications, consultations et agenda communal.
+  version: 1.6.0
 servers:
   - url: /api
-    description: Serveur de production
+    description: Instance locale ou reverse proxy communal
 
 security:
   - bearerAuth: []
 
 paths:
   # ── Auth (v1.0) ───────────────────────────────────────────────
-  /auth/login:
+  /login:
     post:
       summary: Connexion
       tags: [Auth]
@@ -36,7 +37,7 @@ paths:
         '401':
           description: Identifiants incorrects
 
-  /auth/register:
+  /register:
     post:
       summary: Inscription
       tags: [Auth]
@@ -51,6 +52,167 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthResponse' }
+
+  /profile/stats:
+    get:
+      summary: Tableau de bord citoyen
+      tags: [Profil]
+      responses:
+        '200':
+          description: Statistiques et activité récente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserStats' }
+
+  /notifications/token:
+    post:
+      summary: Enregistrer un token push Expo
+      tags: [Notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token: { type: string }
+      responses:
+        '201':
+          description: Token enregistré
+
+  /notifications/read-all:
+    put:
+      summary: Marquer toutes les notifications comme lues
+      tags: [Notifications]
+      responses:
+        '200':
+          description: Notifications marquées comme lues
+
+  /events:
+    get:
+      summary: Lister les rendez-vous communaux
+      tags: [Events]
+      responses:
+        '200':
+          description: Liste des événements
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Event' }
+    post:
+      summary: Publier un rendez-vous communal
+      tags: [Events]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                location: { type: string }
+                starts_at: { type: string, format: date-time }
+      responses:
+        '201':
+          description: Événement publié
+
+  /events/{id}:
+    get:
+      summary: Détail d'un rendez-vous communal
+      tags: [Events]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Détail de l'événement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+
+  /events/{id}/rsvp:
+    post:
+      summary: Répondre à un rendez-vous communal
+      tags: [Events]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [attending, interested, not_attending]
+      responses:
+        '200':
+          description: RSVP enregistré
+
+  /polls:
+    get:
+      summary: Lister les consultations citoyennes actives
+      tags: [Polls]
+      responses:
+        '200':
+          description: Liste des consultations
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Poll' }
+    post:
+      summary: Publier une consultation à choix unique
+      tags: [Polls]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                type: { type: string, enum: [single] }
+                options:
+                  type: array
+                  items: { type: string }
+      responses:
+        '201':
+          description: Consultation publiée
+
+  /polls/{id}/vote:
+    post:
+      summary: Voter à une consultation
+      tags: [Polls]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                option_id: { type: integer }
+      responses:
+        '200':
+          description: Vote enregistré
+
+  /polls/{id}/results:
+    get:
+      summary: Consulter les résultats d'une consultation
+      tags: [Polls]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Résultats de la consultation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Poll' }
 
   # ── Incidents (v1.0, v1.2, v1.4) ──────────────────────────────
   /incidents:
@@ -439,3 +601,67 @@ components:
         replies: 
           type: array
           items: { $ref: '#/components/schemas/CommentThread' }
+
+    UserStats:
+      type: object
+      properties:
+        incidents_count: { type: integer }
+        resolved_count: { type: integer }
+        in_progress_count: { type: integer }
+        pending_count: { type: integer }
+        avg_resolution_hours: { type: number, nullable: true }
+        votes_cast: { type: integer }
+        comments_count: { type: integer }
+        points: { type: integer }
+        rank: { type: integer }
+        total_users: { type: integer }
+        recent_incidents:
+          type: array
+          items: { $ref: '#/components/schemas/Incident' }
+
+    Notification:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, enum: [status_change, new_comment, vote_milestone, system, event] }
+        title: { type: string }
+        body: { type: string }
+        is_read: { type: boolean }
+        sent_at: { type: string, format: date-time }
+        incident_id: { type: integer, nullable: true }
+
+    PollOption:
+      type: object
+      properties:
+        id: { type: integer }
+        label: { type: string }
+        votes_count: { type: integer }
+
+    Poll:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: string }
+        type: { type: string, enum: [single] }
+        status: { type: string, enum: [active, closed] }
+        ends_at: { type: string, format: date-time, nullable: true }
+        total_votes: { type: integer }
+        user_vote_id: { type: integer, nullable: true }
+        options:
+          type: array
+          items: { $ref: '#/components/schemas/PollOption' }
+
+    Event:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: string }
+        location: { type: string }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time, nullable: true }
+        organizer: { type: string }
+        attendees_count: { type: integer }
+        interested_count: { type: integer }
+        user_rsvp: { type: string, enum: [attending, interested], nullable: true }

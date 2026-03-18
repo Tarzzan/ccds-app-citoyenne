@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS — Configuration Phinx (migrations)
+ * Ma Commune — Configuration Phinx (migrations)
  * Supporte les variables Railway (MYSQLHOST, MYSQLDATABASE...) et les variables standard (DB_HOST...)
  */
 

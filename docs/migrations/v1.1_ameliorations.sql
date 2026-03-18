@@ -1,5 +1,5 @@
 -- ============================================================
--- Migration v1.1 — Améliorations CCDS Citoyen
+-- Migration v1.1 — Améliorations historiques de l'ancienne base de l'ancienne marque `CCDS Citoyen`
 -- Fonctionnalités : Votes "Moi aussi", Notifications Push
 -- ============================================================
 

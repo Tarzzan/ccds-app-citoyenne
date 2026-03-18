@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS — Classe de connexion à la base de données
+ * Ma Commune — Classe de connexion à la base de données
  * Utilise PDO avec un pattern Singleton pour éviter les connexions multiples.
  */
 

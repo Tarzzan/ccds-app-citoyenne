@@ -6,7 +6,7 @@
  *  1. Par IP (protection contre les bots et attaques DDoS)
  *  2. Par utilisateur authentifié (protection contre les abus légitimes)
  *
- * Stockage : fichiers JSON dans /tmp/ccds_ratelimit/ (compatible sans Redis)
+ * Stockage : fichiers JSON dans /tmp/ma-commune_ratelimit/ (compatible sans Redis)
  * En production, remplacer par Redis pour de meilleures performances.
  */
 class RateLimiter

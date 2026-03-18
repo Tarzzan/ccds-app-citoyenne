@@ -1,5 +1,5 @@
 /**
- * Service de Queue Hors-Ligne — CCDS Citoyen v1.1
+ * Service de Queue Hors-Ligne — Ma Commune
  *
  * Permet de créer des signalements sans connexion internet.
  * Les signalements sont stockés localement (AsyncStorage) et synchronisés
@@ -12,7 +12,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import { incidentsApi } from './api';
 
-const QUEUE_KEY = 'ccds_offline_queue';
+const QUEUE_KEY = 'ma_commune_offline_queue';
+const LEGACY_QUEUE_KEY = 'ccds_offline_queue';
 const MAX_RETRIES = 3;
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -74,7 +75,7 @@ class OfflineQueueService {
       if (!wasConnected && connected) {
         this.sync().then(({ synced }) => {
           if (synced > 0) {
-            console.log(`[CCDS Offline] ${synced} signalement(s) synchronisé(s)`);
+            console.log(`[Ma Commune Offline] ${synced} signalement(s) synchronisé(s)`);
           }
         });
       }
@@ -86,7 +87,19 @@ class OfflineQueueService {
   private async readQueue(): Promise<QueueItem[]> {
     try {
       const raw = await AsyncStorage.getItem(QUEUE_KEY);
-      return raw ? JSON.parse(raw) : [];
+      if (raw) {
+        return JSON.parse(raw);
+      }
+
+      const legacyRaw = await AsyncStorage.getItem(LEGACY_QUEUE_KEY);
+      if (!legacyRaw) {
+        return [];
+      }
+
+      const legacyQueue = JSON.parse(legacyRaw) as QueueItem[];
+      await AsyncStorage.setItem(QUEUE_KEY, legacyRaw);
+      await AsyncStorage.removeItem(LEGACY_QUEUE_KEY);
+      return legacyQueue;
     } catch {
       return [];
     }
@@ -94,6 +107,7 @@ class OfflineQueueService {
 
   private async writeQueue(queue: QueueItem[]): Promise<void> {
     await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    await AsyncStorage.removeItem(LEGACY_QUEUE_KEY);
     const pending = queue.filter((i) => i.status === 'pending').length;
     this.queueListeners.forEach((fn) => fn(pending));
   }

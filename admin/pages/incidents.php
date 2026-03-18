@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS v1.2 — Liste des signalements (ADMIN-03)
+ * Ma Commune v1.2 — Liste des signalements (ADMIN-03)
  * Filtres avancés : statut, catégorie, priorité, date, recherche textuelle, tri, votes.
  * Export CSV.
  */

@@ -7,7 +7,40 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SERVER_URL_KEY = 'ma_commune_server_url';
-const DEFAULT_URL    = process.env.EXPO_PUBLIC_API_URL ?? 'https://votre-domaine.com/api';
+
+function getAppJsonApiUrl(): string | null {
+  try {
+    const appJson = require('../../app.json') as {
+      expo?: { extra?: { API_BASE_URL?: unknown } };
+    };
+    const apiUrl = appJson.expo?.extra?.API_BASE_URL;
+    return typeof apiUrl === 'string' ? apiUrl : null;
+  } catch {
+    return null;
+  }
+}
+
+const expoConfiguredApiUrl = getAppJsonApiUrl();
+
+export const DEFAULT_SERVER_URL = process.env.EXPO_PUBLIC_API_URL
+  ?? expoConfiguredApiUrl
+  ?? 'https://votre-domaine.com/api';
+export const PLACEHOLDER_SERVER_URLS = new Set([
+  'https://votre-domaine.com/api',
+  'https://votre-domaine.com/backend',
+]);
+
+function normalizeUrl(url: string): string {
+  return url.trim().replace(/\/$/, '');
+}
+
+export function isPlaceholderServerUrl(url: string | null | undefined): boolean {
+  if (!url) {
+    return true;
+  }
+
+  return PLACEHOLDER_SERVER_URLS.has(normalizeUrl(url));
+}
 
 export const ServerConfig = {
 
@@ -18,9 +51,9 @@ export const ServerConfig = {
   async getServerUrl(): Promise<string> {
     try {
       const url = await AsyncStorage.getItem(SERVER_URL_KEY);
-      return url ?? DEFAULT_URL;
+      return url ?? DEFAULT_SERVER_URL;
     } catch {
-      return DEFAULT_URL;
+      return DEFAULT_SERVER_URL;
     }
   },
 
@@ -28,17 +61,22 @@ export const ServerConfig = {
    * Enregistre l'URL du serveur de manière persistante.
    */
   async setServerUrl(url: string): Promise<void> {
-    const clean = url.trim().replace(/\/$/, ''); // Supprimer le slash final
+    const clean = normalizeUrl(url); // Supprimer le slash final
     await AsyncStorage.setItem(SERVER_URL_KEY, clean);
   },
 
   /**
    * Vérifie si un serveur est déjà configuré.
-   * Retourne toujours true car l'URL Railway par défaut est utilisée
-   * si aucune URL personnalisée n'est stockée.
+   * Ignore explicitement les URL placeholders de développement.
    */
   async isConfigured(): Promise<boolean> {
-    return true;
+    try {
+      const url = await AsyncStorage.getItem(SERVER_URL_KEY);
+      const effectiveUrl = normalizeUrl(url ?? DEFAULT_SERVER_URL);
+      return effectiveUrl.length > 0 && !isPlaceholderServerUrl(effectiveUrl);
+    } catch {
+      return false;
+    }
   },
 
   /**
@@ -53,7 +91,7 @@ export const ServerConfig = {
    * Retourne true si le serveur répond correctement.
    */
   async testConnection(url: string): Promise<{ success: boolean; message: string }> {
-    const clean = url.trim().replace(/\/$/, '');
+    const clean = normalizeUrl(url);
     try {
       const controller = new AbortController();
       const timeout    = setTimeout(() => controller.abort(), 8000);

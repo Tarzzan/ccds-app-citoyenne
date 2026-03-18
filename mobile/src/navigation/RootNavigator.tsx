@@ -1,5 +1,5 @@
 /**
- * CCDS — Navigateur racine
+ * Ma Commune — Navigateur racine
  * v1.2 : ajout routes EditIncident et Profile
  */
 
@@ -7,7 +7,9 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer }         from '@react-navigation/native';
 import { createNativeStackNavigator }  from '@react-navigation/native-stack';
 import { createBottomTabNavigator }    from '@react-navigation/bottom-tabs';
-import { ActivityIndicator, View, Text } from 'react-native';
+import { ActivityIndicator, View, Text, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BRAND } from '../theme/brand';
 
 import { useAuth }       from '../services/AuthContext';
 import { ServerConfig }  from '../services/ServerConfig';
@@ -26,6 +28,9 @@ import EditIncidentScreen   from '../screens/EditIncidentScreen';
 import ProfileScreen        from '../screens/ProfileScreen';
 import DashboardScreen      from '../screens/DashboardScreen';
 import ImpactScreen         from '../screens/ImpactScreen';
+import EventsScreen         from '../screens/EventsScreen';
+import PollsScreen          from '../screens/PollsScreen';
+import { flushPendingNavigation, navigationRef } from './navigationRef';
 
 // ----------------------------------------------------------------
 // Types de navigation
@@ -49,6 +54,8 @@ export type AppStackParamList = {
   EditIncident:   { id: number };
   Profile:        undefined;
   Impact:         undefined;
+  Events:         undefined;
+  Polls:          undefined;
   ServerConfig:   undefined;
 };
 
@@ -61,12 +68,31 @@ const Tab       = createBottomTabNavigator<AppTabParamList>();
 
 // Onglets principaux
 function AppTabs() {
+  const { isStaff } = useAuth();
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 12);
+
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor:   '#1a7a42',
-        tabBarInactiveTintColor: '#6b7280',
-        tabBarStyle: { paddingBottom: 4, height: 58 },
+        tabBarActiveTintColor:   BRAND.colors.canopy,
+        tabBarInactiveTintColor: '#70817A',
+        tabBarStyle: {
+          height: 68 + bottomInset,
+          paddingTop: 10,
+          paddingBottom: bottomInset,
+          backgroundColor: '#FFFDF8',
+          borderTopWidth: 1,
+          borderTopColor: '#E6DCC8',
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '700',
+          letterSpacing: 0.2,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 4,
+        },
         headerShown: false,
       }}
     >
@@ -78,7 +104,10 @@ function AppTabs() {
       <Tab.Screen
         name="MyIncidents"
         component={MyIncidentsScreen}
-        options={{ title: 'Mes signalements', tabBarIcon: ({ color }) => <TabIcon label="📋" color={color} /> }}
+        options={{
+          title: isStaff ? 'À traiter' : 'Mes signalements',
+          tabBarIcon: ({ color }) => <TabIcon label="📋" color={color} />,
+        }}
       />
       <Tab.Screen
         name="Notifications"
@@ -96,7 +125,7 @@ function AppTabs() {
 
 // Stack principal
 function AppNavigator() {
-  const headerStyle = { backgroundColor: '#0f4c2a' };
+  const headerStyle = { backgroundColor: BRAND.colors.canopyDeep };
   const headerOpts  = {
     headerStyle,
     headerTintColor:  '#ffffff' as const,
@@ -137,7 +166,17 @@ function AppNavigator() {
       <AppStack.Screen
         name="Impact"
         component={ImpactScreen}
-        options={{ headerShown: true, title: 'Impact citoyen', ...headerOpts }}
+        options={{ headerShown: true, title: 'Mon bilan citoyen', ...headerOpts }}
+      />
+      <AppStack.Screen
+        name="Events"
+        component={EventsScreen}
+        options={{ headerShown: true, title: 'Agenda communal', ...headerOpts }}
+      />
+      <AppStack.Screen
+        name="Polls"
+        component={PollsScreen}
+        options={{ headerShown: true, title: 'Consultations', ...headerOpts }}
       />
       <AppStack.Screen
         name="ServerConfig"
@@ -180,11 +219,20 @@ export default function RootNavigator() {
 
   if (isLoading || serverConfigured === null || onboardingDone === null) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f4c2a' }}>
-        <Text style={{ fontSize: 48, marginBottom: 16 }}>🌿</Text>
-        <ActivityIndicator size="large" color="#a7f3d0" />
-        <Text style={{ color: '#a7f3d0', marginTop: 12, fontSize: 14 }}>
-          CCDS Citoyen — Chargement...
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BRAND.colors.canopyDeep, padding: 24 }}>
+        <Image
+          source={require('../../assets/icon.png')}
+          style={{ width: 92, height: 92, borderRadius: 28, marginBottom: 18 }}
+        />
+        <Text style={{ color: '#F4F1E7', fontSize: 26, fontWeight: '800', marginBottom: 8, fontFamily: BRAND.displayFont }}>
+          {BRAND.name}
+        </Text>
+        <Text style={{ color: '#D7E7DF', marginBottom: 18, fontSize: 13, letterSpacing: 0.4 }}>
+          {BRAND.territory}
+        </Text>
+        <ActivityIndicator size="large" color="#D2A13A" />
+        <Text style={{ color: '#D7E7DF', marginTop: 12, fontSize: 14, textAlign: 'center' }}>
+          Préparation de votre espace citoyen...
         </Text>
       </View>
     );
@@ -207,12 +255,15 @@ export default function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={flushPendingNavigation}
+    >
       {isAuthenticated ? <AppNavigator /> : <AuthNavigator />}
     </NavigationContainer>
   );
 }
 
 function TabIcon({ label, color }: { label: string; color: string }) {
-  return <Text style={{ fontSize: 22, color }}>{label}</Text>;
+  return <Text style={{ fontSize: 20, color }}>{label}</Text>;
 }

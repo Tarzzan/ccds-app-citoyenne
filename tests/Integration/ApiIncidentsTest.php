@@ -1,9 +1,9 @@
 <?php
 /**
- * CCDS — Tests d'Intégration : Endpoint Incidents API
+ * Ma Commune — Tests d'Intégration : Endpoint Incidents API
  */
 
-namespace CCDS\Tests\Integration;
+namespace Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 
@@ -18,7 +18,7 @@ class ApiIncidentsTest extends TestCase
         $this->baseUrl = $_ENV['API_BASE_URL'] ?? 'http://localhost/api';
 
         // Obtenir un token citoyen de test
-        $email    = 'incident_test_' . uniqid() . '@ccds-test.fr';
+        $email    = 'incident_test_' . uniqid() . '@macommune-test.local';
         $register = $this->post('/auth/register', [
             'full_name' => 'Citoyen Incident',
             'email'     => $email,
@@ -126,9 +126,9 @@ class ApiIncidentsTest extends TestCase
         $this->assertArrayHasKey('id',        $response['body']);
         $this->assertArrayHasKey('reference', $response['body']);
         $this->assertMatchesRegularExpression(
-            '/^CCDS-\d{8}-[A-Z0-9]+$/',
+            '/^MC-\d{8}-[A-Z0-9]+$/',
             $response['body']['reference'] ?? '',
-            'La référence doit suivre le format CCDS-YYYYMMDD-XXXXX.'
+            'La référence doit suivre le format MC-YYYYMMDD-XXXXX.'
         );
     }
 

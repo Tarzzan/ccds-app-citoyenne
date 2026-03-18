@@ -1,11 +1,12 @@
 <?php
 /**
- * CCDS v1.4 — CommentController (UX-05)
+ * Ma Commune v1.4 — CommentController (UX-05)
  * Commentaires avec édition, suppression, réponses (threading niveau 1).
  * Compatible avec la version v1.3 (TECH-02).
  */
 require_once __DIR__ . '/../core/BaseController.php';
 require_once __DIR__ . '/../core/Permissions.php';
+require_once __DIR__ . '/../config/PushNotificationService.php';
 
 class CommentController extends BaseController
 {
@@ -14,8 +15,9 @@ class CommentController extends BaseController
      */
     public function list(int $incidentId): void
     {
-        $userId = $this->requireAuth();
-        $role   = $this->user['role'] ?? 'citizen';
+        $auth = $this->requireAuth();
+        $this->requirePermission($auth, 'comment:list');
+        $role = $auth['role'] ?? 'citizen';
         $showInternal = in_array($role, ['agent', 'admin'], true);
 
         // Commentaires racine
@@ -60,8 +62,9 @@ class CommentController extends BaseController
      */
     public function create(int $incidentId): void
     {
-        $userId = $this->requireAuth();
-        $this->requirePermission('comment:create');
+        $auth   = $this->requireAuth();
+        $userId = (int)($auth['sub'] ?? 0);
+        $this->requirePermission($auth, 'comment:create');
 
         $body       = $this->getBody();
         $comment    = trim($body['comment'] ?? '');
@@ -70,11 +73,12 @@ class CommentController extends BaseController
 
         if (mb_strlen($comment) < 2) { $this->error('Commentaire trop court.', 422); }
         if (mb_strlen($comment) > 1000) { $this->error('Commentaire trop long (max 1000).', 422); }
-        if ($isInternal && !$this->hasPermission('comment:create_internal')) { $isInternal = false; }
+        if ($isInternal && !$this->hasPermission($auth, 'comment:create_internal')) { $isInternal = false; }
 
-        $check = $this->db->prepare("SELECT id FROM incidents WHERE id = ?");
+        $check = $this->db->prepare('SELECT id, user_id FROM incidents WHERE id = ?');
         $check->execute([$incidentId]);
-        if (!$check->fetch()) { $this->notFound('Signalement introuvable.'); }
+        $incident = $check->fetch(\PDO::FETCH_ASSOC);
+        if (!$incident) { $this->notFound('Signalement introuvable.'); }
 
         // Valider le parent si réponse
         if ($parentId) {
@@ -92,6 +96,17 @@ class CommentController extends BaseController
         $stmt->execute([$incidentId, $userId, $parentId, $comment, $isInternal ? 1 : 0]);
         $newId = (int)$this->db->lastInsertId();
 
+        if (
+            !$isInternal
+            && (int)$incident['user_id'] !== $userId
+        ) {
+            $authorStmt = $this->db->prepare('SELECT full_name FROM users WHERE id = ?');
+            $authorStmt->execute([$userId]);
+            $commenterName = (string)($authorStmt->fetchColumn() ?: 'Un agent');
+
+            (new PushNotificationService($this->db))->notifyNewComment($incidentId, $commenterName);
+        }
+
         $this->success(['id' => $newId, 'comment_id' => $newId], 201);
     }
 
@@ -100,7 +115,8 @@ class CommentController extends BaseController
      */
     public function update(int $incidentId, int $commentId): void
     {
-        $this->requireAuth();
+        $auth    = $this->requireAuth();
+        $userId  = (int)($auth['sub'] ?? 0);
         $body    = $this->getBody();
         $comment = trim($body['comment'] ?? '');
 
@@ -108,7 +124,7 @@ class CommentController extends BaseController
         if (mb_strlen($comment) > 1000) { $this->error('Commentaire trop long.', 422); }
 
         $existing = $this->loadComment($commentId, $incidentId);
-        if ((int)$existing['user_id'] !== (int)$this->user['id']) {
+        if ((int)$existing['user_id'] !== $userId) {
             $this->error('Vous ne pouvez modifier que vos propres commentaires.', 403);
         }
         if (time() - strtotime($existing['created_at']) > 86400) {
@@ -126,11 +142,11 @@ class CommentController extends BaseController
      */
     public function delete(int $incidentId, int $commentId): void
     {
-        $this->requireAuth();
+        $auth = $this->requireAuth();
         $existing = $this->loadComment($commentId, $incidentId);
 
-        $isAuthor = (int)$existing['user_id'] === (int)$this->user['id'];
-        $isStaff  = in_array($this->user['role'], ['agent', 'admin']);
+        $isAuthor = (int)$existing['user_id'] === (int)($auth['sub'] ?? 0);
+        $isStaff  = in_array($auth['role'] ?? 'citizen', ['agent', 'admin'], true);
 
         if (!$isAuthor && !$isStaff) {
             $this->error('Accès refusé.', 403);

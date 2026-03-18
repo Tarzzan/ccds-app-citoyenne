@@ -27,7 +27,7 @@
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="DB_HOST" value="localhost"/>
-        <env name="DB_NAME" value="ccds_test"/>
+        <env name="DB_NAME" value="ma_commune_test"/>
         <env name="DB_USER" value="root"/>
         <env name="DB_PASS" value=""/>
         <env name="JWT_SECRET" value="test_secret_key_for_phpunit_only"/>

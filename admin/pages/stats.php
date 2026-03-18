@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS v1.2 — Statistiques & Analytiques enrichis (ADMIN-01)
+ * Ma Commune v1.2 — Statistiques & analytiques enrichis (ADMIN-01)
  * Nouveaux KPIs : votes, citoyens actifs, délai médian.
  * Nouveaux graphiques : carte de chaleur horaire, tendance résolus vs soumis.
  * Export CSV des données de la période.

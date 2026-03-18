@@ -1,7 +1,7 @@
 <?php
 
 /**
- * CCDS — ReportController
+ * Ma Commune — ReportController
  * Génération de rapports PDF pour les incidents.
  *
  * GET /api/incidents/{id}/report  → Télécharger le PDF de l'incident
@@ -10,8 +10,11 @@ class ReportController extends BaseController
 {
     public function downloadPdf(int $incidentId): void
     {
-        $this->requireRole('agent');
-        Permissions::check($this->user, 'incidents.view');
+        $auth = $this->requireAuth();
+        if (!in_array($auth['role'] ?? '', ['agent', 'admin'], true)) {
+            $this->error('Accès réservé aux agents et administrateurs.', 403);
+        }
+        $this->requirePermission($auth, 'incident:read');
 
         // Vérifier que l'incident existe
         $stmt = $this->db->prepare("SELECT id FROM incidents WHERE id = ?");

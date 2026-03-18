@@ -1,19 +1,21 @@
 /**
- * CCDS v1.3 — Service i18n (I18N-01 + I18N-02)
- * Support multi-langue : Français (fr) + Créole guyanais (cr)
- * Fonctions : t() avec interpolation, changement de langue, persistance.
+ * Ma Commune — Service i18n
+ * Phase actuelle : français uniquement.
+ * Le support multi-langue reviendra plus tard sur une base déjà stabilisée.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState, useEffect, useCallback } from 'react';
 
 import fr from './fr.json';
-import cr from './cr.json';
+
+const LANGUAGE_KEY = '@ma_commune_language';
+const LEGACY_LANGUAGE_KEY = '@ccds_language';
 
 // ----------------------------------------------------------------
 // Types
 // ----------------------------------------------------------------
 
-export type Language = 'fr' | 'cr';
+export type Language = 'fr';
 
 type TranslationDict = Record<string, unknown>;
 
@@ -22,13 +24,11 @@ type TranslationDict = Record<string, unknown>;
 // ----------------------------------------------------------------
 
 export const LANGUAGES: { code: Language; label: string; nativeLabel: string; flag: string }[] = [
-  { code: 'fr', label: 'Français',        nativeLabel: 'Français',          flag: '🇫🇷' },
-  { code: 'cr', label: 'Créole guyanais', nativeLabel: 'Kréyòl Gwiyannais', flag: '🇬🇫' },
+  { code: 'fr', label: 'Français', nativeLabel: 'Français', flag: '🇫🇷' },
 ];
 
 const translations: Record<Language, TranslationDict> = {
   fr: fr as TranslationDict,
-  cr: cr as TranslationDict,
 };
 
 // ----------------------------------------------------------------
@@ -70,9 +70,12 @@ class I18nService {
 
   async init(): Promise<void> {
     try {
-      const saved = await AsyncStorage.getItem('@ccds_language');
-      if (saved === 'fr' || saved === 'cr') {
+      const saved = await AsyncStorage.getItem(LANGUAGE_KEY)
+        ?? await AsyncStorage.getItem(LEGACY_LANGUAGE_KEY);
+      if (saved === 'fr') {
         this.currentLang = saved;
+        await AsyncStorage.setItem(LANGUAGE_KEY, saved);
+        await AsyncStorage.removeItem(LEGACY_LANGUAGE_KEY);
       }
     } catch {
       // Utiliser la langue par défaut
@@ -80,9 +83,10 @@ class I18nService {
   }
 
   async setLanguage(lang: Language): Promise<void> {
-    this.currentLang = lang;
+    this.currentLang = 'fr';
     try {
-      await AsyncStorage.setItem('@ccds_language', lang);
+      await AsyncStorage.setItem(LANGUAGE_KEY, 'fr');
+      await AsyncStorage.removeItem(LEGACY_LANGUAGE_KEY);
     } catch {
       // Ignorer
     }
@@ -95,17 +99,10 @@ class I18nService {
 
   /**
    * Traduit une clé avec interpolation optionnelle.
-   * Fallback vers le français si la clé n'existe pas dans la langue courante.
-   * Retourne la clé elle-même si introuvable même en français.
+   * Retourne la clé elle-même si introuvable.
    */
   t(key: string, vars?: Record<string, string | number>): string {
-    // Essayer la langue courante
     let value = getNestedValue(translations[this.currentLang], key);
-
-    // Fallback vers le français
-    if (value === undefined && this.currentLang !== 'fr') {
-      value = getNestedValue(translations['fr'], key);
-    }
 
     if (value === undefined) {
       if (__DEV__) console.warn(`[i18n] Clé manquante : "${key}"`);

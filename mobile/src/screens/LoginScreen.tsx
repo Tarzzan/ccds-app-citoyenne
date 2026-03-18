@@ -1,16 +1,17 @@
 /**
- * CCDS — Écran de Connexion
+ * Ma Commune — Écran de connexion
  */
 
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView,
+  View, Text, StyleSheet, ScrollView, Image,
   TouchableOpacity, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../services/AuthContext';
 import { Button, Input, COLORS } from '../components/ui';
 import { AuthStackParamList } from '../navigation/RootNavigator';
+import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
 type Props = { navigation: NativeStackNavigationProp<AuthStackParamList, 'Login'> };
 
@@ -44,18 +45,36 @@ export default function LoginScreen({ navigation }: Props) {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <View style={styles.heroBackdrop} />
+        <View style={styles.riverShape} />
+        <View style={styles.earthShape} />
 
         {/* En-tête */}
         <View style={styles.header}>
-          <Text style={styles.logo}>🌿</Text>
-          <Text style={styles.appName}>CCDS Citoyen</Text>
-          <Text style={styles.tagline}>Kourou · Sinnamary · Iracoubo</Text>
-          <Text style={styles.subTagline}>Signalez. Suivez. Améliorez.</Text>
+          <Image source={require('../../assets/icon.png')} style={styles.logo} />
+          <Text style={styles.eyebrow}>{BRAND.missionLabel}</Text>
+          <Text style={styles.appName}>{BRAND.name}</Text>
+          <Text style={styles.tagline}>{BRAND.territory}</Text>
+          <Text style={styles.subTagline}>{BRAND.copy.heroTitle}</Text>
+          <View style={styles.pillRow}>
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>Signaler</Text>
+            </View>
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>Suivre</Text>
+            </View>
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>Servir le quartier</Text>
+            </View>
+          </View>
         </View>
 
         {/* Formulaire */}
         <View style={styles.form}>
           <Text style={styles.title}>Connexion</Text>
+          <Text style={styles.formIntro}>
+            Accédez à votre espace citoyen pour déclarer un problème, suivre son traitement et contribuer à l'entretien du commun.
+          </Text>
 
           <Input
             label="Adresse email"
@@ -104,50 +123,111 @@ export default function LoginScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#0f4c2a',
+    backgroundColor: BRAND.colors.mist,
     justifyContent: 'center',
     padding: 24,
   },
+  heroBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 300,
+    backgroundColor: BRAND.colors.canopyDeep,
+  },
+  riverShape: {
+    position: 'absolute',
+    top: 90,
+    right: -30,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: '#2D6F8633',
+  },
+  earthShape: {
+    position: 'absolute',
+    top: 150,
+    left: -20,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: '#A64B2A22',
+  },
   header: {
-    alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 36,
   },
   logo: {
-    fontSize: 56,
+    width: 78,
+    height: 78,
+    borderRadius: 22,
+    marginBottom: 14,
+  },
+  eyebrow: {
+    color: '#D2A13A',
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
     marginBottom: 8,
   },
   appName: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: '800',
-    color: COLORS.primary,
-    letterSpacing: 2,
+    color: BRAND.colors.white,
+    fontFamily: BRAND.displayFont,
   },
   tagline: {
-    fontSize: 15,
-    color: '#a7f3d0',
+    fontSize: 13,
+    color: '#DCE7E0',
     marginTop: 4,
     fontWeight: '600',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   subTagline: {
-    fontSize: 13,
-    color: '#6ee7b7',
-    marginTop: 2,
+    fontSize: 18,
+    color: '#F4F1E7',
+    marginTop: 16,
+    lineHeight: 25,
+    maxWidth: 290,
+    fontWeight: '700',
+  },
+  pillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 16,
+  },
+  pill: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF16',
+    borderWidth: 1,
+    borderColor: '#FFFFFF22',
+  },
+  pillText: {
+    color: '#F4F1E7',
+    fontSize: 12,
+    fontWeight: '700',
   },
   form: {
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
+    backgroundColor: '#FFFCF6',
+    borderRadius: 24,
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#ECE4D5',
+    ...BRAND_SHADOW,
   },
   title: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '800',
     color: COLORS.dark,
+    marginBottom: 10,
+  },
+  formIntro: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: BRAND.colors.slate,
     marginBottom: 24,
   },
   linkRow: {

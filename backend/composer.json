@@ -1,10 +1,10 @@
 {
-    "name": "ccds/backend",
-    "description": "CCDS Citoyen — Backend API REST PHP",
+    "name": "macommune/backend",
+    "description": "Ma Commune — Backend API REST PHP",
     "type": "project",
     "license": "proprietary",
     "require": {
-        "php": ">=8.1",
+        "php": ">=8.4",
         "cboden/ratchet": "^0.4",
         "setasign/fpdf": "^1.8",
         "robmorgan/phinx": "^0.16"
@@ -14,15 +14,15 @@
         "friendsofphp/php-cs-fixer": "^3.48"
     },
     "autoload": {
-        "psr-4": {
-            "CCDS\\Core\\": "core/",
-            "CCDS\\Controllers\\": "controllers/",
-            "CCDS\\Config\\": "config/"
-        }
+        "classmap": [
+            "core/",
+            "controllers/",
+            "config/"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
-            "CCDS\\Tests\\": "../tests/"
+            "Tests\\": "../tests/"
         }
     },
     "scripts": {

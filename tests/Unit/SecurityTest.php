@@ -1,9 +1,9 @@
 <?php
 /**
- * CCDS v1.3 — Tests Unitaires : Security (TEST-01)
+ * Ma Commune v1.3 — Tests Unitaires : Security (TEST-01)
  * Couvre : sanitisation XSS, rate limiting, validation CSRF.
  */
-namespace CCDS\Tests\Unit;
+namespace Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 

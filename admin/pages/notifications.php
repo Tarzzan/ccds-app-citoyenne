@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS Back-Office — Gestion des Notifications Push
+ * Ma Commune Back-Office — Gestion des notifications push
  * v1.1 : liste, envoi manuel, statistiques
  */
 require_once __DIR__ . '/../includes/bootstrap.php';
@@ -24,10 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // Récupérer les tokens concernés
             if ($target === 'user' && $user_id > 0) {
-                $tokens_stmt = $db->prepare("SELECT pt.token, pt.user_id FROM push_tokens pt WHERE pt.user_id = ? AND pt.is_active = 1");
+                $tokens_stmt = $db->prepare("SELECT pt.token, pt.user_id FROM push_tokens pt WHERE pt.user_id = ?");
                 $tokens_stmt->execute([$user_id]);
             } else {
-                $tokens_stmt = $db->query("SELECT pt.token, pt.user_id FROM push_tokens pt WHERE pt.is_active = 1");
+                $tokens_stmt = $db->query("SELECT pt.token, pt.user_id FROM push_tokens pt");
             }
             $token_rows = $tokens_stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -84,10 +84,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // --- Statistiques ---
 $stats = [];
 try {
-    $stats['total_tokens']  = $db->query("SELECT COUNT(*) FROM push_tokens WHERE is_active = 1")->fetchColumn();
+    $stats['total_tokens']  = $db->query("SELECT COUNT(*) FROM push_tokens")->fetchColumn();
     $stats['total_notifs']  = $db->query("SELECT COUNT(*) FROM notifications")->fetchColumn();
     $stats['unread_notifs'] = $db->query("SELECT COUNT(*) FROM notifications WHERE is_read = 0")->fetchColumn();
-    $stats['users_with_tokens'] = $db->query("SELECT COUNT(DISTINCT user_id) FROM push_tokens WHERE is_active = 1")->fetchColumn();
+    $stats['users_with_tokens'] = $db->query("SELECT COUNT(DISTINCT user_id) FROM push_tokens")->fetchColumn();
 } catch (PDOException $e) {
     $stats = ['total_tokens' => 'N/A', 'total_notifs' => 'N/A', 'unread_notifs' => 'N/A', 'users_with_tokens' => 'N/A'];
 }

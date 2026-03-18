@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, RefreshControl, ActivityIndicator,
+  StyleSheet, RefreshControl, ActivityIndicator, Alert,
 } from 'react-native';
 import { notificationsApi, Notification } from '../services/api';
 import { useNavigation } from '@react-navigation/native';
 import { clearBadge } from '../services/NotificationService';
 import { COLORS } from '../components/ui';
+import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
 const TYPE_ICONS: Record<string, string> = {
   status_change:   '🔄',
   new_comment:     '💬',
   vote_milestone:  '🎉',
   system:          '📢',
+  event:           '📅',
 };
 
 const formatDate = (iso: string): string => {
@@ -71,10 +73,25 @@ export const NotificationsScreen: React.FC = () => {
       );
       setUnreadCount((c) => Math.max(0, c - 1));
     }
-    // Naviguer vers le signalement si disponible
-    if (notif.incident_reference) {
-      navigation.navigate('IncidentDetail', { reference: notif.incident_reference });
+    if (notif.incident_id) {
+      navigation.navigate('IncidentDetail', { id: notif.incident_id, reference: notif.incident_reference });
+      return;
     }
+
+    if (notif.type === 'event') {
+      navigation.navigate('Events');
+      return;
+    }
+
+    if (notif.incident_reference) {
+      Alert.alert(
+        'Référence disponible',
+        `Cette notification mentionne ${notif.incident_reference}, mais aucun lien direct n'a été transmis.`
+      );
+      return;
+    }
+
+    Alert.alert('Information', 'Cette notification ne dispose pas encore d’un écran dédié.');
   };
 
   const renderItem = ({ item }: { item: Notification }) => (
@@ -108,23 +125,30 @@ export const NotificationsScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          Notifications {unreadCount > 0 && <Text style={styles.badge}> {unreadCount} </Text>}
+        <Text style={styles.headerEyebrow}>Suivi d'information</Text>
+        <Text style={styles.headerTitle}>Actualités de vos démarches</Text>
+        <Text style={styles.headerText}>
+          Suivez les évolutions de vos signalements et gardez un lien clair avec l'action communale.
         </Text>
-        {unreadCount > 0 && (
-          <TouchableOpacity onPress={handleMarkAllRead}>
-            <Text style={styles.markAll}>Tout lire</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.headerActions}>
+          <View style={styles.badgePill}>
+            <Text style={styles.badgePillValue}>{unreadCount}</Text>
+            <Text style={styles.badgePillLabel}>non lues</Text>
+          </View>
+          {unreadCount > 0 && (
+            <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAllBtn}>
+              <Text style={styles.markAll}>Tout lire</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      {/* Liste */}
       <FlatList
         data={notifications}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderItem}
+        contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -137,7 +161,7 @@ export const NotificationsScreen: React.FC = () => {
             <Text style={styles.emptyIcon}>🔔</Text>
             <Text style={styles.emptyText}>Aucune notification pour l'instant</Text>
             <Text style={styles.emptySubtext}>
-              Vous serez notifié des mises à jour de vos signalements
+              Vous serez prévenu des mises à jour, commentaires et étapes de traitement de vos signalements.
             </Text>
           </View>
         }
@@ -147,32 +171,79 @@ export const NotificationsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: '#f8fafc' },
+  container:    { flex: 1, backgroundColor: BRAND.colors.mist },
+  listContent:  { paddingHorizontal: 16, paddingBottom: 120 },
   center:       { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header:       {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0',
+    paddingHorizontal: 16,
+    paddingTop: 28,
+    paddingBottom: 16,
   },
-  headerTitle:  { fontSize: 18, fontWeight: '700', color: COLORS.dark },
-  badge:        {
-    backgroundColor: COLORS.primary, color: '#fff',
-    fontSize: 12, fontWeight: '700', borderRadius: 10,
-    paddingHorizontal: 6, paddingVertical: 2,
+  headerEyebrow: {
+    color: BRAND.colors.canopy,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1.1,
   },
-  markAll:      { fontSize: 13, color: COLORS.primary, fontWeight: '600' },
+  headerTitle:  {
+    fontSize: 28,
+    fontWeight: '800',
+    color: BRAND.colors.canopyDeep,
+    fontFamily: BRAND.displayFont,
+    marginTop: 8,
+  },
+  headerText: {
+    fontSize: 14,
+    color: BRAND.colors.slate,
+    lineHeight: 21,
+    marginTop: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 16,
+  },
+  badgePill: {
+    backgroundColor: BRAND.colors.canopyDeep,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  badgePillValue: {
+    color: BRAND.colors.white,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  badgePillLabel: {
+    color: '#D7E7DF',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  markAllBtn: {
+    backgroundColor: BRAND.colors.awara,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  markAll:      { fontSize: 13, color: BRAND.colors.canopyDeep, fontWeight: '800' },
   item:         {
     flexDirection: 'row', alignItems: 'flex-start',
-    padding: 14, backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+    padding: 16, backgroundColor: '#FFFDF8',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#ECE4D5',
+    marginBottom: 12,
     gap: 12,
+    ...BRAND_SHADOW,
   },
-  itemUnread:   { backgroundColor: '#f0fdf4' },
+  itemUnread:   { backgroundColor: '#F8F3E7' },
   icon:         { fontSize: 24, marginTop: 2 },
   content:      { flex: 1 },
-  title:        { fontSize: 14, fontWeight: '500', color: COLORS.dark, marginBottom: 3 },
+  title:        { fontSize: 15, fontWeight: '600', color: COLORS.dark, marginBottom: 3 },
   titleUnread:  { fontWeight: '700' },
-  body:         { fontSize: 13, color: COLORS.textSecondary, lineHeight: 18 },
+  body:         { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19 },
   ref:          { fontSize: 11, color: COLORS.primary, marginTop: 4, fontWeight: '600' },
   date:         { fontSize: 11, color: '#94a3b8', marginTop: 4 },
   dot:          {

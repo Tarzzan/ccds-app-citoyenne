@@ -1,10 +1,15 @@
-# Présentation : Application Mobile CCDS Citoyen — Guyane
+# Présentation : Application Mobile Guyane — Archive de contenu
+
+> Archive de présentation liée à l'ancien récit `CCDS`.
+> À conserver comme matière de travail, mais pas comme présentation produit actuelle de `Ma Commune`.
+> Le contenu ci-dessous reprend volontairement l'ancien vocabulaire territorial et ne doit pas être repris tel quel.
+
 ## Contenu des slides
 
 ---
 
 ## Slide 1 — Couverture (Title Slide)
-**Titre :** CCDS Citoyen — Application Mobile
+**Titre :** Ancienne marque `CCDS Citoyen` — Application Mobile
 **Sous-titre :** Signalez, suivez, améliorez votre commune — Kourou · Sinnamary · Iracoubo
 **Détails :**
 - Icône 🏛️ et nom de l'application en grand
@@ -18,7 +23,7 @@
 ## Slide 2 — Vue d'ensemble de l'application
 **Titre :** Une application citoyenne pour le territoire des Savanes
 **Contenu :**
-L'application CCDS Citoyen offre un parcours utilisateur fluide et intuitif, adapté aux spécificités de la Guyane. Elle couvre l'ensemble des communes de la Communauté de Communes des Savanes (Kourou, Sinnamary, Iracoubo, Saint-Élie).
+Dans cette ancienne version de présentation, `CCDS Citoyen` désigne le produit avant sa reprise. Le support décrit un parcours adapté aux spécificités de la Guyane et au récit territorial initial.
 
 **Points clés :**
 - Cartographie complète du territoire (OpenStreetMap)
@@ -134,7 +139,7 @@ L'application repose sur des technologies standards et sécurisées, garantissan
 ---
 
 ## Slide 10 — Conclusion
-**Titre :** CCDS Citoyen — L'innovation au service du territoire
+**Titre :** Ancienne marque `CCDS Citoyen` — L'innovation au service du territoire
 **Contenu :**
 Cette application rapproche les citoyens de leurs élus et améliore concrètement le cadre de vie en Guyane. Elle modernise l'action publique et renforce le lien social.
 

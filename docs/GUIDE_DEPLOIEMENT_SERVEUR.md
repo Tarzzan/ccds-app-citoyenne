@@ -1,4 +1,4 @@
-# Guide de Déploiement Serveur — CCDS App Citoyenne
+# Guide de Déploiement Serveur — Ma Commune
 
 > **Stack :** Apache 2.4 + PHP 8.1 + MySQL 8.0 | **OS cible :** Ubuntu 22.04 LTS
 
@@ -118,16 +118,16 @@ sudo mysql -u root -p
 
 ```sql
 -- Créer la base de données et l'utilisateur applicatif
-CREATE DATABASE ccds_production CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'ccds_user'@'localhost' IDENTIFIED BY 'VOTRE_MOT_DE_PASSE_FORT';
-GRANT ALL PRIVILEGES ON ccds_production.* TO 'ccds_user'@'localhost';
+CREATE DATABASE ma_commune_production CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'ma_commune_user'@'localhost' IDENTIFIED BY 'VOTRE_MOT_DE_PASSE_FORT';
+GRANT ALL PRIVILEGES ON ma_commune_production.* TO 'ma_commune_user'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
 ```
 
 ```bash
 # Importer le schéma
-mysql -u ccds_user -p ccds_production < /var/www/ccds/docs/database.sql
+mysql -u ma_commune_user -p ma_commune_production < /var/www/ma-commune/docs/database.sql
 ```
 
 ---
@@ -138,16 +138,16 @@ mysql -u ccds_user -p ccds_production < /var/www/ccds/docs/database.sql
 
 ```bash
 cd /var/www
-sudo git clone https://github.com/Tarzzan/ccds-app-citoyenne.git ccds
-sudo chown -R www-data:www-data /var/www/ccds
+sudo git clone https://github.com/Tarzzan/ccds-app-citoyenne.git ma-commune
+sudo chown -R www-data:www-data /var/www/ma-commune
 ```
 
 ### 4.2 Configurer l'application
 
 ```bash
 # Copier et éditer le fichier de configuration
-sudo cp /var/www/ccds/backend/config/config.example.php /var/www/ccds/backend/config/config.php
-sudo nano /var/www/ccds/backend/config/config.php
+sudo cp /var/www/ma-commune/backend/config/config.example.php /var/www/ma-commune/backend/config/config.php
+sudo nano /var/www/ma-commune/backend/config/config.php
 ```
 
 Renseigner les valeurs de production :
@@ -156,8 +156,8 @@ Renseigner les valeurs de production :
 <?php
 // Base de données
 define('DB_HOST',    'localhost');
-define('DB_NAME',    'ccds_production');
-define('DB_USER',    'ccds_user');
+define('DB_NAME',    'ma_commune_production');
+define('DB_USER',    'ma_commune_user');
 define('DB_PASS',    'VOTRE_MOT_DE_PASSE_FORT');
 
 // JWT — Générer avec : openssl rand -hex 64
@@ -165,7 +165,7 @@ define('JWT_SECRET', 'VOTRE_CLE_JWT_ALEATOIRE_LONGUE_ET_SECURISEE');
 define('JWT_EXPIRY', 86400); // 24 heures
 
 // Upload
-define('UPLOAD_DIR', '/var/www/ccds/backend/uploads/');
+define('UPLOAD_DIR', '/var/www/ma-commune/backend/uploads/');
 define('UPLOAD_URL', 'https://votre-domaine.fr/uploads/');
 define('MAX_FILE_SIZE', 10 * 1024 * 1024); // 10 Mo
 
@@ -176,15 +176,15 @@ define('CORS_ORIGIN', '*');
 ### 4.3 Créer et sécuriser le dossier d'uploads
 
 ```bash
-sudo mkdir -p /var/www/ccds/backend/uploads
-sudo chown www-data:www-data /var/www/ccds/backend/uploads
-sudo chmod 755 /var/www/ccds/backend/uploads
+sudo mkdir -p /var/www/ma-commune/backend/uploads
+sudo chown www-data:www-data /var/www/ma-commune/backend/uploads
+sudo chmod 755 /var/www/ma-commune/backend/uploads
 
 # Protéger contre l'exécution de scripts dans uploads
 echo "Options -Indexes
 <FilesMatch '\.(php|phtml|php3|php4|php5|pl|py|jsp|asp|sh|cgi)$'>
     Deny from all
-</FilesMatch>" | sudo tee /var/www/ccds/backend/uploads/.htaccess
+</FilesMatch>" | sudo tee /var/www/ma-commune/backend/uploads/.htaccess
 ```
 
 ---
@@ -194,7 +194,7 @@ echo "Options -Indexes
 ### 5.1 VirtualHost HTTP (port 80)
 
 ```bash
-sudo nano /etc/apache2/sites-available/ccds.conf
+sudo nano /etc/apache2/sites-available/ma-commune.conf
 ```
 
 ```apache
@@ -211,7 +211,7 @@ sudo nano /etc/apache2/sites-available/ccds.conf
 <VirtualHost *:443>
     ServerName votre-domaine.fr
     ServerAlias www.votre-domaine.fr
-    DocumentRoot /var/www/ccds
+    DocumentRoot /var/www/ma-commune
 
     # SSL (Let's Encrypt — voir section 6)
     SSLEngine on
@@ -226,14 +226,14 @@ sudo nano /etc/apache2/sites-available/ccds.conf
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
     # API REST (/api/*)
-    <Directory /var/www/ccds/backend>
+    <Directory /var/www/ma-commune/backend>
         Options -Indexes +FollowSymLinks
         AllowOverride All
         Require all granted
     </Directory>
 
     # Back-Office Admin (/admin/*)
-    <Directory /var/www/ccds/admin>
+    <Directory /var/www/ma-commune/admin>
         Options -Indexes +FollowSymLinks
         AllowOverride All
         Require all granted
@@ -243,15 +243,15 @@ sudo nano /etc/apache2/sites-available/ccds.conf
     </Directory>
 
     # Uploads (lecture seule)
-    <Directory /var/www/ccds/backend/uploads>
+    <Directory /var/www/ma-commune/backend/uploads>
         Options -Indexes -ExecCGI
         AllowOverride None
         Require all granted
     </Directory>
 
     # Logs
-    ErrorLog  ${APACHE_LOG_DIR}/ccds_error.log
-    CustomLog ${APACHE_LOG_DIR}/ccds_access.log combined
+    ErrorLog  ${APACHE_LOG_DIR}/ma-commune_error.log
+    CustomLog ${APACHE_LOG_DIR}/ma-commune_access.log combined
 
     # Compression Gzip
     <IfModule mod_deflate.c>
@@ -261,7 +261,7 @@ sudo nano /etc/apache2/sites-available/ccds.conf
 ```
 
 ```bash
-sudo a2ensite ccds.conf
+sudo a2ensite ma-commune.conf
 sudo a2dissite 000-default.conf
 sudo apache2ctl configtest
 sudo systemctl reload apache2
@@ -283,31 +283,31 @@ sudo certbot renew --dry-run
 
 ## 7. Script de Déploiement Automatisé
 
-Créer le script `/var/www/ccds/deploy.sh` pour les mises à jour futures :
+Créer le script `/var/www/ma-commune/deploy.sh` pour les mises à jour futures :
 
 ```bash
-sudo nano /var/www/ccds/deploy.sh
+sudo nano /var/www/ma-commune/deploy.sh
 ```
 
 ```bash
 #!/bin/bash
 # ============================================================
-# CCDS — Script de déploiement automatisé
-# Usage : sudo bash /var/www/ccds/deploy.sh
+# Ma Commune — Script de déploiement automatisé
+# Usage : sudo bash /var/www/ma-commune/deploy.sh
 # ============================================================
 
 set -e  # Arrêter en cas d'erreur
 
-DEPLOY_DIR="/var/www/ccds"
-BACKUP_DIR="/var/backups/ccds"
+DEPLOY_DIR="/var/www/ma-commune"
+BACKUP_DIR="/var/backups/ma-commune"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
-echo "🚀 [CCDS Deploy] Démarrage du déploiement — $TIMESTAMP"
+echo "🚀 [Ma Commune Deploy] Démarrage du déploiement — $TIMESTAMP"
 
 # 1. Sauvegarde de la base de données
 echo "📦 Sauvegarde de la base de données..."
 mkdir -p "$BACKUP_DIR"
-mysqldump -u ccds_user -p"$DB_PASS" ccds_production > "$BACKUP_DIR/db_backup_$TIMESTAMP.sql"
+mysqldump -u ma_commune_user -p"$DB_PASS" ma_commune_production > "$BACKUP_DIR/db_backup_$TIMESTAMP.sql"
 echo "   ✅ Sauvegarde créée : db_backup_$TIMESTAMP.sql"
 
 # 2. Sauvegarde du code actuel
@@ -348,13 +348,13 @@ find "$BACKUP_DIR" -name "*.sql" -mtime +7 -delete
 find "$BACKUP_DIR" -name "*.tar.gz" -mtime +7 -delete
 
 echo ""
-echo "✅ [CCDS Deploy] Déploiement terminé avec succès !"
+echo "✅ [Ma Commune Deploy] Déploiement terminé avec succès !"
 echo "   URL API    : https://votre-domaine.fr/api/"
 echo "   URL Admin  : https://votre-domaine.fr/admin/"
 ```
 
 ```bash
-sudo chmod +x /var/www/ccds/deploy.sh
+sudo chmod +x /var/www/ma-commune/deploy.sh
 ```
 
 ---
@@ -371,11 +371,11 @@ sudo systemctl status apache2
 curl -s https://votre-domaine.fr/api/categories | python3 -m json.tool
 
 # Vérifier les logs d'erreur
-sudo tail -50 /var/log/apache2/ccds_error.log
+sudo tail -50 /var/log/apache2/ma-commune_error.log
 
 # Vérifier les permissions
-ls -la /var/www/ccds/backend/uploads/
-ls -la /var/www/ccds/backend/config/config.php
+ls -la /var/www/ma-commune/backend/uploads/
+ls -la /var/www/ma-commune/backend/config/config.php
 ```
 
 ---
@@ -398,8 +398,8 @@ sudo crontab -e
 
 Ajouter :
 ```
-# Sauvegarde BDD CCDS tous les jours à 2h du matin
-0 2 * * * mysqldump -u ccds_user -pVOTRE_MOT_DE_PASSE ccds_production | gzip > /var/backups/ccds/daily_$(date +\%Y\%m\%d).sql.gz
+# Sauvegarde BDD Ma Commune tous les jours à 2h du matin
+0 2 * * * mysqldump -u ma_commune_user -pVOTRE_MOT_DE_PASSE ma_commune_production | gzip > /var/backups/ma-commune/daily_$(date +\%Y\%m\%d).sql.gz
 ```
 
 ### 9.3 Monitoring avec logwatch
@@ -411,4 +411,4 @@ sudo logwatch --output mail --mailto admin@votre-domaine.fr --detail high
 
 ---
 
-*Document maintenu par l'équipe CCDS — Mettre à jour à chaque changement d'infrastructure.*
+*Document maintenu pour Ma Commune — Mettre à jour à chaque changement d'infrastructure.*

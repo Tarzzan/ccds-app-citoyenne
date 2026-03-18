@@ -1,7 +1,7 @@
 <?php
 
 /**
- * CCDS — PdfReportService
+ * Ma Commune — PdfReportService
  * Génère un rapport PDF complet pour un incident.
  * Utilise FPDF (via Composer) — aucune dépendance système.
  *
@@ -12,6 +12,7 @@
 class PdfReportService
 {
     private PDO $db;
+    private ?bool $hasPhotoSortOrderColumn = null;
 
     public function __construct(PDO $db)
     {
@@ -103,7 +104,7 @@ class PdfReportService
             $imgH = 40;
             $col  = 0;
             foreach ($photos as $photo) {
-                $filePath = __DIR__ . '/../uploads/' . basename($photo['file_path']);
+                $filePath = __DIR__ . '/../uploads/incidents/' . basename($photo['file_path']);
                 if (file_exists($filePath)) {
                     $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
                     $type = match($ext) { 'jpg','jpeg' => 'JPEG', 'png' => 'PNG', default => null };
@@ -225,9 +226,29 @@ class PdfReportService
 
     private function loadPhotos(int $id): array
     {
-        $stmt = $this->db->prepare("SELECT * FROM photos WHERE incident_id = ? ORDER BY sort_order, id");
+        $orderBy = $this->hasPhotoSortOrderColumn() ? 'sort_order, id' : 'id';
+        $stmt = $this->db->prepare("SELECT * FROM photos WHERE incident_id = ? ORDER BY {$orderBy}");
         $stmt->execute([$id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function hasPhotoSortOrderColumn(): bool
+    {
+        if ($this->hasPhotoSortOrderColumn !== null) {
+            return $this->hasPhotoSortOrderColumn;
+        }
+
+        try {
+            $stmt = $this->db->prepare(
+                'SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
+            );
+            $stmt->execute(['photos', 'sort_order']);
+            $this->hasPhotoSortOrderColumn = (int) $stmt->fetchColumn() > 0;
+        } catch (\Throwable $e) {
+            $this->hasPhotoSortOrderColumn = false;
+        }
+
+        return $this->hasPhotoSortOrderColumn;
     }
 
     private function loadComments(int $id): array
@@ -245,7 +266,7 @@ class PdfReportService
     {
         $stmt = $this->db->prepare("
             SELECT sh.*, u.full_name AS agent_name
-            FROM status_history sh JOIN users u ON u.id = sh.changed_by
+            FROM status_history sh JOIN users u ON u.id = sh.user_id
             WHERE sh.incident_id = ? ORDER BY sh.changed_at ASC
         ");
         $stmt->execute([$id]);

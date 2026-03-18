@@ -1,17 +1,17 @@
-# Guide d'Installation — CCDS Citoyen
+# Guide d'Installation — Ma Commune
 
-> **Public Cible :** Citoyens de Kourou, Sinnamary, Iracoubo et Saint-Élie
-> **Objectif :** Télécharger, installer et se connecter à l'application pour la première fois.
+> **Public cible :** Habitants de la commune pilote
+> **Objectif :** Installer l'application, configurer l'accès au serveur communal et effectuer une première connexion.
 
 ---
 
-## Bienvenue sur CCDS Citoyen !
+## Bienvenue sur Ma Commune
 
-L'application officielle de la Communauté de Communes des Savanes pour signaler les anomalies, suivre leur résolution et contribuer à l'amélioration de notre cadre de vie.
+`Ma Commune` permet de signaler un problème utile au territoire, de suivre sa prise en charge et de retrouver la preuve d'action des services.
 
-## 1. Téléchargez l'Application
+## 1. Téléchargez l'application
 
-Scannez le QR Code correspondant à votre smartphone avec votre appareil photo.
+Scannez le QR Code correspondant à votre smartphone avec votre appareil photo, ou ouvrez le lien d'installation communiqué par la commune.
 
 <table align="center">
   <tr>
@@ -28,21 +28,35 @@ Scannez le QR Code correspondant à votre smartphone avec votre appareil photo.
   </tr>
 </table>
 
-Appuyez sur le lien qui apparaît à l'écran pour ouvrir la page de téléchargement.
+Appuyez sur le lien qui apparaît à l'écran pour ouvrir la page de téléchargement ou d'installation.
 
 ---
 
-## 2. Installez l'Application
+## 2. Installez l'application
 
 | Étape | Action | Visuel |
 |---|---|---|
 | **1** | Appuyez sur le bouton **"Obtenir"** (sur iPhone) ou **"Installer"** (sur Android). | 📲 |
 | **2** | L'application va se télécharger et s'installer automatiquement. | ⏳ |
-| **3** | Une fois terminée, une nouvelle icône **"CCDS Citoyen"** 🌿 apparaît sur votre écran d'accueil. | ✅ |
+| **3** | Une fois terminée, une nouvelle icône **"Ma Commune"** 🌿 apparaît sur votre écran d'accueil. | ✅ |
 
 ---
 
-## 3. Première Connexion
+## 3. Première configuration
+
+Au premier lancement, l'application peut demander l'adresse du serveur communal.
+
+Si votre commune ou votre agent de déploiement vous a transmis une adresse spécifique, saisissez-la.
+
+Exemple local de démonstration :
+
+- `http://127.0.0.1:8080/api`
+
+Appuyez ensuite sur **"Tester la connexion"**, puis sur **"Enregistrer et continuer"**.
+
+---
+
+## 4. Première connexion
 
 1.  **Ouvrez l'application** en appuyant sur la nouvelle icône 🌿.
 2.  Sur l'écran de bienvenue, appuyez sur **"Créer un compte citoyen"**.
@@ -51,4 +65,4 @@ Appuyez sur le lien qui apparaît à l'écran pour ouvrir la page de télécharg
 5.  C'est fait ! Vous êtes maintenant connecté et prêt à effectuer votre premier signalement.
 
 > **Besoin d'aide ?**
-> En cas de difficulté, n'hésitez pas à contacter les services de la CCDS.
+> En cas de difficulté, contactez votre mairie ou l'administrateur local de `Ma Commune`.

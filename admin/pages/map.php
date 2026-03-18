@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS Back-Office — Carte des signalements
+ * Ma Commune Back-Office — Carte des signalements
  */
 require_once __DIR__ . '/../includes/bootstrap.php';
 $admin      = require_admin_auth();
@@ -42,7 +42,8 @@ const statusLabels = {
   in_progress:'En cours', resolved:'Résolu', rejected:'Rejeté'
 };
 
-const map = L.map('admin-map').setView([46.6, 2.3], 6);
+const KOUROU_CENTER = [5.1597, -52.6498];
+const map = L.map('admin-map').setView(KOUROU_CENTER, 13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors'
 }).addTo(map);

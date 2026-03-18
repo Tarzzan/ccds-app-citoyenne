@@ -1,7 +1,10 @@
-# Guide de Build & Publication Mobile — CCDS Citoyen
+# Guide de Build & Publication Mobile — Ma Commune
 
 > **Public Cible :** Développeur Mobile
 > **Objectif :** Compiler l'application React Native avec Expo EAS, la publier sur les stores, et gérer les mises à jour.
+
+> **Note importante :** Ce guide est un mémo de publication simplifié.
+> La référence la plus à jour pour la configuration de build reste `docs/GUIDE_BUILD_MOBILE_EAS.md`.
 
 ---
 
@@ -104,7 +107,7 @@ Une fois les binaires générés, vous pouvez les soumettre aux plateformes.
 ### 4.1. Google Play Store
 
 1.  Connectez-vous à la [Google Play Console](https://play.google.com/console).
-2.  Créez une nouvelle application "CCDS Citoyen".
+2.  Créez une nouvelle application "Ma Commune".
 3.  Remplissez toutes les informations requises (description, captures d'écran, politique de confidentialité).
 4.  Dans la section "Production", importez le fichier `.aab` généré par EAS.
 5.  Déployez la version.

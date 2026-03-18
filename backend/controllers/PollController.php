@@ -6,6 +6,10 @@
  * - polls       : id, title, description, type, status, created_by, ends_at, created_at
  * - poll_options: id, poll_id, label, sort_order
  * - poll_votes  : id, poll_id, option_id, user_id, voted_at
+ *
+ * Note V1 :
+ * - les consultations sont volontairement limitees au choix unique
+ * - le schema courant garantit un seul vote par utilisateur et par consultation
  */
 class PollController extends BaseController
 {
@@ -15,8 +19,9 @@ class PollController extends BaseController
      */
     public function index(): void
     {
-        $user = $this->requireAuth();
-        $this->applyRateLimit('default', $user['id']);
+        $user   = $this->requireAuth();
+        $userId = (int)($user['sub'] ?? 0);
+        $this->applyRateLimit('default', $userId);
 
         $stmt = $this->db->prepare("
             SELECT p.*,
@@ -28,10 +33,11 @@ class PollController extends BaseController
                     LIMIT 1) AS user_vote_id
             FROM polls p
             JOIN users u ON u.id = p.created_by
-            WHERE p.ends_at >= NOW() OR p.ends_at IS NULL
+            WHERE p.status = 'active'
+              AND (p.ends_at >= NOW() OR p.ends_at IS NULL)
             ORDER BY p.created_at DESC
         ");
-        $stmt->execute([':uid' => $user['id']]);
+        $stmt->execute([':uid' => $userId]);
         $polls = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Charger les options pour chaque sondage
@@ -60,7 +66,8 @@ class PollController extends BaseController
     {
         $user = $this->requireAuth();
         $this->requireRole($user, 'admin');
-        $this->applyRateLimit('default', $user['id']);
+        $userId = (int)($user['sub'] ?? 0);
+        $this->applyRateLimit('default', $userId);
 
         $input = json_decode(file_get_contents('php://input'), true);
 
@@ -68,6 +75,9 @@ class PollController extends BaseController
         if (empty($input['title'])) $errors[] = 'Le titre est requis.';
         if (empty($input['options']) || count($input['options']) < 2) {
             $errors[] = 'Au moins 2 options sont requises.';
+        }
+        if (($input['type'] ?? 'single') !== 'single') {
+            $errors[] = 'La V1 supporte uniquement les consultations a choix unique.';
         }
         if (!empty($errors)) $this->error(implode(' ', $errors), 422);
 
@@ -80,8 +90,8 @@ class PollController extends BaseController
             $stmt->execute([
                 Security::sanitizeString($input['title']),
                 Security::sanitizeString($input['description'] ?? ''),
-                in_array($input['type'] ?? 'single', ['single', 'multiple']) ? $input['type'] : 'single',
-                $user['id'],
+                'single',
+                $userId,
                 $input['ends_at'] ?? null,
             ]);
             $pollId = (int) $this->db->lastInsertId();
@@ -107,8 +117,9 @@ class PollController extends BaseController
      */
     public function vote(int $pollId): void
     {
-        $user = $this->requireAuth();
-        $this->applyRateLimit('vote_create', $user['id']);
+        $user   = $this->requireAuth();
+        $userId = (int)($user['sub'] ?? 0);
+        $this->applyRateLimit('vote_create', $userId);
 
         $input    = json_decode(file_get_contents('php://input'), true);
         $optionId = (int) ($input['option_id'] ?? 0);
@@ -141,7 +152,7 @@ class PollController extends BaseController
             SELECT id FROM poll_votes
             WHERE poll_id = ? AND user_id = ?
         ");
-        $existingStmt->execute([$pollId, $user['id']]);
+        $existingStmt->execute([$pollId, $userId]);
         if ($existingStmt->fetch()) {
             $this->error('Vous avez déjà voté sur ce sondage.', 409);
         }
@@ -150,7 +161,7 @@ class PollController extends BaseController
             INSERT INTO poll_votes (poll_id, option_id, user_id, voted_at)
             VALUES (?, ?, ?, NOW())
         ");
-        $voteStmt->execute([$pollId, $optionId, $user['id']]);
+        $voteStmt->execute([$pollId, $optionId, $userId]);
 
         $this->success(['voted_option_id' => $optionId], 201, 'Vote enregistré.');
     }
@@ -161,7 +172,7 @@ class PollController extends BaseController
      */
     public function results(int $pollId): void
     {
-        $user = $this->requireAuth();
+        $this->requireAuth();
 
         $pollStmt = $this->db->prepare("SELECT * FROM polls WHERE id = ?");
         $pollStmt->execute([$pollId]);

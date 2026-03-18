@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Phinx\Migration\AbstractMigration;
 
 /**
- * Migration 001 — Schéma initial CCDS Citoyen
+ * Migration 001 — Schéma initial Ma Commune
  * Crée toutes les tables de base : users, categories, incidents, photos,
  * comments, status_history, votes, push_tokens, notifications.
  *

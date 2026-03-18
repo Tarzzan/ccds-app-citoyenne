@@ -1,18 +1,13 @@
 {
-    "name": "ccds/app-citoyenne",
-    "description": "Application citoyenne de signalement CCDS",
+    "name": "ma-commune/app-citoyenne",
+    "description": "Application citoyenne de signalement Ma Commune",
     "type": "project",
     "require-dev": {
         "phpunit/phpunit": "^10.5"
     },
-    "autoload": {
-        "psr-4": {
-            "CCDS\\": "backend/"
-        }
-    },
     "autoload-dev": {
         "psr-4": {
-            "CCDS\\Tests\\": "tests/"
+            "Tests\\": "tests/"
         }
     }
 }

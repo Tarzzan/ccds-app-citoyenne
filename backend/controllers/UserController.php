@@ -1,7 +1,7 @@
 <?php
 
 /**
- * CCDS — UserController
+ * Ma Commune — UserController
  * Gestion des utilisateurs (endpoints admin).
  *
  * GET    /api/admin/users              → Liste paginée avec filtres
@@ -12,13 +12,22 @@
  */
 class UserController extends BaseController
 {
+    private function requireAdminAccess(string $permission = 'user:list'): array
+    {
+        $auth = $this->requireAuth();
+        if (($auth['role'] ?? '') !== 'admin') {
+            $this->error('Accès réservé aux administrateurs.', 403);
+        }
+        $this->requirePermission($auth, $permission);
+        return $auth;
+    }
+
     // ─────────────────────────────────────────────────────────
     // GET /api/admin/users
     // ─────────────────────────────────────────────────────────
     public function index(): void
     {
-        $this->requireRole('agent');
-        Permissions::check($this->user, 'users.view');
+        $this->requireAdminAccess('user:list');
 
         ['page' => $page, 'limit' => $limit, 'offset' => $offset] = $this->getPagination();
 
@@ -93,8 +102,14 @@ class UserController extends BaseController
     // ─────────────────────────────────────────────────────────
     public function show(int $id): void
     {
-        $this->requireRole('agent');
-        Permissions::check($this->user, 'users.view');
+        $this->requireAdminAccess('user:list');
+
+        $gamificationJoin = $this->hasTable('user_gamification')
+            ? 'LEFT JOIN user_gamification g ON g.user_id = u.id'
+            : '';
+        $gamificationSelect = $this->hasTable('user_gamification')
+            ? 'COALESCE(g.points, 0) AS gamification_points,'
+            : '0 AS gamification_points,';
 
         $stmt = $this->db->prepare("
             SELECT
@@ -103,13 +118,13 @@ class UserController extends BaseController
                 COUNT(DISTINCT i.id)   AS incidents_count,
                 COUNT(DISTINCT v.id)   AS votes_count,
                 COUNT(DISTINCT c.id)   AS comments_count,
-                COALESCE(g.points, 0)  AS gamification_points,
+                {$gamificationSelect}
                 MAX(i.created_at)      AS last_incident_at
             FROM users u
-            LEFT JOIN incidents      i ON i.user_id = u.id
-            LEFT JOIN votes          v ON v.user_id = u.id
-            LEFT JOIN comments       c ON c.user_id = u.id
-            LEFT JOIN user_gamification g ON g.user_id = u.id
+            LEFT JOIN incidents i ON i.user_id = u.id
+            LEFT JOIN votes v ON v.user_id = u.id
+            LEFT JOIN comments c ON c.user_id = u.id
+            {$gamificationJoin}
             WHERE u.id = ?
             GROUP BY u.id
         ");
@@ -134,11 +149,14 @@ class UserController extends BaseController
         $user['recent_incidents'] = $stmtInc->fetchAll();
 
         // Badges
-        $stmtBadges = $this->db->prepare("
-            SELECT badge_key, awarded_at FROM user_badges WHERE user_id = ? ORDER BY awarded_at DESC
-        ");
-        $stmtBadges->execute([$id]);
-        $user['badges'] = $stmtBadges->fetchAll();
+        $user['badges'] = [];
+        if ($this->hasTable('user_badges')) {
+            $stmtBadges = $this->db->prepare("
+                SELECT badge_key, awarded_at FROM user_badges WHERE user_id = ? ORDER BY awarded_at DESC
+            ");
+            $stmtBadges->execute([$id]);
+            $user['badges'] = $stmtBadges->fetchAll();
+        }
 
         $this->success($user);
     }
@@ -148,10 +166,9 @@ class UserController extends BaseController
     // ─────────────────────────────────────────────────────────
     public function update(int $id): void
     {
-        $this->requireRole('admin');
-        Permissions::check($this->user, 'users.manage');
+        $auth = $this->requireAdminAccess('user:list');
 
-        if ($id === $this->user['id']) {
+        if ($id === (int)($auth['sub'] ?? 0)) {
             $this->error('Vous ne pouvez pas modifier votre propre compte via cet endpoint', 403);
         }
 
@@ -160,10 +177,12 @@ class UserController extends BaseController
         $params = [];
 
         if (isset($data['role']) && in_array($data['role'], ['citizen', 'agent', 'admin'])) {
+            $this->requirePermission($auth, 'user:update_role');
             $sets[]   = 'role = ?';
             $params[] = $data['role'];
         }
         if (isset($data['is_active'])) {
+            $this->requirePermission($auth, 'user:toggle_active');
             $sets[]   = 'is_active = ?';
             $params[] = (int)(bool)$data['is_active'];
         }
@@ -182,8 +201,7 @@ class UserController extends BaseController
     // ─────────────────────────────────────────────────────────
     public function activity(int $id): void
     {
-        $this->requireRole('agent');
-        Permissions::check($this->user, 'users.view');
+        $this->requireAdminAccess('user:list');
 
         // Vérifier que l'utilisateur existe
         $check = $this->db->prepare("SELECT id FROM users WHERE id = ?");
@@ -238,8 +256,7 @@ class UserController extends BaseController
     // ─────────────────────────────────────────────────────────
     public function stats(): void
     {
-        $this->requireRole('agent');
-        Permissions::check($this->user, 'users.view');
+        $this->requireAdminAccess('user:list');
 
         $stmt = $this->db->query("
             SELECT

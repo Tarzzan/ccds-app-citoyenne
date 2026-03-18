@@ -1,5 +1,5 @@
 /**
- * CCDS — Service API centralisé v1.5
+ * Ma Commune — Service API centralisé v1.5
  * ─────────────────────────────────────────────────────────────────────────────
  * Fusion de api.ts + api_additions.ts (TECH-03)
  * Tous les appels HTTP vers le backend PHP sont gérés ici.
@@ -14,14 +14,15 @@
  */
 
 import * as SecureStore from 'expo-secure-store';
-import { ServerConfig }  from './ServerConfig';
+import { DEFAULT_SERVER_URL, ServerConfig }  from './ServerConfig';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Configuration
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://votre-domaine.com/api';
+export const API_BASE_URL = DEFAULT_SERVER_URL;
 const TOKEN_KEY = 'ma_commune_jwt_token';
+const USER_KEY = 'ma_commune_user';
 
 export const getBaseUrl = async (): Promise<string> => ServerConfig.getServerUrl();
 
@@ -32,6 +33,21 @@ export const getBaseUrl = async (): Promise<string> => ServerConfig.getServerUrl
 export const saveToken   = (token: string)  => SecureStore.setItemAsync(TOKEN_KEY, token);
 export const getToken    = ()               => SecureStore.getItemAsync(TOKEN_KEY);
 export const removeToken = ()               => SecureStore.deleteItemAsync(TOKEN_KEY);
+export const saveUser    = (user: User)     => SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+export const getUser     = async (): Promise<User | null> => {
+  const raw = await SecureStore.getItemAsync(USER_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw) as User;
+  } catch {
+    await SecureStore.deleteItemAsync(USER_KEY);
+    return null;
+  }
+};
+export const removeUser  = ()               => SecureStore.deleteItemAsync(USER_KEY);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Client HTTP de base
@@ -75,6 +91,7 @@ export interface User {
   id: number;
   email: string;
   full_name: string;
+  phone?: string;
   role: 'citizen' | 'agent' | 'admin';
 }
 
@@ -124,6 +141,18 @@ export interface Comment {
   user_role: string;
 }
 
+function normalizeComment(raw: any): Comment {
+  const replies = Array.isArray(raw?.replies) ? raw.replies.map(normalizeComment) : [];
+
+  return {
+    ...raw,
+    replies,
+    user_name: raw?.user_name ?? raw?.author_name ?? 'Utilisateur',
+    author_name: raw?.author_name ?? raw?.user_name ?? 'Utilisateur',
+    user_role: raw?.user_role ?? raw?.author_role ?? 'citizen',
+  };
+}
+
 export interface Incident {
   id: number;
   reference: string;
@@ -139,6 +168,8 @@ export interface Incident {
   category_icon: string;
   category_color: string;
   reporter_name: string;
+  assigned_to?: number | null;
+  assigned_to_name?: string | null;
   thumbnail?: string;
   photos?: Photo[];
   status_history?: StatusHistory[];
@@ -160,11 +191,12 @@ export interface PaginatedIncidents {
 
 export interface Notification {
   id: number;
-  type: 'status_change' | 'new_comment' | 'vote_milestone' | 'system';
+  type: 'status_change' | 'new_comment' | 'vote_milestone' | 'system' | 'event';
   title: string;
   body: string;
   is_read: boolean;
   sent_at: string;
+  incident_id?: number;
   incident_reference?: string;
   incident_title?: string;
 }
@@ -195,6 +227,9 @@ export interface UserProfile {
 export interface UserStats {
   incidents_count: number;
   resolved_count: number;
+  in_progress_count: number;
+  pending_count: number;
+  avg_resolution_hours: number | null;
   votes_cast: number;
   comments_count: number;
   points: number;
@@ -202,6 +237,7 @@ export interface UserStats {
   total_users: number;
   badges: Array<{ key: string; label: string; icon: string; awarded_at: string }>;
   recent_incidents: Incident[];
+  monthly_activity: Array<{ month: string; count: number }>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -277,7 +313,7 @@ export const incidentsApi = {
       });
     }
     const query = qs.toString() ? `?${qs.toString()}` : '';
-    return request<PaginatedIncidents>(`incidents${query}`, {}, false);
+    return request<PaginatedIncidents>(`incidents${query}`);
   },
 
   create: async (formData: FormData) => {
@@ -298,6 +334,20 @@ export const incidentsApi = {
       `incidents/${id}`,
       { method: 'PATCH', body: JSON.stringify(data) }
     ),
+
+  updateStatus: (
+    id: number,
+    data: {
+      status: 'acknowledged' | 'in_progress' | 'resolved' | 'rejected';
+      note?: string;
+      priority?: 'low' | 'medium' | 'high' | 'critical';
+      assigned_to?: number;
+    }
+  ) =>
+    request<{ id: number; status: string }>(
+      `incidents/${id}`,
+      { method: 'PUT', body: JSON.stringify(data) }
+    ),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -306,7 +356,20 @@ export const incidentsApi = {
 
 export const commentsApi = {
   list: (incidentId: number) =>
-    request<Comment[]>(`incidents/${incidentId}/comments`),
+    request<Comment[] | { comments?: Comment[] }>(`incidents/${incidentId}/comments`)
+      .then((response) => {
+        const payload = response.data as any;
+        const comments = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.comments)
+            ? payload.comments
+            : [];
+
+        return {
+          ...response,
+          data: comments.map(normalizeComment),
+        };
+      }),
 
   add: (incidentId: number, data: { comment: string; is_internal?: boolean; parent_id?: number }) =>
     request(`incidents/${incidentId}/comments`, { method: 'POST', body: JSON.stringify(data) }),
@@ -432,6 +495,7 @@ export interface Poll {
   id: number;
   title: string;
   description: string;
+  type: 'single';
   status: 'active' | 'closed';
   ends_at: string;
   total_votes: number;
@@ -454,13 +518,50 @@ export interface Event {
   created_at: string;
 }
 
+function normalizePoll(raw: any): Poll {
+  return {
+    ...raw,
+    type: 'single',
+    options: Array.isArray(raw?.options) ? raw.options : [],
+    total_votes: raw?.total_votes ?? 0,
+    user_vote_id: raw?.user_vote_id ?? null,
+  };
+}
+
+function normalizeEvent(raw: any): Event {
+  const startsAt = raw?.starts_at ?? raw?.event_date ?? raw?.startsAt ?? null;
+  const organizer = raw?.organizer ?? raw?.created_by_name ?? 'Commune';
+
+  return {
+    id: raw?.id,
+    title: raw?.title ?? 'Événement communal',
+    description: raw?.description ?? '',
+    location: raw?.location ?? '',
+    starts_at: startsAt,
+    ends_at: raw?.ends_at ?? startsAt,
+    organizer,
+    attendees_count: raw?.attendees_count ?? 0,
+    interested_count: raw?.interested_count ?? 0,
+    user_rsvp: raw?.user_rsvp ?? null,
+    created_at: raw?.created_at,
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Sondages API (v1.6 — UX-10)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const pollsApi = {
-  list: () => request<Poll[]>('polls'),
-  get: (id: number) => request<Poll>(`polls/${id}`),
+  list: () =>
+    request<Poll[]>('polls').then((response) => ({
+      ...response,
+      data: Array.isArray(response.data) ? response.data.map(normalizePoll) : [],
+    })),
+  get: (id: number) =>
+    request<Poll>(`polls/${id}`).then((response) => ({
+      ...response,
+      data: response.data ? normalizePoll(response.data) : response.data,
+    })),
   vote: (pollId: number, optionId: number) =>
     request(`polls/${pollId}/vote`, { method: 'POST', body: JSON.stringify({ option_id: optionId }) }),
 };
@@ -470,8 +571,19 @@ export const pollsApi = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const eventsApi = {
-  list: () => request<Event[]>('events'),
-  get: (id: number) => request<Event>(`events/${id}`),
+  list: () =>
+    request<Event[]>('events').then((response) => ({
+      ...response,
+      data: Array.isArray(response.data) ? response.data.map(normalizeEvent) : [],
+    })),
+  get: (id: number) =>
+    request<Event>(`events/${id}`).then((response) => ({
+      ...response,
+      data: response.data ? normalizeEvent(response.data) : response.data,
+    })),
   rsvp: (eventId: number, status: 'attending' | 'interested' | null) =>
-    request(`events/${eventId}/rsvp`, { method: 'POST', body: JSON.stringify({ status }) }),
+    request(`events/${eventId}/rsvp`, {
+      method: 'POST',
+      body: JSON.stringify({ status: status ?? 'not_attending' }),
+    }),
 };

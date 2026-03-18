@@ -15,8 +15,9 @@ class EventController extends BaseController
      */
     public function index(): void
     {
-        $user = $this->requireAuth();
-        $this->applyRateLimit('default', $user['id']);
+        $user   = $this->requireAuth();
+        $userId = (int)($user['sub'] ?? 0);
+        $this->applyRateLimit('default', $userId);
 
         $stmt = $this->db->prepare("
             SELECT e.*,
@@ -29,7 +30,7 @@ class EventController extends BaseController
             WHERE e.event_date >= NOW()
             ORDER BY e.event_date ASC
         ");
-        $stmt->execute([':uid' => $user['id']]);
+        $stmt->execute([':uid' => $userId]);
         $this->success($stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
@@ -43,7 +44,8 @@ class EventController extends BaseController
         if (!in_array($user['role'], ['agent', 'admin'])) {
             $this->error('Accès réservé aux agents et administrateurs.', 403);
         }
-        $this->applyRateLimit('default', $user['id']);
+        $userId = (int)($user['sub'] ?? 0);
+        $this->applyRateLimit('default', $userId);
 
         $input = json_decode(file_get_contents('php://input'), true);
 
@@ -62,7 +64,7 @@ class EventController extends BaseController
             Security::sanitizeString($input['description'] ?? ''),
             Security::sanitizeString($input['location']),
             $input['event_date'],
-            $user['id'],
+            $userId,
         ]);
 
         $eventId = (int) $this->db->lastInsertId();
@@ -79,8 +81,9 @@ class EventController extends BaseController
      */
     public function rsvp(int $eventId): void
     {
-        $user  = $this->requireAuth();
-        $this->applyRateLimit('default', $user['id']);
+        $user   = $this->requireAuth();
+        $userId = (int)($user['sub'] ?? 0);
+        $this->applyRateLimit('default', $userId);
 
         $input  = json_decode(file_get_contents('php://input'), true);
         $status = $input['status'] ?? 'attending';
@@ -102,7 +105,7 @@ class EventController extends BaseController
         if ($status === 'not_attending') {
             // Supprimer l'inscription
             $this->db->prepare("DELETE FROM event_rsvps WHERE event_id = ? AND user_id = ?")
-                ->execute([$eventId, $user['id']]);
+                ->execute([$eventId, $userId]);
             $this->success(null, 200, 'Inscription annulée.');
         } else {
             // Insérer ou mettre à jour
@@ -111,7 +114,7 @@ class EventController extends BaseController
                 VALUES (?, ?, ?, NOW())
                 ON DUPLICATE KEY UPDATE status = VALUES(status)
             ");
-            $stmt->execute([$eventId, $user['id'], $status]);
+            $stmt->execute([$eventId, $userId, $status]);
             $this->success(['status' => $status], 200, 'Inscription enregistrée.');
         }
     }
@@ -122,7 +125,8 @@ class EventController extends BaseController
      */
     public function show(int $eventId): void
     {
-        $user = $this->requireAuth();
+        $user   = $this->requireAuth();
+        $userId = (int)($user['sub'] ?? 0);
 
         $eventStmt = $this->db->prepare("
             SELECT e.*, u.full_name AS created_by_name,
@@ -131,7 +135,7 @@ class EventController extends BaseController
             JOIN users u ON u.id = e.created_by
             WHERE e.id = ?
         ");
-        $eventStmt->execute([$user['id'], $eventId]);
+        $eventStmt->execute([$userId, $eventId]);
         $event = $eventStmt->fetch(PDO::FETCH_ASSOC);
         if (!$event) $this->error('Événement introuvable.', 404);
 
@@ -158,10 +162,10 @@ class EventController extends BaseController
         // incident_id est nullable — on passe NULL pour les notifications d'événements
         try {
             $this->db->prepare("
-                INSERT INTO notifications (user_id, incident_id, title, body, type, created_at)
+                INSERT INTO notifications (user_id, incident_id, title, body, type, sent_at)
                 SELECT id, NULL,
                        '📅 Nouvel événement communautaire',
-                       :title,
+                       CONCAT('Un nouveau rendez-vous est proposé : ', :title),
                        'event',
                        NOW()
                 FROM users

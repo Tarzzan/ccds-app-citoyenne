@@ -8,6 +8,8 @@
  *   PUT  /admin/moderation/reports/{id}     — Traiter un signalement (admin)
  *   GET  /admin/moderation/stats            — Statistiques de modération
  */
+require_once __DIR__ . '/AuditLogController.php';
+
 class ModerationController extends BaseController
 {
     // ─────────────────────────────────────────────────────────────────────────
@@ -18,7 +20,8 @@ class ModerationController extends BaseController
     public function reportComment(int $commentId): void
     {
         $user = $this->requireAuth();
-        $this->applyRateLimit('default', $user['id']);
+        $userId = $this->getAuthUserId($user);
+        $this->applyRateLimit('default', $userId);
 
         // Vérifier que le commentaire existe
         $stmt = $this->db->prepare("SELECT id, user_id FROM comments WHERE id = ?");
@@ -29,7 +32,7 @@ class ModerationController extends BaseController
         }
 
         // Un utilisateur ne peut pas signaler son propre commentaire
-        if ((int) $comment['user_id'] === (int) $user['id']) {
+        if ((int) $comment['user_id'] === $userId) {
             $this->error('Vous ne pouvez pas signaler votre propre commentaire.', 400);
         }
 
@@ -44,7 +47,7 @@ class ModerationController extends BaseController
         $existingStmt = $this->db->prepare(
             "SELECT id FROM comment_reports WHERE comment_id = ? AND reporter_id = ?"
         );
-        $existingStmt->execute([$commentId, $user['id']]);
+        $existingStmt->execute([$commentId, $userId]);
         if ($existingStmt->fetch()) {
             $this->error('Vous avez déjà signalé ce commentaire.', 409);
         }
@@ -55,7 +58,7 @@ class ModerationController extends BaseController
         ");
         $insertStmt->execute([
             $commentId,
-            $user['id'],
+            $userId,
             $reason,
             Security::sanitizeString($input['description'] ?? ''),
         ]);
@@ -92,7 +95,7 @@ class ModerationController extends BaseController
         $stmt = $this->db->prepare("
             SELECT
                 cr.*,
-                c.content        AS comment_content,
+                c.comment        AS comment_content,
                 c.user_id        AS comment_author_id,
                 author.full_name AS comment_author_name,
                 reporter.full_name AS reporter_name,
@@ -132,6 +135,7 @@ class ModerationController extends BaseController
     public function reviewReport(int $reportId): void
     {
         $user = $this->requireAuth();
+        $userId = $this->getAuthUserId($user);
         $this->requireAdmin($user);
 
         $input  = json_decode(file_get_contents('php://input'), true);
@@ -163,14 +167,14 @@ class ModerationController extends BaseController
             $newStatus = 'actioned';
 
             // Log d'audit
-            AuditLogController::log($this->db, (int) $user['id'], 'comment.deleted_via_moderation', 'comment', (int) $report['comment_id'], $details);
+            AuditLogController::log($this->db, $userId, 'comment.deleted_via_moderation', 'comment', (int) $report['comment_id'], $details);
         } elseif ($action === 'dismiss') {
             $newStatus = 'dismissed';
-            AuditLogController::log($this->db, (int) $user['id'], 'comment_report.dismissed', 'comment_report', $reportId, $details);
+            AuditLogController::log($this->db, $userId, 'comment_report.dismissed', 'comment_report', $reportId, $details);
         } elseif ($action === 'warn_author') {
             // Créer une notification pour l'auteur du commentaire
             $notifStmt = $this->db->prepare("
-                INSERT INTO notifications (user_id, type, title, message, created_at)
+                INSERT INTO notifications (user_id, type, title, body, sent_at)
                 VALUES (?, 'moderation_warning', 'Avertissement de modération', ?, NOW())
             ");
             $notifStmt->execute([
@@ -178,7 +182,7 @@ class ModerationController extends BaseController
                 'Votre commentaire a été signalé et examiné par notre équipe de modération. Merci de respecter les règles de la communauté.',
             ]);
             $newStatus = 'actioned';
-            AuditLogController::log($this->db, (int) $user['id'], 'comment.author_warned', 'comment', (int) $report['comment_id'], $details);
+            AuditLogController::log($this->db, $userId, 'comment.author_warned', 'comment', (int) $report['comment_id'], $details);
         }
 
         // Mettre à jour le statut du signalement
@@ -187,7 +191,7 @@ class ModerationController extends BaseController
             SET status = ?, reviewed_by = ?, reviewed_at = NOW()
             WHERE id = ?
         ");
-        $updateStmt->execute([$newStatus, $user['id'], $reportId]);
+        $updateStmt->execute([$newStatus, $userId, $reportId]);
 
         $this->success(['message' => 'Signalement traité avec succès.', 'status' => $newStatus]);
     }

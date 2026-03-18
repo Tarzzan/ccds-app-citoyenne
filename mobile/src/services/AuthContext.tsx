@@ -1,10 +1,10 @@
 /**
- * CCDS — Contexte d'authentification global
+ * Ma Commune — Contexte d'authentification global
  * Fournit l'état de connexion et les fonctions login/logout à toute l'application.
  */
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { authApi, getToken, saveToken, removeToken, User } from './api';
+import { authApi, getToken, getUser, saveToken, saveUser, removeToken, removeUser, User } from './api';
 
 // ----------------------------------------------------------------
 // Types
@@ -17,8 +17,10 @@ interface AuthState {
 }
 
 interface AuthContextType extends AuthState {
+  isStaff: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (data: { email: string; password: string; full_name: string }) => Promise<void>;
+  updateCurrentUser: (patch: Partial<User>) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -39,11 +41,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const token = await getToken();
+        const [token, user] = await Promise.all([getToken(), getUser()]);
         if (token) {
-          // Token présent : on considère l'utilisateur connecté
-          // Dans une version avancée, on pourrait appeler GET /api/me pour valider
-          setState(s => ({ ...s, token, isAuthenticated: true, isLoading: false }));
+          setState({
+            user,
+            token,
+            isAuthenticated: true,
+            isLoading: false,
+          });
         } else {
           setState(s => ({ ...s, isLoading: false }));
         }
@@ -56,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const res = await authApi.login({ email, password });
     if (res.data) {
-      await saveToken(res.data.token);
+      await Promise.all([saveToken(res.data.token), saveUser(res.data.user)]);
       setState({
         user: res.data.user,
         token: res.data.token,
@@ -69,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (data: { email: string; password: string; full_name: string }) => {
     const res = await authApi.register(data);
     if (res.data) {
-      await saveToken(res.data.token);
+      await Promise.all([saveToken(res.data.token), saveUser(res.data.user)]);
       setState({
         user: res.data.user,
         token: res.data.token,
@@ -79,13 +84,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateCurrentUser = async (patch: Partial<User>) => {
+    setState((current) => {
+      if (!current.user) {
+        return current;
+      }
+
+      const nextUser = { ...current.user, ...patch };
+      void saveUser(nextUser);
+
+      return {
+        ...current,
+        user: nextUser,
+      };
+    });
+  };
+
   const logout = async () => {
-    await removeToken();
+    await Promise.all([removeToken(), removeUser()]);
     setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        ...state,
+        isStaff: state.user?.role === 'admin' || state.user?.role === 'agent',
+        login,
+        register,
+        updateCurrentUser,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

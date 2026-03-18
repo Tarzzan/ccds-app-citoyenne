@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS v1.2 — IncidentController (TECH-01 + UX-01 + UX-02)
+ * Ma Commune v1.2 — IncidentController (TECH-01 + UX-01 + UX-02)
  *
  * GET    /api/incidents              → Liste paginée avec recherche et filtres avancés
  * POST   /api/incidents              → Créer un signalement
@@ -13,6 +13,7 @@
 require_once __DIR__ . '/../core/BaseController.php';
 require_once __DIR__ . '/../core/Permissions.php';
 require_once __DIR__ . '/../core/Security.php';
+require_once __DIR__ . '/../config/PushNotificationService.php';
 
 class IncidentController extends BaseController
 {
@@ -21,10 +22,29 @@ class IncidentController extends BaseController
     // ----------------------------------------------------------------
     public function index(): void
     {
+        $auth = $this->getOptionalAuth();
         ['page' => $page, 'limit' => $limit, 'offset' => $offset] = $this->getPagination();
 
         $where  = ['1=1'];
         $params = [];
+
+        $scope = Security::sanitizeString($_GET['scope'] ?? '');
+        if ($scope === 'mine') {
+            if (!$auth) {
+                $this->error("Authentification requise pour afficher vos signalements.", 401);
+            }
+
+            $isStaffScope = in_array($auth['role'] ?? '', ['agent', 'admin'], true);
+            $where[]  = $isStaffScope ? 'i.assigned_to = ?' : 'i.user_id = ?';
+            $params[] = (int)$auth['sub'];
+        }
+
+        $queue = Security::sanitizeString($_GET['queue'] ?? '');
+        if ($queue === 'open') {
+            $where[] = "i.status IN ('submitted', 'acknowledged', 'in_progress')";
+        } elseif ($queue === 'closed') {
+            $where[] = "i.status IN ('resolved', 'rejected')";
+        }
 
         // Filtre statut
         if (!empty($_GET['status'])) {
@@ -72,6 +92,7 @@ class IncidentController extends BaseController
         $sortField = match(Security::sanitizeString($_GET['sort'] ?? '')) {
             'votes'      => 'i.votes_count',
             'updated_at' => 'i.updated_at',
+            'priority'   => "FIELD(i.priority, 'critical', 'high', 'medium', 'low')",
             default      => 'i.created_at',
         };
         $sortDir = strtoupper(Security::sanitizeString($_GET['dir'] ?? '')) === 'ASC' ? 'ASC' : 'DESC';
@@ -88,17 +109,19 @@ class IncidentController extends BaseController
             SELECT
                 i.id, i.reference, i.title, i.description,
                 i.latitude, i.longitude, i.address,
-                i.status, i.priority, i.votes_count,
+                i.status, i.priority, i.assigned_to, i.votes_count,
                 i.created_at, i.updated_at,
                 c.id   AS category_id,
                 c.name AS category_name,
                 c.icon AS category_icon,
                 c.color AS category_color,
                 u.full_name AS reporter_name,
+                assignee.full_name AS assigned_to_name,
                 (SELECT file_path FROM photos WHERE incident_id = i.id ORDER BY id ASC LIMIT 1) AS thumbnail
             FROM incidents i
             JOIN categories c ON c.id = i.category_id
             JOIN users      u ON u.id = i.user_id
+            LEFT JOIN users assignee ON assignee.id = i.assigned_to
             WHERE $whereStr
             ORDER BY $sortField $sortDir
             LIMIT $limit OFFSET $offset
@@ -131,10 +154,12 @@ class IncidentController extends BaseController
                 c.icon  AS category_icon,
                 c.color AS category_color,
                 u.full_name AS reporter_name,
-                u.email     AS reporter_email
+                u.email     AS reporter_email,
+                assignee.full_name AS assigned_to_name
             FROM incidents i
             JOIN categories c ON c.id = i.category_id
             JOIN users      u ON u.id = i.user_id
+            LEFT JOIN users assignee ON assignee.id = i.assigned_to
             WHERE i.id = ?
             LIMIT 1
         ");
@@ -159,7 +184,7 @@ class IncidentController extends BaseController
         $stmtH = $this->db->prepare("
             SELECT sh.old_status, sh.new_status, sh.note, sh.changed_at, u.full_name AS changed_by
             FROM status_history sh
-            JOIN users u ON u.id = sh.changed_by
+            JOIN users u ON u.id = sh.user_id
             WHERE sh.incident_id = ?
             ORDER BY sh.changed_at ASC
         ");
@@ -221,7 +246,7 @@ class IncidentController extends BaseController
                  ->execute([$reference, $incidentId]);
 
         $this->db->prepare(
-            'INSERT INTO status_history (incident_id, changed_by, old_status, new_status, note) VALUES (?, ?, NULL, ?, ?)'
+            'INSERT INTO status_history (incident_id, user_id, old_status, new_status, note) VALUES (?, ?, NULL, ?, ?)'
         )->execute([$incidentId, $auth['sub'], 'submitted', 'Signalement créé par le citoyen.']);
 
         // Upload photo
@@ -299,8 +324,10 @@ class IncidentController extends BaseController
                  ->execute($params);
 
         $this->db->prepare(
-            'INSERT INTO status_history (incident_id, changed_by, old_status, new_status, note) VALUES (?, ?, ?, ?, ?)'
+            'INSERT INTO status_history (incident_id, user_id, old_status, new_status, note) VALUES (?, ?, ?, ?, ?)'
         )->execute([$id, $auth['sub'], $oldStatus, $newStatus, $note ?: null]);
+
+        (new PushNotificationService($this->db))->notifyStatusChange($id, $newStatus, $note ?: null);
 
         $this->success(['id' => $id, 'status' => $newStatus], 200, 'Signalement mis à jour.');
     }

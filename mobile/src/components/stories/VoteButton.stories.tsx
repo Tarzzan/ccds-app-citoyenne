@@ -8,7 +8,7 @@ import { View } from 'react-native';
 import { VoteButton } from '../VoteButton';
 
 export default {
-  title: 'CCDS/VoteButton',
+  title: 'MaCommune/VoteButton',
   component: VoteButton,
   decorators: [
     (Story: React.FC) => (

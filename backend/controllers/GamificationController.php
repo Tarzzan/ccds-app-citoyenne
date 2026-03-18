@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS v1.3 — GamificationController (GAMIF-01)
+ * Ma Commune v1.3 — GamificationController (GAMIF-01)
  * Système de points et badges pour l'engagement citoyen.
  *
  * Règles de points :
@@ -38,41 +38,32 @@ class GamificationController extends BaseController
      */
     public function stats(): void
     {
-        $userId = $this->requireAuth();
+        $auth = $this->requireAuth();
+        $userId = $this->getAuthUserId($auth);
 
-        // Récupérer ou créer les stats de gamification
-        $row = $this->db->prepare("SELECT * FROM user_gamification WHERE user_id = ?");
-        $row->execute([$userId]);
-        $gamif = $row->fetch(\PDO::FETCH_ASSOC);
+        [$incidents_count, $votes_count, $comments_count, $resolved_count] = $this->getContributionCounts($userId);
+        $points = ($incidents_count * 10) + ($votes_count * 2) + ($comments_count * 3) + ($resolved_count * 20);
 
-        if (!$gamif) {
-            // Calculer les stats depuis les tables existantes
-            $this->recalculate($userId);
+        $gamif = ['points' => $points];
+        if ($this->hasTable('user_gamification')) {
+            $row = $this->db->prepare("SELECT * FROM user_gamification WHERE user_id = ?");
             $row->execute([$userId]);
-            $gamif = $row->fetch(\PDO::FETCH_ASSOC) ?? ['points' => 0];
+            $gamif = $row->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$gamif) {
+                $this->recalculate($userId);
+                $row->execute([$userId]);
+                $gamif = $row->fetch(\PDO::FETCH_ASSOC) ?? ['points' => $points];
+            }
         }
 
-        // Badges obtenus
-        $badgeStmt = $this->db->prepare("SELECT badge_key, awarded_at FROM user_badges WHERE user_id = ? ORDER BY awarded_at DESC");
-        $badgeStmt->execute([$userId]);
-        $earnedBadges = $badgeStmt->fetchAll(\PDO::FETCH_ASSOC);
+        $earnedBadges = $this->getEarnedBadges($userId);
+        if (empty($earnedBadges)) {
+            $earnedBadges = $this->computeEarnedBadges($incidents_count, $votes_count, $comments_count, $resolved_count);
+        }
 
-        // Rang parmi tous les utilisateurs
-        $rankStmt = $this->db->query("
-            SELECT COUNT(*) + 1 AS rank
-            FROM user_gamification
-            WHERE points > (SELECT COALESCE(points, 0) FROM user_gamification WHERE user_id = $userId)
-        ");
-        $rank = (int)($rankStmt->fetchColumn() ?? 1);
-
-        // Total utilisateurs
-        $total = (int)$this->db->query("SELECT COUNT(*) FROM users WHERE role = 'citizen'")->fetchColumn();
-
-        // Statistiques détaillées
-        $incidents_count = (int)$this->db->query("SELECT COUNT(*) FROM incidents WHERE user_id = $userId")->fetchColumn();
-        $votes_count     = (int)$this->db->query("SELECT COUNT(*) FROM votes WHERE user_id = $userId")->fetchColumn();
-        $comments_count  = (int)$this->db->query("SELECT COUNT(*) FROM comments WHERE user_id = $userId")->fetchColumn();
-        $resolved_count  = (int)$this->db->query("SELECT COUNT(*) FROM incidents WHERE user_id = $userId AND status = 'resolved'")->fetchColumn();
+        $rank = $this->getRank($userId);
+        $total = $this->countCitizens();
 
         // Prochain badge à débloquer
         $nextBadge = $this->getNextBadge($userId, $incidents_count, $votes_count, $comments_count, $resolved_count, $earnedBadges);
@@ -105,11 +96,16 @@ class GamificationController extends BaseController
      */
     public function badges(): void
     {
-        $userId = $this->requireAuth();
+        $auth = $this->requireAuth();
+        $userId = $this->getAuthUserId($auth);
 
-        $earnedStmt = $this->db->prepare("SELECT badge_key FROM user_badges WHERE user_id = ?");
-        $earnedStmt->execute([$userId]);
-        $earned = array_column($earnedStmt->fetchAll(\PDO::FETCH_ASSOC), 'badge_key');
+        $earnedBadges = $this->getEarnedBadges($userId);
+        if (empty($earnedBadges)) {
+            [$incidents, $votes, $comments, $resolved] = $this->getContributionCounts($userId);
+            $earnedBadges = $this->computeEarnedBadges($incidents, $votes, $comments, $resolved);
+        }
+
+        $earned = array_column($earnedBadges, 'badge_key');
 
         $badges = [];
         foreach (self::BADGES as $key => $def) {
@@ -131,6 +127,10 @@ class GamificationController extends BaseController
      */
     public static function addPoints(\PDO $db, int $userId, int $points, string $action): void
     {
+        if (!self::tableExists($db, 'user_gamification')) {
+            return;
+        }
+
         // Upsert dans user_gamification
         $db->prepare("
             INSERT INTO user_gamification (user_id, points, last_action_at)
@@ -148,10 +148,11 @@ class GamificationController extends BaseController
 
     private function recalculate(int $userId): void
     {
-        $incidents = (int)$this->db->query("SELECT COUNT(*) FROM incidents WHERE user_id = $userId")->fetchColumn();
-        $votes     = (int)$this->db->query("SELECT COUNT(*) FROM votes WHERE user_id = $userId")->fetchColumn();
-        $comments  = (int)$this->db->query("SELECT COUNT(*) FROM comments WHERE user_id = $userId")->fetchColumn();
-        $resolved  = (int)$this->db->query("SELECT COUNT(*) FROM incidents WHERE user_id = $userId AND status = 'resolved'")->fetchColumn();
+        if (!$this->hasTable('user_gamification')) {
+            return;
+        }
+
+        [$incidents, $votes, $comments, $resolved] = $this->getContributionCounts($userId);
 
         $points = ($incidents * 10) + ($votes * 2) + ($comments * 3) + ($resolved * 20);
 
@@ -164,10 +165,14 @@ class GamificationController extends BaseController
 
     private static function checkAndAwardBadges(\PDO $db, int $userId, string $action): void
     {
-        $incidents = (int)$db->query("SELECT COUNT(*) FROM incidents WHERE user_id = $userId")->fetchColumn();
-        $votes     = (int)$db->query("SELECT COUNT(*) FROM votes WHERE user_id = $userId")->fetchColumn();
-        $comments  = (int)$db->query("SELECT COUNT(*) FROM comments WHERE user_id = $userId")->fetchColumn();
-        $resolved  = (int)$db->query("SELECT COUNT(*) FROM incidents WHERE user_id = $userId AND status = 'resolved'")->fetchColumn();
+        if (!self::tableExists($db, 'user_badges')) {
+            return;
+        }
+
+        $incidents = self::fetchCount($db, "SELECT COUNT(*) FROM incidents WHERE user_id = ?", [$userId]);
+        $votes     = self::fetchCount($db, "SELECT COUNT(*) FROM votes WHERE user_id = ?", [$userId]);
+        $comments  = self::fetchCount($db, "SELECT COUNT(*) FROM comments WHERE user_id = ?", [$userId]);
+        $resolved  = self::fetchCount($db, "SELECT COUNT(*) FROM incidents WHERE user_id = ? AND status = 'resolved'", [$userId]);
 
         $toAward = [];
 
@@ -178,15 +183,25 @@ class GamificationController extends BaseController
         if ($resolved >= 5)   $toAward[] = 'resolved';
 
         // Badge "popular" : un signalement avec 50+ votes
-        $popular = $db->query("SELECT COUNT(*) FROM incidents WHERE user_id = $userId AND votes_count >= 50")->fetchColumn();
+        $popular = self::fetchCount($db, "SELECT COUNT(*) FROM incidents WHERE user_id = ? AND votes_count >= 50", [$userId]);
         if ($popular > 0) $toAward[] = 'popular';
 
         // Badge "top" : dans le top 10%
-        $total = (int)$db->query("SELECT COUNT(*) FROM users WHERE role = 'citizen'")->fetchColumn();
-        $rank  = (int)$db->query("
-            SELECT COUNT(*) + 1 FROM user_gamification
-            WHERE points > (SELECT COALESCE(points, 0) FROM user_gamification WHERE user_id = $userId)
-        ")->fetchColumn();
+        $total = self::fetchCount($db, "SELECT COUNT(*) FROM users WHERE role = 'citizen'");
+        $rank = 1;
+        if (self::tableExists($db, 'user_gamification')) {
+            $rankStmt = $db->prepare("
+                SELECT COUNT(*) + 1
+                FROM user_gamification
+                WHERE points > (
+                    SELECT COALESCE(points, 0)
+                    FROM user_gamification
+                    WHERE user_id = ?
+                )
+            ");
+            $rankStmt->execute([$userId]);
+            $rank = (int) ($rankStmt->fetchColumn() ?? 1);
+        }
         if ($total > 0 && ($rank / $total) <= 0.10) $toAward[] = 'top';
 
         // Insérer uniquement les badges non encore obtenus
@@ -197,6 +212,100 @@ class GamificationController extends BaseController
             } catch (\PDOException $e) {
                 // Ignorer les doublons
             }
+        }
+    }
+
+    private function getContributionCounts(int $userId): array
+    {
+        return [
+            $this->fetchCountLocal("SELECT COUNT(*) FROM incidents WHERE user_id = ?", [$userId]),
+            $this->fetchCountLocal("SELECT COUNT(*) FROM votes WHERE user_id = ?", [$userId]),
+            $this->fetchCountLocal("SELECT COUNT(*) FROM comments WHERE user_id = ?", [$userId]),
+            $this->fetchCountLocal("SELECT COUNT(*) FROM incidents WHERE user_id = ? AND status = 'resolved'", [$userId]),
+        ];
+    }
+
+    private function getEarnedBadges(int $userId): array
+    {
+        if (!$this->hasTable('user_badges')) {
+            return [];
+        }
+
+        $badgeStmt = $this->db->prepare("SELECT badge_key, awarded_at FROM user_badges WHERE user_id = ? ORDER BY awarded_at DESC");
+        $badgeStmt->execute([$userId]);
+        return $badgeStmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    private function computeEarnedBadges(int $incidents, int $votes, int $comments, int $resolved): array
+    {
+        $earned = [];
+
+        if ($incidents >= 1) {
+            $earned[] = ['badge_key' => 'explorer', 'awarded_at' => null];
+        }
+        if ($incidents >= 10) {
+            $earned[] = ['badge_key' => 'active', 'awarded_at' => null];
+        }
+        if ($votes >= 20) {
+            $earned[] = ['badge_key' => 'voter', 'awarded_at' => null];
+        }
+        if ($comments >= 10) {
+            $earned[] = ['badge_key' => 'commenter', 'awarded_at' => null];
+        }
+        if ($resolved >= 5) {
+            $earned[] = ['badge_key' => 'resolved', 'awarded_at' => null];
+        }
+
+        return $earned;
+    }
+
+    private function getRank(int $userId): int
+    {
+        if (!$this->hasTable('user_gamification')) {
+            return 1;
+        }
+
+        $rankStmt = $this->db->prepare("
+            SELECT COUNT(*) + 1 AS user_rank
+            FROM user_gamification
+            WHERE points > (
+                SELECT COALESCE(points, 0)
+                FROM user_gamification
+                WHERE user_id = ?
+            )
+        ");
+        $rankStmt->execute([$userId]);
+
+        return (int) ($rankStmt->fetchColumn() ?? 1);
+    }
+
+    private function countCitizens(): int
+    {
+        return $this->fetchCountLocal("SELECT COUNT(*) FROM users WHERE role = 'citizen'");
+    }
+
+    private function fetchCountLocal(string $sql, array $params = []): int
+    {
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return (int) ($stmt->fetchColumn() ?? 0);
+    }
+
+    private static function fetchCount(\PDO $db, string $sql, array $params = []): int
+    {
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        return (int) ($stmt->fetchColumn() ?? 0);
+    }
+
+    private static function tableExists(\PDO $db, string $table): bool
+    {
+        try {
+            $stmt = $db->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?');
+            $stmt->execute([$table]);
+            return (int) $stmt->fetchColumn() > 0;
+        } catch (\Throwable $e) {
+            return false;
         }
     }
 

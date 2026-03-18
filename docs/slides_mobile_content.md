@@ -1,10 +1,15 @@
-# Présentation : Application Mobile CCDS Citoyen
+# Présentation : Application Mobile — Archive de contenu
+
+> Archive de slides préparatoires issue de l'ancienne identité produit.
+> Ce document ne doit plus être utilisé comme support principal de présentation sans réécriture sous `Ma Commune`.
+> Les intitulés et formulations `CCDS` ci-dessous sont conservés à titre historique.
+
 ## Contenu des slides
 
 ---
 
 ## Slide 1 — Couverture (Title Slide)
-**Titre :** CCDS Citoyen — Application Mobile
+**Titre :** Ancienne marque `CCDS Citoyen` — Application Mobile
 **Sous-titre :** Signalez, suivez, améliorez votre commune
 **Détails :**
 - Icône 🏛️ et nom de l'application en grand
@@ -18,7 +23,7 @@
 ## Slide 2 — Vue d'ensemble de l'application
 **Titre :** Une application citoyenne complète en 5 écrans clés
 **Contenu :**
-L'application CCDS Citoyen offre un parcours utilisateur fluide et intuitif, de l'authentification jusqu'au suivi en temps réel des signalements. Développée en React Native (Expo), elle fonctionne nativement sur iOS et Android avec une seule base de code.
+Dans cette ancienne version de présentation, `CCDS Citoyen` désigne le produit avant sa reprise. Le support décrit un parcours utilisateur fluide et intuitif, de l'authentification jusqu'au suivi en temps réel des signalements.
 
 **Points clés :**
 - Authentification sécurisée avec tokens JWT
@@ -141,9 +146,9 @@ La version 1.0 pose les bases solides de l'application. La roadmap prévoit des 
 ---
 
 ## Slide 10 — Conclusion
-**Titre :** CCDS Citoyen — La commune à portée de main
+**Titre :** Ancienne marque `CCDS Citoyen` — La commune à portée de main
 **Contenu :**
-L'application CCDS Citoyen transforme le rapport entre les habitants et leur commune. En donnant aux citoyens un outil simple, rapide et transparent pour signaler les problèmes, elle renforce la démocratie participative locale et améliore la qualité de vie de tous.
+Dans cette formulation historique, `CCDS Citoyen` désigne l'ancien récit produit. Le message central reste utile comme archive d'intention, mais doit être réécrit avant toute réutilisation sous `Ma Commune`.
 
 **Chiffres clés du projet :**
 - 5 écrans mobiles développés

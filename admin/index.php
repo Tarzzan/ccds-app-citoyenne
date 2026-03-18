@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS Back-Office — Point d'entrée et routeur principal
+ * Ma Commune Back-Office — Point d'entrée et routeur principal
  * Toutes les requêtes passent par ce fichier via .htaccess
  */
 

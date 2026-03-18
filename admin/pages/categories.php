@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS v1.2 — Gestion des catégories (ADMIN-02)
+ * Ma Commune v1.2 — Gestion des catégories (ADMIN-02)
  * CRUD complet : liste, création, modification, activation/désactivation, suppression.
  * Nouvelles colonnes : icône emoji, votes totaux, édition inline.
  */

@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS Back-Office — Bootstrap
+ * Ma Commune Back-Office — Bootstrap
  * Charge la configuration partagée avec le backend et démarre la session.
  */
 
@@ -8,6 +8,7 @@
 require_once __DIR__ . '/../../backend/config/config.php';
 require_once __DIR__ . '/../../backend/config/Database.php';
 require_once __DIR__ . '/../../backend/config/helpers.php';
+require_once __DIR__ . '/../../backend/core/Security.php';
 
 // Démarrer la session PHP sécurisée
 if (session_status() === PHP_SESSION_NONE) {

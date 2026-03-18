@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS v1.2 — Système de permissions RBAC (SEC-02)
+ * Ma Commune v1.2 — Système de permissions RBAC (SEC-02)
  *
  * Chaque rôle dispose d'un ensemble de permissions nommées.
  * Les contrôleurs utilisent `Permissions::require()` au lieu de `require_role()`.
@@ -28,6 +28,7 @@ class Permissions
         // --- Commentaires ---
         'comment:list'           => ['citizen', 'agent', 'admin'],
         'comment:create'         => ['citizen', 'agent', 'admin'],
+        'comment:create_internal'=> ['agent', 'admin'],
         'comment:delete_own'     => ['citizen'],
         'comment:delete_any'     => ['admin'],
 

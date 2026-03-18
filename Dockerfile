@@ -1,8 +1,8 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# CCDS Citoyen — Dockerfile de production (Railway)
-# PHP 8.1-FPM + Nginx dans un seul conteneur (supervisord)
+# Ma Commune — Dockerfile de production (Railway)
+# PHP 8.4-FPM + Nginx dans un seul conteneur (supervisord)
 # ─────────────────────────────────────────────────────────────────────────────
-FROM php:8.1-fpm-alpine
+FROM php:8.4-fpm-alpine
 
 # ── Dépendances système ───────────────────────────────────────────────────────
 RUN apk add --no-cache \

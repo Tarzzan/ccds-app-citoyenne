@@ -3,12 +3,12 @@
     "language": "Kréyòl Gwiyannais",
     "code": "cr",
     "version": "1.3.0",
-    "contributors": ["CCDS Team"],
+    "contributors": ["Ékip Ma Commune"],
     "note": "Créole guyanais — variante de Guyane française"
   },
 
   "common": {
-    "app_name": "CCDS Sitwayen",
+    "app_name": "Ma Commune",
     "loading": "Chajman...",
     "error": "Yonn erè rivé",
     "retry": "Eséyé ankò",
@@ -41,7 +41,7 @@
     "full_name": "Non konplè",
     "phone": "Nimewo téléfòn",
     "login_title": "Konektéw",
-    "login_subtitle": "Bienvini nan CCDS Sitwayen",
+    "login_subtitle": "Bienvini anlè Ma Commune",
     "register_title": "Kréyé kont ou",
     "forgot_password": "Ou bliyé mo pasé ou?",
     "no_account": "Pa ni kont? Enskri",

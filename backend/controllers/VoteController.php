@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS v1.3 — VoteController (TECH-02)
+ * Ma Commune v1.3 — VoteController (TECH-02)
  * Migration de backend/api/votes.php vers l'architecture OO.
  */
 require_once __DIR__ . '/../core/BaseController.php';
@@ -13,7 +13,9 @@ class VoteController extends BaseController
      */
     public function getState(int $incidentId): void
     {
-        $userId = $this->requireAuth();
+        $auth   = $this->requireAuth();
+        $userId = (int)($auth['sub'] ?? 0);
+        $this->requirePermission($auth, 'vote:read');
 
         $stmt = $this->db->prepare("
             SELECT
@@ -40,8 +42,9 @@ class VoteController extends BaseController
      */
     public function vote(int $incidentId): void
     {
-        $userId = $this->requireAuth();
-        $this->requirePermission('vote:create');
+        $auth   = $this->requireAuth();
+        $userId = (int)($auth['sub'] ?? 0);
+        $this->requirePermission($auth, 'vote:create');
 
         // Vérifier que l'incident existe
         $check = $this->db->prepare("SELECT id FROM incidents WHERE id = ?");
@@ -58,10 +61,9 @@ class VoteController extends BaseController
                      ->execute([$incidentId]);
 
             // Vérifier les paliers de gamification (10, 50, 100 votes)
-            $count = (int)$this->db->prepare("SELECT votes_count FROM incidents WHERE id = ?")
-                                   ->execute([$incidentId]) && true
-                     ? $this->db->query("SELECT votes_count FROM incidents WHERE id = $incidentId")->fetchColumn()
-                     : 0;
+            $countStmt = $this->db->prepare('SELECT votes_count FROM incidents WHERE id = ?');
+            $countStmt->execute([$incidentId]);
+            $count = (int)$countStmt->fetchColumn();
 
             $this->success([
                 'votes_count'    => $count,
@@ -82,8 +84,9 @@ class VoteController extends BaseController
      */
     public function removeVote(int $incidentId): void
     {
-        $userId = $this->requireAuth();
-        $this->requirePermission('vote:delete');
+        $auth   = $this->requireAuth();
+        $userId = (int)($auth['sub'] ?? 0);
+        $this->requirePermission($auth, 'vote:delete_own');
 
         $stmt = $this->db->prepare("DELETE FROM votes WHERE user_id = ? AND incident_id = ?");
         $stmt->execute([$userId, $incidentId]);
@@ -95,7 +98,9 @@ class VoteController extends BaseController
         $this->db->prepare("UPDATE incidents SET votes_count = GREATEST(0, votes_count - 1) WHERE id = ?")
                  ->execute([$incidentId]);
 
-        $count = (int)$this->db->query("SELECT votes_count FROM incidents WHERE id = $incidentId")->fetchColumn();
+        $countStmt = $this->db->prepare('SELECT votes_count FROM incidents WHERE id = ?');
+        $countStmt->execute([$incidentId]);
+        $count = (int)$countStmt->fetchColumn();
 
         $this->success([
             'votes_count'    => $count,

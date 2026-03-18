@@ -1,5 +1,5 @@
 /**
- * CCDS v1.3 — AccessibleButton (A11Y-01)
+ * Ma Commune v1.3 — AccessibleButton (A11Y-01)
  * Bouton conforme WCAG 2.1 AA :
  * - Zone tactile minimale 44×44 dp
  * - Labels accessibilityLabel et accessibilityHint

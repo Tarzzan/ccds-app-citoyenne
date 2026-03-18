@@ -1,6 +1,7 @@
-# Feuille de Route (Roadmap) - Projet CCDS
+# Feuille de Route Historique - Projet alors nomme CCDS
 
-Ce document est la source de vérité unique pour le développement de l'application citoyenne de signalement (CCDS). Il sert de guide pour l'agent IA et de suivi pour le commanditaire du projet.
+Archive de cadrage historique du projet avant la refonte `Ma Commune`.
+Ce document reste utile pour relire la trajectoire du produit, mais ne doit plus etre interprete comme la source de verite active.
 
 ## 🎯 Objectif Global (Goal)
 

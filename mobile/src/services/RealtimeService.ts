@@ -1,5 +1,5 @@
 /**
- * CCDS v1.3 — RealtimeService (RT-01)
+ * Ma Commune v1.3 — RealtimeService (RT-01)
  * Service WebSocket pour les mises à jour en temps réel de la carte.
  * Gestion : reconnexion automatique, backoff exponentiel, heartbeat.
  *

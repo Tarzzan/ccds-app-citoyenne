@@ -1,134 +1,172 @@
-/**
- * CCDS v1.3 — ImpactScreen (GAMIF-01)
- * Écran "Mon Impact" : points, rang, badges, statistiques de contribution.
- */
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl,
-  Animated,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { authApi, Incident, UserStats } from '../services/api';
 import { useTheme } from '../theme/ThemeContext';
-import { useTranslation } from '../i18n/i18n';
-import { apiRequest } from '../services/api';
+import { AppStackParamList } from '../navigation/RootNavigator';
 
-// ----------------------------------------------------------------
-// Types
-// ----------------------------------------------------------------
+type NavProp = NativeStackNavigationProp<AppStackParamList>;
 
-interface Badge {
-  key: string;
-  label: string;
+const STATUS_LABELS: Record<string, string> = {
+  submitted: 'Soumis',
+  acknowledged: 'Pris en compte',
+  in_progress: 'En cours',
+  resolved: 'Résolu',
+  rejected: 'Rejeté',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  submitted: '#D97706',
+  acknowledged: '#2563EB',
+  in_progress: '#7C3AED',
+  resolved: '#15803D',
+  rejected: '#B91C1C',
+};
+
+function getBilanNarrative(stats: UserStats): { title: string; body: string } {
+  if (stats.pending_count > 0) {
+    return {
+      title: 'Des demandes attendent encore une reponse visible',
+      body: `${stats.pending_count} dossier(s) sont toujours en attente. Le bon signal pour la commune est maintenant de rendre la prise en charge plus lisible.`,
+    };
+  }
+
+  if (stats.in_progress_count > 0) {
+    return {
+      title: 'Votre vigilance produit deja un mouvement concret',
+      body: `${stats.in_progress_count} dossier(s) sont en cours de traitement. Le territoire voit donc deja une reponse en train de se construire.`,
+    };
+  }
+
+  if (stats.resolved_count > 0) {
+    return {
+      title: 'La boucle de service public local fonctionne',
+      body: `${stats.resolved_count} dossier(s) ont deja ete resolus. Votre bilan montre ici la preuve de suivi, pas seulement l acte de signaler.`,
+    };
+  }
+
+  return {
+    title: 'Votre bilan citoyen va documenter la reponse locale',
+    body: 'Des vos premiers signalements, cet espace montrera ce qui a ete pris en charge, ce qui reste ouvert et comment la commune repond.',
+  };
+}
+
+function formatResolutionDelay(avgResolutionHours: number | null): string {
+  if (avgResolutionHours === null) {
+    return 'Pas encore assez de dossiers resolus pour calculer un delai moyen.';
+  }
+
+  if (avgResolutionHours < 24) {
+    return `Delai moyen observe : ${Math.round(avgResolutionHours)} h`;
+  }
+
+  const days = Math.round((avgResolutionHours / 24) * 10) / 10;
+  return `Delai moyen observe : ${days} j`;
+}
+
+function buildMonthlySummary(stats: UserStats): string {
+  if (!stats.monthly_activity.length) {
+    return 'Aucune activite recente n a encore ete consolidee.';
+  }
+
+  const total = stats.monthly_activity.reduce((sum, item) => sum + item.count, 0);
+  return `${total} signalement(s) sur les 6 derniers mois, avec ${stats.monthly_activity.length} mois d activite visible.`;
+}
+
+function MetricCard({
+  icon,
+  value,
+  label,
+  backgroundColor,
+}: {
   icon: string;
-  description: string;
-  awarded_at?: string;
-  earned?: boolean;
-}
-
-interface NextBadge {
-  key: string;
+  value: string | number;
   label: string;
+  backgroundColor: string;
+}) {
+  return (
+    <View style={[styles.metricCard, { backgroundColor }]}>
+      <Text style={styles.metricIcon}>{icon}</Text>
+      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={styles.metricLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function EngagementCard({
+  icon,
+  value,
+  label,
+}: {
   icon: string;
-  progress: number;
-  required: number;
+  value: string | number;
+  label: string;
+}) {
+  const { theme } = useTheme();
+
+  return (
+    <View style={[styles.engagementCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      <Text style={styles.engagementIcon}>{icon}</Text>
+      <Text style={[styles.engagementValue, { color: theme.textPrimary }]}>{value}</Text>
+      <Text style={[styles.engagementLabel, { color: theme.textSecondary }]}>{label}</Text>
+    </View>
+  );
 }
-
-interface GamificationStats {
-  points: number;
-  rank: number;
-  total_users: number;
-  percentile: number;
-  incidents_count: number;
-  votes_count: number;
-  comments_count: number;
-  resolved_count: number;
-  badges: Badge[];
-  next_badge: NextBadge | null;
-}
-
-// ----------------------------------------------------------------
-// Composants
-// ----------------------------------------------------------------
-
-const StatCard = ({ icon, value, label, color }: {
-  icon: string; value: number; label: string; color: string;
-}) => {
-  const { theme } = useTheme();
-  return (
-    <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-      <Text style={styles.statIcon}>{icon}</Text>
-      <Text style={[styles.statValue, { color }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{label}</Text>
-    </View>
-  );
-};
-
-const BadgeItem = ({ badge, earned }: { badge: Badge; earned: boolean }) => {
-  const { theme } = useTheme();
-  return (
-    <View style={[
-      styles.badgeItem,
-      { backgroundColor: earned ? theme.primaryLight : theme.surfaceVariant, borderColor: earned ? theme.primary : theme.border },
-    ]}>
-      <Text style={[styles.badgeIcon, { opacity: earned ? 1 : 0.35 }]}>{badge.icon}</Text>
-      <Text style={[styles.badgeLabel, { color: earned ? theme.primary : theme.textTertiary }]} numberOfLines={2}>
-        {badge.label}
-      </Text>
-      {earned && <Text style={styles.badgeCheck}>✓</Text>}
-    </View>
-  );
-};
-
-const ProgressBar = ({ progress, total, color }: { progress: number; total: number; color: string }) => {
-  const { theme } = useTheme();
-  const pct = Math.min((progress / total) * 100, 100);
-  return (
-    <View style={[styles.progressTrack, { backgroundColor: theme.surfaceVariant }]}>
-      <View style={[styles.progressFill, { width: `${pct}%`, backgroundColor: color }]} />
-    </View>
-  );
-};
-
-// ----------------------------------------------------------------
-// Écran principal
-// ----------------------------------------------------------------
 
 export default function ImpactScreen() {
-  const { theme }   = useTheme();
-  const { t }       = useTranslation();
-  const [stats, setStats]         = useState<GamificationStats | null>(null);
-  const [loading, setLoading]     = useState(true);
+  const navigation = useNavigation<NavProp>();
+  const { theme } = useTheme();
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError]         = useState<string | null>(null);
-  const pointsAnim = React.useRef(new Animated.Value(0)).current;
+  const [error, setError] = useState('');
 
   const loadStats = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    try {
-      const res = await apiRequest<GamificationStats>('gamification');
-      if (res.data) setStats(res.data);
-      setError(null);
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
 
-      // Animation des points
-      Animated.timing(pointsAnim, {
-        toValue: res.data?.points ?? 0,
-        duration: 1200,
-        useNativeDriver: false,
-      }).start();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t('errors.unknown'));
+    try {
+      const response = await authApi.getStats();
+      if (response.data) {
+        setStats(response.data);
+      }
+      setError('');
+    } catch (err: any) {
+      setError(err?.message ?? 'Impossible de charger votre bilan citoyen.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [t, pointsAnim]);
+  }, []);
 
-  useEffect(() => { loadStats(); }, [loadStats]);
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
+  const resolutionRate = useMemo(() => {
+    if (!stats || stats.incidents_count === 0) {
+      return 0;
+    }
+    return Math.round((stats.resolved_count / stats.incidents_count) * 100);
+  }, [stats]);
 
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Chargement du bilan citoyen…</Text>
       </View>
     );
   }
@@ -136,126 +174,374 @@ export default function ImpactScreen() {
   if (error || !stats) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <Text style={[styles.errorText, { color: theme.danger }]}>{error ?? t('errors.unknown')}</Text>
-        <TouchableOpacity onPress={() => loadStats()} style={[styles.retryBtn, { backgroundColor: theme.primary }]}>
-          <Text style={{ color: theme.textInverse, fontWeight: '600' }}>{t('common.retry')}</Text>
+        <Text style={[styles.errorIcon, { color: theme.danger }]}>⚠️</Text>
+        <Text style={[styles.errorText, { color: theme.danger }]}>{error || 'Impossible de charger votre bilan citoyen.'}</Text>
+        <TouchableOpacity style={[styles.retryBtn, { backgroundColor: theme.primary }]} onPress={() => loadStats()}>
+          <Text style={styles.retryBtnText}>Reessayer</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const earnedKeys = stats.badges.map(b => b.key);
+  const narrative = getBilanNarrative(stats);
+  const monthlySummary = buildMonthlySummary(stats);
 
   return (
     <ScrollView
       style={{ backgroundColor: theme.background }}
       contentContainerStyle={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadStats(true)} tintColor={theme.primary} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => loadStats(true)}
+          tintColor={theme.primary}
+        />
+      }
     >
-      {/* En-tête : Points et Rang */}
-      <View style={[styles.header, { backgroundColor: theme.primary }]}>
-        <Text style={styles.headerTitle}>{t('gamification.my_impact')}</Text>
-        <Animated.Text style={styles.headerPoints}>
-          {pointsAnim.interpolate({ inputRange: [0, stats.points], outputRange: ['0', String(stats.points)] })}
-        </Animated.Text>
-        <Text style={styles.headerPointsLabel}>{t('gamification.points', { count: stats.points })}</Text>
-        <View style={styles.rankRow}>
-          <Text style={styles.rankText}>
-            {t('gamification.rank', { rank: stats.rank })} / {stats.total_users}
-          </Text>
-          <View style={styles.percentileBadge}>
-            <Text style={styles.percentileText}>Top {stats.percentile}%</Text>
+      <View style={[styles.hero, { backgroundColor: theme.primary }]}>
+        <Text style={styles.heroEyebrow}>Mon bilan citoyen</Text>
+        <Text style={styles.heroTitle}>{narrative.title}</Text>
+        <Text style={styles.heroText}>{narrative.body}</Text>
+        <View style={styles.heroStats}>
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatValue}>{stats.incidents_count}</Text>
+            <Text style={styles.heroStatLabel}>dossiers suivis</Text>
+          </View>
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatValue}>{resolutionRate}%</Text>
+            <Text style={styles.heroStatLabel}>resolus</Text>
+          </View>
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatValue}>#{stats.rank}</Text>
+            <Text style={styles.heroStatLabel}>rang local</Text>
           </View>
         </View>
       </View>
 
-      {/* Statistiques */}
-      <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Mes contributions</Text>
-      <View style={styles.statsGrid}>
-        <StatCard icon="📍" value={stats.incidents_count} label="Signalements"  color={theme.primary} />
-        <StatCard icon="👍" value={stats.votes_count}     label="Votes donnés"  color={theme.success} />
-        <StatCard icon="💬" value={stats.comments_count}  label="Commentaires"  color={theme.warning} />
-        <StatCard icon="✅" value={stats.resolved_count}  label="Résolus"       color={theme.success} />
+      <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Preuve de suivi</Text>
+      <View style={styles.metricsGrid}>
+        <MetricCard icon="🕐" value={stats.pending_count} label="En attente" backgroundColor="#FFF4D6" />
+        <MetricCard icon="🛠️" value={stats.in_progress_count} label="En cours" backgroundColor="#EEE6FF" />
+        <MetricCard icon="✅" value={stats.resolved_count} label="Resolus" backgroundColor="#DCFCE7" />
+        <MetricCard
+          icon="⏱️"
+          value={stats.avg_resolution_hours === null ? 'N/D' : stats.avg_resolution_hours < 24 ? `${Math.round(stats.avg_resolution_hours)} h` : `${Math.round(stats.avg_resolution_hours / 24)} j`}
+          label="Delai moyen"
+          backgroundColor="#E0F2FE"
+        />
       </View>
 
-      {/* Prochain badge */}
-      {stats.next_badge && (
+      <View style={[styles.proofCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <Text style={[styles.proofTitle, { color: theme.textPrimary }]}>Lecture rapide du service rendu</Text>
+        <Text style={[styles.proofText, { color: theme.textSecondary }]}>{formatResolutionDelay(stats.avg_resolution_hours)}</Text>
+        <Text style={[styles.proofHint, { color: theme.textSecondary }]}>{monthlySummary}</Text>
+      </View>
+
+      <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Derniers dossiers</Text>
+      {stats.recent_incidents.length === 0 ? (
+        <View style={[styles.emptyCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Aucun dossier pour le moment</Text>
+          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+            Vos prochains signalements apparaitront ici avec leur statut et leur reference.
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.incidentList}>
+          {stats.recent_incidents.map((incident) => {
+            const statusColor = STATUS_COLORS[incident.status] ?? theme.primary;
+            const statusLabel = STATUS_LABELS[incident.status] ?? incident.status;
+
+            return (
+              <TouchableOpacity
+                key={incident.id}
+                style={[styles.incidentCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                onPress={() => navigation.navigate('IncidentDetail', { id: incident.id })}
+                activeOpacity={0.85}
+              >
+                <View style={styles.incidentTopRow}>
+                  <Text style={[styles.incidentIcon, { color: theme.textPrimary }]}>
+                    {incident.category_icon || '📍'}
+                  </Text>
+                  <View style={styles.incidentMain}>
+                    <Text style={[styles.incidentTitle, { color: theme.textPrimary }]} numberOfLines={2}>
+                      {incident.title}
+                    </Text>
+                    <Text style={[styles.incidentRef, { color: theme.textSecondary }]}>
+                      {incident.reference}
+                    </Text>
+                  </View>
+                  <View style={[styles.statusPill, { backgroundColor: `${statusColor}22` }]}>
+                    <Text style={[styles.statusPillText, { color: statusColor }]}>{statusLabel}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
+      <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Repères d engagement</Text>
+      <View style={styles.engagementGrid}>
+        <EngagementCard icon="🏅" value={stats.points} label="points de contribution" />
+        <EngagementCard icon="👍" value={stats.votes_cast} label="votes exprimes" />
+        <EngagementCard icon="💬" value={stats.comments_count} label="commentaires" />
+        <EngagementCard icon="🎖️" value={stats.badges.length} label="badges recents" />
+      </View>
+
+      {stats.badges.length > 0 && (
         <>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Prochain badge</Text>
-          <View style={[styles.nextBadgeCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={styles.nextBadgeIcon}>{stats.next_badge.icon}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.nextBadgeLabel, { color: theme.textPrimary }]}>{stats.next_badge.label}</Text>
-              <Text style={[styles.nextBadgeProgress, { color: theme.textSecondary }]}>
-                {t('gamification.progress', {
-                  current:  stats.next_badge.progress,
-                  required: stats.next_badge.required,
-                  badge:    stats.next_badge.label,
-                })}
-              </Text>
-              <ProgressBar
-                progress={stats.next_badge.progress}
-                total={stats.next_badge.required}
-                color={theme.primary}
-              />
-            </View>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Badges recents</Text>
+          <View style={styles.badgesList}>
+            {stats.badges.map((badge) => (
+              <View key={`${badge.key}-${badge.awarded_at || badge.label}`} style={[styles.badgeItem, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <Text style={styles.badgeIcon}>{badge.icon}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.badgeLabel, { color: theme.textPrimary }]}>{badge.label}</Text>
+                  <Text style={[styles.badgeMeta, { color: theme.textSecondary }]}>
+                    {badge.awarded_at ? `Attribue le ${new Date(badge.awarded_at).toLocaleDateString('fr-FR')}` : 'Badge enregistre'}
+                  </Text>
+                </View>
+              </View>
+            ))}
           </View>
         </>
       )}
-
-      {/* Badges */}
-      <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
-        {t('gamification.badges')} ({earnedKeys.length}/7)
-      </Text>
-      <View style={styles.badgesGrid}>
-        {[
-          { key: 'explorer',  label: 'Explorateur',        icon: '🗺️',  description: 'Premier signalement' },
-          { key: 'active',    label: 'Contributeur actif', icon: '⭐',  description: '10 signalements' },
-          { key: 'voter',     label: 'Votant engagé',      icon: '👍',  description: '20 votes' },
-          { key: 'commenter', label: 'Commentateur',       icon: '💬',  description: '10 commentaires' },
-          { key: 'resolved',  label: 'Problème résolu',    icon: '✅',  description: '5 résolus' },
-          { key: 'popular',   label: 'Populaire',          icon: '🔥',  description: '50 votes sur un signalement' },
-          { key: 'top',       label: 'Top contributeur',   icon: '🏆',  description: 'Top 10%' },
-        ].map(badge => (
-          <BadgeItem key={badge.key} badge={badge} earned={earnedKeys.includes(badge.key)} />
-        ))}
-      </View>
     </ScrollView>
   );
 }
 
-// ----------------------------------------------------------------
-// Styles
-// ----------------------------------------------------------------
-
 const styles = StyleSheet.create({
-  container:      { paddingBottom: 32 },
-  center:         { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },
-  header:         { padding: 24, alignItems: 'center', paddingTop: 40 },
-  headerTitle:    { color: '#FFFFFF', fontSize: 14, fontWeight: '500', opacity: 0.85, marginBottom: 4 },
-  headerPoints:   { color: '#FFFFFF', fontSize: 56, fontWeight: '800', letterSpacing: -2 },
-  headerPointsLabel: { color: '#FFFFFF', fontSize: 14, opacity: 0.85, marginTop: -4 },
-  rankRow:        { flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 10 },
-  rankText:       { color: '#FFFFFF', fontSize: 14, opacity: 0.9 },
-  percentileBadge:{ backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
-  percentileText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  sectionTitle:   { fontSize: 16, fontWeight: '700', marginHorizontal: 16, marginTop: 24, marginBottom: 12 },
-  statsGrid:      { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, gap: 8 },
-  statCard:       { width: '47%', borderRadius: 12, padding: 16, alignItems: 'center', borderWidth: 1 },
-  statIcon:       { fontSize: 24, marginBottom: 4 },
-  statValue:      { fontSize: 28, fontWeight: '800' },
-  statLabel:      { fontSize: 12, marginTop: 2 },
-  nextBadgeCard:  { marginHorizontal: 16, borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1 },
-  nextBadgeIcon:  { fontSize: 36 },
-  nextBadgeLabel: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
-  nextBadgeProgress: { fontSize: 12, marginBottom: 8 },
-  progressTrack:  { height: 6, borderRadius: 3, overflow: 'hidden' },
-  progressFill:   { height: 6, borderRadius: 3 },
-  badgesGrid:     { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, gap: 8, paddingBottom: 8 },
-  badgeItem:      { width: '30%', borderRadius: 12, padding: 12, alignItems: 'center', borderWidth: 1.5, position: 'relative' },
-  badgeIcon:      { fontSize: 28, marginBottom: 4 },
-  badgeLabel:     { fontSize: 11, fontWeight: '600', textAlign: 'center' },
-  badgeCheck:     { position: 'absolute', top: 6, right: 8, fontSize: 11, color: '#2563EB', fontWeight: '800' },
-  errorText:      { fontSize: 14, textAlign: 'center', marginHorizontal: 32 },
-  retryBtn:       { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8, marginTop: 8 },
+  container: {
+    paddingBottom: 32,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 14,
+  },
+  errorIcon: {
+    fontSize: 28,
+  },
+  errorText: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 21,
+  },
+  retryBtn: {
+    paddingHorizontal: 22,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  retryBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  hero: {
+    paddingHorizontal: 20,
+    paddingTop: 28,
+    paddingBottom: 24,
+  },
+  heroEyebrow: {
+    color: '#E8F6ED',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  heroTitle: {
+    color: '#FFFFFF',
+    fontSize: 26,
+    fontWeight: '800',
+    lineHeight: 32,
+  },
+  heroText: {
+    color: '#E8F6ED',
+    fontSize: 14,
+    lineHeight: 22,
+    marginTop: 10,
+  },
+  heroStats: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 18,
+  },
+  heroStat: {
+    flex: 1,
+    backgroundColor: '#FFFFFF14',
+    borderWidth: 1,
+    borderColor: '#FFFFFF1F',
+    borderRadius: 14,
+    padding: 12,
+  },
+  heroStatValue: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  heroStatLabel: {
+    color: '#E8F6ED',
+    fontSize: 11,
+    marginTop: 4,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    marginHorizontal: 16,
+    marginTop: 22,
+    marginBottom: 12,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingHorizontal: 16,
+  },
+  metricCard: {
+    width: '47%',
+    borderRadius: 16,
+    padding: 14,
+  },
+  metricIcon: {
+    fontSize: 22,
+    marginBottom: 8,
+  },
+  metricValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#14213D',
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: '#334155',
+    marginTop: 4,
+  },
+  proofCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 16,
+  },
+  proofTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  proofText: {
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  proofHint: {
+    fontSize: 12,
+    lineHeight: 19,
+    marginTop: 8,
+  },
+  emptyCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    marginHorizontal: 16,
+    padding: 18,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  incidentList: {
+    gap: 10,
+    paddingHorizontal: 16,
+  },
+  incidentCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 14,
+  },
+  incidentTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  incidentIcon: {
+    fontSize: 24,
+    width: 28,
+    textAlign: 'center',
+  },
+  incidentMain: {
+    flex: 1,
+  },
+  incidentTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 21,
+  },
+  incidentRef: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  engagementGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingHorizontal: 16,
+  },
+  engagementCard: {
+    width: '47%',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+  },
+  engagementIcon: {
+    fontSize: 20,
+    marginBottom: 8,
+  },
+  engagementValue: {
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  engagementLabel: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  badgesList: {
+    gap: 10,
+    paddingHorizontal: 16,
+  },
+  badgeItem: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  badgeIcon: {
+    fontSize: 24,
+  },
+  badgeLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  badgeMeta: {
+    fontSize: 12,
+    marginTop: 4,
+  },
 });

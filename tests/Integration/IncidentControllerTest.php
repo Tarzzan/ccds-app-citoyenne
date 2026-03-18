@@ -1,10 +1,10 @@
 <?php
 /**
- * CCDS v1.3 — Tests d'Intégration : IncidentController (TEST-01)
+ * Ma Commune v1.3 — Tests d'Intégration : IncidentController (TEST-01)
  * Couvre : création, lecture, édition, filtres, votes.
- * Note : utilise une base de données de test (CCDS_TEST_DB).
+ * Note : utilise une base de données de test dédiée.
  */
-namespace CCDS\Tests\Integration;
+namespace Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 
@@ -18,7 +18,7 @@ class IncidentControllerTest extends TestCase
     public static function setUpBeforeClass(): void
     {
         $host = getenv('DB_HOST')     ?: 'localhost';
-        $name = getenv('DB_TEST_NAME') ?: 'ccds_test';
+        $name = getenv('DB_TEST_NAME') ?: 'ma_commune_test';
         $user = getenv('DB_USER')     ?: 'root';
         $pass = getenv('DB_PASS')     ?: '';
 

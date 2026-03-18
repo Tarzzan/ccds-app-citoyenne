@@ -1,5 +1,5 @@
 /**
- * CCDS v1.3 — CacheService (PERF-01)
+ * Ma Commune v1.3 — CacheService (PERF-01)
  * Cache mémoire + AsyncStorage pour les données fréquemment consultées.
  * Stratégie : stale-while-revalidate avec TTL configurable.
  */

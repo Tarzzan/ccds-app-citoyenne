@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --canopy-deep: #0e3127;
+      --canopy: #174b3a;
+      --river: #2d6f86;
+      --awara: #d2a13a;
+      --mist: #f4f1e7;
+      --sand: #e6dcc8;
+      --cloud: #faf8f2;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(circle at top right, rgba(210, 161, 58, 0.16), transparent 22%),
+        radial-gradient(circle at bottom left, rgba(250, 248, 242, 0.1), transparent 26%),
+        linear-gradient(180deg, var(--canopy-deep) 0%, var(--canopy) 56%, var(--river) 100%);
+      font-family: Georgia, serif;
+      color: var(--cloud);
+    }
+
+    .frame {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 180px 110px;
+      box-sizing: border-box;
+    }
+
+    .mark {
+      width: 360px;
+      height: 360px;
+      border-radius: 96px;
+      overflow: hidden;
+      box-shadow: 0 24px 72px rgba(0, 0, 0, 0.24);
+    }
+
+    .name {
+      margin-top: 52px;
+      font-size: 126px;
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: -2px;
+    }
+
+    .tagline {
+      margin-top: 18px;
+      font-family: "Manrope", Arial, sans-serif;
+      font-size: 42px;
+      line-height: 1.45;
+      color: rgba(250, 248, 242, 0.84);
+    }
+
+    .territory {
+      margin-top: 30px;
+      font-family: "Manrope", Arial, sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.42em;
+      text-transform: uppercase;
+      color: #f2d58c;
+    }
+
+    img {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <div class="mark">
+      <img src="./ma-commune-guyane-mark.svg" alt="Ma Commune Guyane">
+    </div>
+    <div class="name">Ma Commune</div>
+    <div class="tagline">Veiller, signaler, suivre et servir le territoire.</div>
+    <div class="territory">Guyane · Kourou</div>
+  </div>
+</body>
+</html>

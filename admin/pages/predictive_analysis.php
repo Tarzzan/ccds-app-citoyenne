@@ -1,213 +1,310 @@
 <?php
 /**
- * Page Admin — Analyse Prédictive des zones à risque (ADMIN-10)
+ * Ma Commune Back-Office — Analyse prédictive territoriale
  *
- * Analyse l'historique des signalements pour identifier les zones récurrentes
- * et prédire les futures zones à risque.
+ * Cette vue ne prétend pas faire de "ML". Elle consolide des signaux simples
+ * et utiles pour anticiper les zones à surveiller en Guyane.
  */
-$page_title = 'Analyse prédictive';
+require_once __DIR__ . '/../includes/bootstrap.php';
 
-// ─── Zones à risque (clustering géographique simplifié) ──────────────────────
-// Regrouper les incidents par zone de 0.01° (~1km) et calculer la récurrence
-$hotspots = $pdo->query("
+$admin = require_admin_auth();
+$page_title = 'Analyse prédictive';
+$active_nav = 'predictive_analysis';
+
+$db = Database::getInstance();
+
+$windowDays = (int)($_GET['window'] ?? 180);
+if (!in_array($windowDays, [30, 90, 180, 365], true)) {
+    $windowDays = 180;
+}
+
+$hotspotsStmt = $db->prepare("
     SELECT
-        ROUND(latitude, 2)  AS lat_zone,
-        ROUND(longitude, 2) AS lng_zone,
-        COUNT(*)            AS incident_count,
-        AVG(votes_count)    AS avg_votes,
-        MAX(created_at)     AS last_incident,
-        MIN(created_at)     AS first_incident,
-        GROUP_CONCAT(DISTINCT category_id) AS categories,
-        SUM(CASE WHEN status IN ('submitted','in_progress') THEN 1 ELSE 0 END) AS unresolved_count,
-        SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) AS resolved_count,
-        DATEDIFF(NOW(), MAX(created_at)) AS days_since_last
-    FROM incidents
-    WHERE latitude IS NOT NULL AND longitude IS NOT NULL
-    GROUP BY lat_zone, lng_zone
+        ROUND(i.latitude, 2) AS lat_zone,
+        ROUND(i.longitude, 2) AS lng_zone,
+        COUNT(*) AS incident_count,
+        COALESCE(AVG(i.votes_count), 0) AS avg_votes,
+        SUM(CASE WHEN i.status IN ('submitted', 'acknowledged', 'in_progress') THEN 1 ELSE 0 END) AS unresolved_count,
+        SUM(CASE WHEN i.status = 'resolved' THEN 1 ELSE 0 END) AS resolved_count,
+        MAX(i.created_at) AS last_incident_at,
+        GROUP_CONCAT(DISTINCT c.name ORDER BY c.name SEPARATOR ', ') AS categories
+    FROM incidents i
+    JOIN categories c ON c.id = i.category_id
+    WHERE i.latitude IS NOT NULL
+      AND i.longitude IS NOT NULL
+      AND i.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    GROUP BY ROUND(i.latitude, 2), ROUND(i.longitude, 2)
     HAVING incident_count >= 2
     ORDER BY incident_count DESC, avg_votes DESC
-    LIMIT 20
-")->fetchAll(PDO::FETCH_ASSOC);
+    LIMIT 12
+");
+$hotspotsStmt->execute([$windowDays]);
+$hotspots = $hotspotsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// ─── Tendances mensuelles par catégorie ─────────────────────────────────────
-$trends = $pdo->query("
+foreach ($hotspots as &$hotspot) {
+    $daysSinceLast = max(0, (int)((new DateTimeImmutable($hotspot['last_incident_at']))->diff(new DateTimeImmutable())->format('%a')));
+    $riskScore = ($hotspot['incident_count'] * 2.5)
+        + ($hotspot['unresolved_count'] * 3)
+        + ((float)$hotspot['avg_votes'] * 1.2)
+        - ($daysSinceLast * 0.12);
+
+    $hotspot['days_since_last'] = $daysSinceLast;
+    $hotspot['risk_score'] = max(0, (int)round($riskScore));
+    $hotspot['risk_level'] = $hotspot['risk_score'] >= 16 ? 'critical'
+        : ($hotspot['risk_score'] >= 10 ? 'high'
+        : ($hotspot['risk_score'] >= 5 ? 'medium' : 'low'));
+}
+unset($hotspot);
+
+usort($hotspots, static fn(array $a, array $b): int => $b['risk_score'] <=> $a['risk_score']);
+
+$trendStmt = $db->prepare("
     SELECT
-        c.name AS category,
-        DATE_FORMAT(i.created_at, '%Y-%m') AS month,
-        COUNT(*) AS count
+        DATE_FORMAT(i.created_at, '%Y-%m') AS month_key,
+        c.name AS category_name,
+        COUNT(*) AS total
     FROM incidents i
     JOIN categories c ON c.id = i.category_id
     WHERE i.created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-    GROUP BY c.name, month
-    ORDER BY month ASC, count DESC
-")->fetchAll(PDO::FETCH_ASSOC);
+    GROUP BY month_key, category_name
+    ORDER BY month_key ASC, total DESC
+");
+$trendStmt->execute();
+$trendRows = $trendStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// ─── Score de risque par zone ────────────────────────────────────────────────
-// Score = (incidents × 2) + (votes moyens) + (non résolus × 3) - (jours depuis dernier × 0.1)
-foreach ($hotspots as &$spot) {
-    $spot['risk_score'] = round(
-        ($spot['incident_count'] * 2)
-        + ($spot['avg_votes'])
-        + ($spot['unresolved_count'] * 3)
-        - ($spot['days_since_last'] * 0.1)
-    );
-    $spot['risk_level'] = $spot['risk_score'] >= 15 ? 'critical'
-        : ($spot['risk_score'] >= 8 ? 'high'
-        : ($spot['risk_score'] >= 4 ? 'medium' : 'low'));
-}
-usort($hotspots, fn($a, $b) => $b['risk_score'] - $a['risk_score']);
-
-// ─── Prévision des 30 prochains jours ───────────────────────────────────────
-$forecast = $pdo->query("
+$forecastStmt = $db->prepare("
     SELECT
         DAYOFWEEK(created_at) AS day_of_week,
-        HOUR(created_at)      AS hour_of_day,
-        COUNT(*)              AS avg_incidents
+        HOUR(created_at) AS hour_of_day,
+        COUNT(*) AS total
     FROM incidents
     WHERE created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
-    GROUP BY day_of_week, hour_of_day
-    ORDER BY avg_incidents DESC
+    GROUP BY DAYOFWEEK(created_at), HOUR(created_at)
+    ORDER BY total DESC
     LIMIT 10
-")->fetchAll(PDO::FETCH_ASSOC);
+");
+$forecastStmt->execute();
+$forecastSlots = $forecastStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$days_fr = ['', 'Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+$servicePressureStmt = $db->prepare("
+    SELECT
+        c.service,
+        COUNT(i.id) AS incident_count,
+        SUM(CASE WHEN i.status IN ('submitted', 'acknowledged', 'in_progress') THEN 1 ELSE 0 END) AS unresolved_count
+    FROM categories c
+    LEFT JOIN incidents i
+      ON i.category_id = c.id
+      AND i.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    WHERE c.service IS NOT NULL AND c.service <> ''
+    GROUP BY c.service
+    HAVING incident_count > 0
+    ORDER BY unresolved_count DESC, incident_count DESC
+    LIMIT 6
+");
+$servicePressureStmt->execute([$windowDays]);
+$servicePressure = $servicePressureStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$topSignal = $hotspots[0] ?? null;
+$daysFr = ['', 'Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+
+function coord_label(float $value, string $positive, string $negative): string
+{
+    return number_format(abs($value), 2, ',', ' ') . '°' . ($value >= 0 ? $positive : $negative);
+}
+
+require_once __DIR__ . '/../includes/layout.php';
 ?>
 
-<div class="page-header">
-    <h1>🔮 Analyse prédictive</h1>
-    <span class="badge-info">Basé sur les 90 derniers jours</span>
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
+  <div>
+    <div class="text-small" style="text-transform:uppercase;letter-spacing:.16em;color:#7c8b78;">Lecture prospective</div>
+    <h2 style="margin:6px 0 8px;font-size:28px;font-weight:800;">Zones à surveiller en priorité</h2>
+    <p class="text-muted" style="max-width:780px;margin:0;">
+      Cette vue transforme l'historique des signalements en signaux opérationnels.
+      Elle aide à anticiper les secteurs à forte récurrence et à prioriser l'action publique.
+    </p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <?php foreach ([30 => '30 j', 90 => '90 j', 180 => '180 j', 365 => '1 an'] as $option => $label): ?>
+      <a href="/admin/?page=predictive_analysis&window=<?= $option ?>"
+         class="btn btn-sm <?= $windowDays === $option ? 'btn-primary' : 'btn-outline' ?>">
+        <?= $label ?>
+      </a>
+    <?php endforeach; ?>
+  </div>
 </div>
 
-<!-- Carte des zones à risque -->
-<div class="section-card">
-    <div class="section-header">
-        <h2>🗺️ Zones à risque identifiées</h2>
-        <span class="badge-count"><?= count($hotspots) ?> zones</span>
+<div style="display:grid;grid-template-columns:1.2fr .8fr;gap:24px;align-items:start;margin-bottom:24px;">
+  <div class="card" style="padding:24px;">
+    <div class="card-header" style="padding:0 0 12px;">
+      <span class="card-title">Signal directeur</span>
+      <span class="text-small text-muted">Fenêtre d'analyse : <?= $windowDays ?> jours</span>
     </div>
-    <div class="hotspots-grid">
-        <?php foreach ($hotspots as $i => $spot): ?>
-        <div class="hotspot-card risk-<?= $spot['risk_level'] ?>">
-            <div class="hotspot-rank">#<?= $i + 1 ?></div>
-            <div class="hotspot-info">
-                <div class="hotspot-coords">
-                    📍 <?= number_format($spot['lat_zone'], 2) ?>°N,
-                    <?= number_format($spot['lng_zone'], 2) ?>°E
-                </div>
-                <div class="hotspot-stats">
-                    <span>📋 <?= $spot['incident_count'] ?> incidents</span>
-                    <span>👍 <?= round($spot['avg_votes'], 1) ?> votes moy.</span>
-                    <span>⚠️ <?= $spot['unresolved_count'] ?> non résolus</span>
-                    <span>🕐 Il y a <?= $spot['days_since_last'] ?>j</span>
-                </div>
-            </div>
-            <div class="risk-badge risk-badge-<?= $spot['risk_level'] ?>">
-                <?php
-                $labels = ['critical' => '🔴 Critique', 'high' => '🟠 Élevé', 'medium' => '🟡 Moyen', 'low' => '🟢 Faible'];
-                echo $labels[$spot['risk_level']];
-                ?>
-                <br><small>Score: <?= $spot['risk_score'] ?></small>
-            </div>
+    <?php if ($topSignal): ?>
+      <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:16px;align-items:start;">
+        <div>
+          <div class="text-small text-muted">Zone dominante</div>
+          <div style="font-size:18px;font-weight:800;margin-top:6px;">
+            <?= coord_label((float)$topSignal['lat_zone'], 'N', 'S') ?> ·
+            <?= coord_label((float)$topSignal['lng_zone'], 'E', 'W') ?>
+          </div>
+          <div class="text-small text-muted" style="margin-top:6px;"><?= e($topSignal['categories']) ?></div>
         </div>
+        <div>
+          <div class="text-small text-muted">Charge cumulée</div>
+          <div style="font-size:34px;font-weight:800;color:#9a3412;"><?= (int)$topSignal['risk_score'] ?></div>
+          <div class="text-small text-muted">score de risque opérationnel</div>
+        </div>
+        <div>
+          <div class="text-small text-muted">Dernière récurrence</div>
+          <div style="font-size:34px;font-weight:800;color:#0f766e;"><?= (int)$topSignal['days_since_last'] ?> j</div>
+          <div class="text-small text-muted">depuis le dernier incident</div>
+        </div>
+      </div>
+    <?php else: ?>
+      <div class="text-muted">Pas assez d'historique géolocalisé pour produire une lecture de risque fiable.</div>
+    <?php endif; ?>
+  </div>
+
+  <div class="card" style="padding:24px;">
+    <div class="card-header" style="padding:0 0 12px;">
+      <span class="card-title">Services sous tension</span>
+    </div>
+    <div style="display:grid;gap:10px;">
+      <?php if (empty($servicePressure)): ?>
+        <div class="text-muted">Aucune pression notable détectée sur la période.</div>
+      <?php else: ?>
+        <?php foreach ($servicePressure as $service): ?>
+          <div style="padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.55);border:1px solid rgba(30,41,59,.06);">
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+              <strong><?= e($service['service']) ?></strong>
+              <span class="badge <?= (int)$service['unresolved_count'] > 0 ? 'badge-yellow' : 'badge-green' ?>">
+                <?= (int)$service['unresolved_count'] ?> non résolu<?= (int)$service['unresolved_count'] > 1 ? 's' : '' ?>
+              </span>
+            </div>
+            <div class="text-small text-muted" style="margin-top:6px;">
+              <?= (int)$service['incident_count'] ?> signalement<?= (int)$service['incident_count'] > 1 ? 's' : '' ?> sur la fenêtre analysée
+            </div>
+          </div>
         <?php endforeach; ?>
+      <?php endif; ?>
     </div>
+  </div>
 </div>
 
-<!-- Tendances par catégorie -->
-<div class="charts-grid">
-    <div class="section-card">
-        <div class="section-header">
-            <h2>📈 Tendances par catégorie (6 mois)</h2>
-        </div>
-        <div style="height: 280px;">
-            <canvas id="trendsChart"></canvas>
-        </div>
+<div style="display:grid;grid-template-columns:1.2fr .8fr;gap:24px;align-items:start;margin-bottom:24px;">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Hotspots territoriaux</span>
+      <span class="text-small text-muted"><?= count($hotspots) ?> zones retenues</span>
     </div>
-
-    <!-- Créneaux à risque -->
-    <div class="section-card">
-        <div class="section-header">
-            <h2>⏰ Créneaux les plus actifs</h2>
-        </div>
-        <div class="forecast-list">
-            <?php foreach ($forecast as $slot): ?>
-            <div class="forecast-item">
-                <span class="forecast-time">
-                    <?= $days_fr[$slot['day_of_week']] ?> <?= str_pad($slot['hour_of_day'], 2, '0', STR_PAD_LEFT) ?>h
-                </span>
-                <div class="forecast-bar-container">
-                    <div class="forecast-bar" style="width: <?= min(100, $slot['avg_incidents'] * 5) ?>%"></div>
-                </div>
-                <span class="forecast-count"><?= $slot['avg_incidents'] ?></span>
+    <div style="display:grid;gap:10px;">
+      <?php if (empty($hotspots)): ?>
+        <div class="text-muted">Aucune zone récurrente détectée avec le volume actuel.</div>
+      <?php else: ?>
+        <?php foreach ($hotspots as $index => $spot): ?>
+          <div style="display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px;border-radius:16px;background:rgba(255,255,255,.56);border:1px solid rgba(30,41,59,.06);border-left:5px solid <?= $spot['risk_level'] === 'critical' ? '#dc2626' : ($spot['risk_level'] === 'high' ? '#ea580c' : ($spot['risk_level'] === 'medium' ? '#ca8a04' : '#15803d')) ?>;">
+            <div style="font-size:24px;font-weight:800;color:#94a3b8;">#<?= $index + 1 ?></div>
+            <div>
+              <div style="font-weight:800;">
+                <?= coord_label((float)$spot['lat_zone'], 'N', 'S') ?> ·
+                <?= coord_label((float)$spot['lng_zone'], 'E', 'W') ?>
+              </div>
+              <div class="text-small text-muted" style="margin-top:4px;"><?= e($spot['categories']) ?></div>
+              <div class="text-small" style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;">
+                <span>📋 <?= (int)$spot['incident_count'] ?> cas</span>
+                <span>⚠️ <?= (int)$spot['unresolved_count'] ?> ouverts</span>
+                <span>👍 <?= number_format((float)$spot['avg_votes'], 1, ',', ' ') ?> votes moy.</span>
+                <span>🕒 <?= (int)$spot['days_since_last'] ?> j</span>
+              </div>
             </div>
-            <?php endforeach; ?>
-        </div>
+            <div style="text-align:right;">
+              <div class="badge <?= $spot['risk_level'] === 'critical' ? 'badge-red' : ($spot['risk_level'] === 'high' ? 'badge-yellow' : ($spot['risk_level'] === 'medium' ? 'badge-blue' : 'badge-green')) ?>">
+                <?= $spot['risk_level'] === 'critical' ? 'Critique' : ($spot['risk_level'] === 'high' ? 'Élevé' : ($spot['risk_level'] === 'medium' ? 'Modéré' : 'Faible')) ?>
+              </div>
+              <div style="font-size:28px;font-weight:800;margin-top:6px;"><?= (int)$spot['risk_score'] ?></div>
+              <div class="text-small text-muted">score</div>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      <?php endif; ?>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Créneaux à surveiller</span>
+      <span class="text-small text-muted">Basés sur 90 jours</span>
+    </div>
+    <div style="display:grid;gap:10px;">
+      <?php if (empty($forecastSlots)): ?>
+        <div class="text-muted">Pas assez de données pour estimer des créneaux récurrents.</div>
+      <?php else: ?>
+        <?php foreach ($forecastSlots as $slot): ?>
+          <div style="display:grid;grid-template-columns:78px 1fr 28px;gap:10px;align-items:center;">
+            <strong style="font-size:12px;color:#64748b;">
+              <?= $daysFr[(int)$slot['day_of_week']] ?>
+              <?= str_pad((string)$slot['hour_of_day'], 2, '0', STR_PAD_LEFT) ?>h
+            </strong>
+            <div style="height:10px;border-radius:999px;background:rgba(30,41,59,.08);overflow:hidden;">
+              <div style="height:100%;width:<?= min(100, (int)$slot['total'] * 10) ?>%;background:linear-gradient(90deg,#1d4ed8,#0f766e);"></div>
+            </div>
+            <span style="font-size:12px;font-weight:800;color:#1e3a8a;"><?= (int)$slot['total'] ?></span>
+          </div>
+        <?php endforeach; ?>
+      <?php endif; ?>
+    </div>
+  </div>
 </div>
 
-<style>
-.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-.badge-info  { background: #3B82F622; color: #3B82F6; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-.badge-count { background: #3B82F6; color: #fff; padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
-.section-card { background: var(--card-bg, #1e293b); border-radius: 14px; padding: 20px; margin-bottom: 20px; }
-.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.section-header h2 { font-size: 16px; font-weight: 700; margin: 0; }
-.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Tendance par catégorie</span>
+    <span class="text-small text-muted">Six derniers mois</span>
+  </div>
+  <div class="chart-container" style="height:340px;">
+    <canvas id="trendChart"></canvas>
+  </div>
+</div>
 
-.hotspots-grid { display: flex; flex-direction: column; gap: 10px; }
-.hotspot-card { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 10px; background: rgba(255,255,255,0.04); border-left: 4px solid; }
-.risk-critical { border-color: #EF4444; }
-.risk-high     { border-color: #F97316; }
-.risk-medium   { border-color: #F59E0B; }
-.risk-low      { border-color: #10B981; }
-.hotspot-rank  { font-size: 18px; font-weight: 800; color: #94a3b8; min-width: 30px; }
-.hotspot-info  { flex: 1; }
-.hotspot-coords { font-size: 13px; font-weight: 600; color: #e2e8f0; margin-bottom: 4px; }
-.hotspot-stats { display: flex; flex-wrap: wrap; gap: 8px; }
-.hotspot-stats span { font-size: 11px; color: #94a3b8; }
-.risk-badge { text-align: right; font-size: 12px; font-weight: 700; }
-.risk-badge-critical { color: #EF4444; }
-.risk-badge-high     { color: #F97316; }
-.risk-badge-medium   { color: #F59E0B; }
-.risk-badge-low      { color: #10B981; }
-
-.forecast-list { display: flex; flex-direction: column; gap: 8px; }
-.forecast-item { display: flex; align-items: center; gap: 10px; }
-.forecast-time { font-size: 12px; font-weight: 700; color: #94a3b8; min-width: 60px; }
-.forecast-bar-container { flex: 1; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
-.forecast-bar { height: 100%; background: linear-gradient(90deg, #3B82F6, #8B5CF6); border-radius: 4px; }
-.forecast-count { font-size: 12px; font-weight: 700; color: #3B82F6; min-width: 20px; text-align: right; }
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>
-// Graphique des tendances
-const trendsData = <?= json_encode($trends) ?>;
-const months     = [...new Set(trendsData.map(d => d.month))];
-const categories = [...new Set(trendsData.map(d => d.category))];
-const colors     = ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899'];
+const trendRows = <?= json_encode($trendRows, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+const months = [...new Set(trendRows.map((row) => row.month_key))];
+const categories = [...new Set(trendRows.map((row) => row.category_name))];
+const palette = ['#1d4ed8', '#0f766e', '#b45309', '#be123c', '#4f46e5', '#15803d', '#334155'];
 
-const datasets = categories.map((cat, i) => ({
-    label: cat,
-    data: months.map(m => {
-        const found = trendsData.find(d => d.category === cat && d.month === m);
-        return found ? found.count : 0;
-    }),
-    borderColor: colors[i % colors.length],
-    backgroundColor: colors[i % colors.length] + '33',
-    tension: 0.4,
-    fill: true,
+const datasets = categories.map((category, index) => ({
+  label: category,
+  data: months.map((month) => {
+    const found = trendRows.find((row) => row.category_name === category && row.month_key === month);
+    return found ? Number(found.total) : 0;
+  }),
+  borderColor: palette[index % palette.length],
+  backgroundColor: `${palette[index % palette.length]}22`,
+  borderWidth: 2,
+  tension: 0.3,
+  fill: false,
 }));
 
-new Chart(document.getElementById('trendsChart').getContext('2d'), {
-    type: 'line',
-    data: { labels: months, datasets },
-    options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
-        scales: {
-            x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#334155' } },
-            y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
-        },
+new Chart(document.getElementById('trendChart').getContext('2d'), {
+  type: 'line',
+  data: { labels: months, datasets },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { boxWidth: 12, usePointStyle: true },
+      },
     },
+    scales: {
+      y: { beginAtZero: true, ticks: { precision: 0 } },
+      x: { grid: { display: false } },
+    },
+  },
 });
 </script>
+
+<?php require_once __DIR__ . '/../includes/layout_footer.php'; ?>

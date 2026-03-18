@@ -8,7 +8,7 @@ import { View } from 'react-native';
 import { OfflineBanner } from '../OfflineBanner';
 
 export default {
-  title: 'CCDS/OfflineBanner',
+  title: 'MaCommune/OfflineBanner',
   component: OfflineBanner,
   decorators: [
     (Story: React.FC) => (

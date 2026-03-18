@@ -1,13 +1,13 @@
 <?php
 /**
- * CCDS — Tests d'Intégration : Endpoint d'Authentification API
+ * Ma Commune — Tests d'Intégration : Endpoint d'Authentification API
  *
  * Ces tests simulent des requêtes HTTP vers l'API REST.
  * Ils nécessitent un serveur Apache/PHP actif avec la BDD de test configurée.
  * En CI/CD, utiliser un serveur PHP intégré : php -S localhost:8080 -t backend/
  */
 
-namespace CCDS\Tests\Integration;
+namespace Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 
@@ -73,7 +73,7 @@ class ApiAuthTest extends TestCase
      */
     public function register_with_valid_data_returns_201_and_token(): void
     {
-        $uniqueEmail = 'test_' . uniqid() . '@ccds-test.fr';
+        $uniqueEmail = 'test_' . uniqid() . '@macommune-test.local';
         $response    = $this->post('/auth/register', [
             'full_name' => 'Citoyen Test',
             'email'     => $uniqueEmail,
@@ -97,7 +97,7 @@ class ApiAuthTest extends TestCase
     public function register_with_missing_fields_returns_422(): void
     {
         $response = $this->post('/auth/register', [
-            'email' => 'incomplete@ccds-test.fr',
+            'email' => 'incomplete@macommune-test.local',
             // full_name et password manquants
         ]);
 
@@ -114,7 +114,7 @@ class ApiAuthTest extends TestCase
      */
     public function register_with_duplicate_email_returns_409(): void
     {
-        $email = 'duplicate_' . uniqid() . '@ccds-test.fr';
+        $email = 'duplicate_' . uniqid() . '@macommune-test.local';
 
         // Premier enregistrement
         $this->post('/auth/register', [
@@ -163,7 +163,7 @@ class ApiAuthTest extends TestCase
     public function login_with_valid_credentials_returns_200_and_token(): void
     {
         // Créer un compte de test
-        $email    = 'login_test_' . uniqid() . '@ccds-test.fr';
+        $email    = 'login_test_' . uniqid() . '@macommune-test.local';
         $password = 'LoginP@ss123!';
         $this->post('/auth/register', [
             'full_name' => 'Login Test',

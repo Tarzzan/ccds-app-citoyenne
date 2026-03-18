@@ -1,8 +1,12 @@
-# Rapport Technique — Phase 3 : Application Mobile CCDS
+# Rapport Technique — Phase 3 : Application Mobile
+
+> **Archive de chantier :** ce document décrit un état historique du projet au 26 février 2026.
+> Il ne doit plus être lu comme la description fidèle de l'application `Ma Commune` au 18 mars 2026.
+> Pour l'état réel courant, se référer au `README`, à l'audit pré-déploiement local et aux guides de démonstration.
 
 ---
 
-| **Projet** | Application Citoyenne de Signalement (CCDS) |
+| **Projet** | Socle mobile historique avant recentrage `Ma Commune` |
 |---|---|
 | **Phase** | 3 sur 6 : Développement de l'Application Mobile |
 | **Auteur** | Manus AI |
@@ -13,7 +17,7 @@
 
 ## 1. Introduction
 
-Ce document présente le rapport technique détaillé de la **Phase 3** du projet CCDS, consacrée au développement de l'application mobile multiplateforme (iOS et Android). L'objectif de cette phase était de produire une application fonctionnelle, robuste et intuitive permettant aux citoyens de signaler des incidents, de suivre leur résolution et d'interagir avec les services de la commune.
+Ce document présente le rapport technique détaillé de la **Phase 3** du projet initial, consacrée au développement de l'application mobile multiplateforme (iOS et Android). L'objectif de cette phase était de produire une application fonctionnelle, robuste et intuitive permettant aux citoyens de signaler des incidents, de suivre leur résolution et d'interagir avec les services de la commune.
 
 Le développement a été réalisé en **React Native** avec le framework **Expo**, un choix stratégique visant à maximiser la réutilisation du code entre iOS et Android, tout en simplifiant la gestion des dépendances natives et le processus de build.
 
@@ -117,4 +121,4 @@ Le projet s'appuie sur un ensemble de bibliothèques robustes et maintenues par 
 
 La Phase 3 a abouti à la création d'une application mobile complète, fonctionnelle et prête pour les tests utilisateurs. L'architecture mise en place est solide et permettra d'itérer facilement pour ajouter de nouvelles fonctionnalités.
 
-La prochaine étape, la **Phase 4**, se concentrera sur le développement du **Back-Office Web d'Administration**, qui permettra aux agents municipaux de traiter les signalements reçus via l'application mobile.
+Historiquement, la phase suivante visait le développement du back-office web d'administration. Cette étape a depuis été largement engagée dans le dépôt, avec un recentrage produit et de marque vers `Ma Commune`.

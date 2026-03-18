@@ -1,279 +1,440 @@
 <?php
 /**
- * Page admin — Logs d'audit (ADMIN-08)
- * Traçabilité complète des actions sensibles des administrateurs.
+ * Ma Commune Back-Office — Logs d'audit
  */
+require_once __DIR__ . '/../includes/bootstrap.php';
 
-require_once __DIR__ . '/../includes/auth_check.php';
-requireAdmin();
+$admin      = require_admin_auth();
+$page_title = 'Logs d\'audit';
+$active_nav = 'audit_logs';
+$db         = Database::getInstance();
 
-$db = Database::getInstance();
+if ($admin['role'] !== 'admin') {
+    render_error(403, 'Accès réservé aux administrateurs.');
+}
 
-// Filtres
+$columns = [];
+try {
+    $columns = $db->query('SHOW COLUMNS FROM audit_logs')->fetchAll(PDO::FETCH_COLUMN);
+} catch (Throwable $e) {
+    $columns = [];
+}
+
+if (empty($columns)) {
+    require_once __DIR__ . '/../includes/layout.php';
+    echo '<div class="alert alert-warning">La table <strong>audit_logs</strong> n\'est pas disponible dans cet environnement.</div>';
+    require_once __DIR__ . '/../includes/layout_footer.php';
+    return;
+}
+
+$userField       = in_array('user_id', $columns, true) ? 'user_id' : 'admin_id';
+$targetTypeField = in_array('target_type', $columns, true) ? 'target_type' : 'entity';
+$targetIdField   = in_array('target_id', $columns, true) ? 'target_id' : 'entity_id';
+$detailsField    = in_array('details', $columns, true) ? 'details' : null;
+$oldValueField   = in_array('old_value', $columns, true) ? 'old_value' : null;
+$newValueField   = in_array('new_value', $columns, true) ? 'new_value' : null;
+
 $filterAdmin  = (int)($_GET['admin_id'] ?? 0);
-$filterEntity = $_GET['entity'] ?? '';
-$filterAction = $_GET['action'] ?? '';
-$filterFrom   = $_GET['from']   ?? date('Y-m-d', strtotime('-30 days'));
-$filterTo     = $_GET['to']     ?? date('Y-m-d');
-$page         = max(1, (int)($_GET['page'] ?? 1));
+$filterEntity = trim($_GET['entity'] ?? '');
+$filterAction = trim($_GET['action'] ?? '');
+$filterFrom   = $_GET['from'] ?? date('Y-m-d', strtotime('-30 days'));
+$filterTo     = $_GET['to'] ?? date('Y-m-d');
+$pageNum      = max(1, (int)($_GET['p'] ?? 1));
 $perPage      = 25;
-$offset       = ($page - 1) * $perPage;
+$offset       = ($pageNum - 1) * $perPage;
 
-// Construction de la requête
 $where  = ['al.created_at BETWEEN ? AND ?'];
 $params = [$filterFrom . ' 00:00:00', $filterTo . ' 23:59:59'];
 
 if ($filterAdmin > 0) {
-    $where[]  = 'al.admin_id = ?';
+    $where[] = "al.{$userField} = ?";
     $params[] = $filterAdmin;
 }
-if ($filterEntity) {
-    $where[]  = 'al.entity = ?';
+if ($filterEntity !== '') {
+    $where[] = "al.{$targetTypeField} = ?";
     $params[] = $filterEntity;
 }
-if ($filterAction) {
-    $where[]  = 'al.action LIKE ?';
+if ($filterAction !== '') {
+    $where[] = 'al.action LIKE ?';
     $params[] = '%' . $filterAction . '%';
 }
 
-$whereClause = 'WHERE ' . implode(' AND ', $where);
+$whereSql = implode(' AND ', $where);
 
-$total = $db->fetchOne(
-    "SELECT COUNT(*) AS n FROM audit_logs al $whereClause",
-    $params
-)['n'] ?? 0;
+$stmtCount = $db->prepare("SELECT COUNT(*) FROM audit_logs al WHERE {$whereSql}");
+$stmtCount->execute($params);
+$total = (int)$stmtCount->fetchColumn();
 
-$logs = $db->fetchAll(
-    "SELECT al.*, u.full_name AS admin_name, u.email AS admin_email
-     FROM audit_logs al
-     JOIN users u ON u.id = al.admin_id
-     $whereClause
-     ORDER BY al.created_at DESC
-     LIMIT $perPage OFFSET $offset",
-    $params
-);
+$selectDetails = [];
+if ($detailsField) {
+    $selectDetails[] = "al.{$detailsField} AS log_details";
+}
+if ($oldValueField) {
+    $selectDetails[] = "al.{$oldValueField} AS log_old_value";
+}
+if ($newValueField) {
+    $selectDetails[] = "al.{$newValueField} AS log_new_value";
+}
+$detailsSql = $selectDetails ? ', ' . implode(', ', $selectDetails) : '';
 
-$totalPages = max(1, (int) ceil($total / $perPage));
-$admins     = $db->fetchAll("SELECT id, full_name FROM users WHERE role IN ('admin', 'agent') ORDER BY full_name");
+$stmtLogs = $db->prepare("
+    SELECT al.action, al.created_at, al.ip_address,
+           al.{$targetTypeField} AS log_target_type,
+           al.{$targetIdField} AS log_target_id,
+           u.full_name AS admin_name,
+           u.email AS admin_email
+           {$detailsSql}
+    FROM audit_logs al
+    JOIN users u ON u.id = al.{$userField}
+    WHERE {$whereSql}
+    ORDER BY al.created_at DESC
+    LIMIT {$perPage} OFFSET {$offset}
+");
+$stmtLogs->execute($params);
+$logs = $stmtLogs->fetchAll(PDO::FETCH_ASSOC);
 
-// Libellés des actions
+$admins = $db->query("SELECT id, full_name FROM users WHERE role IN ('admin', 'agent') ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+$totalPages = max(1, (int)ceil($total / $perPage));
+
+$stats = ['actors_7d' => 0, 'deletions_30d' => 0, 'suspensions_30d' => 0];
+try {
+    $stats['actors_7d'] = (int)$db->query("SELECT COUNT(DISTINCT {$userField}) FROM audit_logs WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)")->fetchColumn();
+    $stats['deletions_30d'] = (int)$db->query("SELECT COUNT(*) FROM audit_logs WHERE action LIKE '%deleted%' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)")->fetchColumn();
+    $stats['suspensions_30d'] = (int)$db->query("SELECT COUNT(*) FROM audit_logs WHERE action LIKE '%banned%' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)")->fetchColumn();
+} catch (Throwable $e) {
+}
+
 $actionLabels = [
-    'incident_status_changed' => ['label' => 'Statut modifié',        'icon' => '🔄', 'color' => '#1565C0'],
-    'incident_deleted'        => ['label' => 'Signalement supprimé',  'icon' => '🗑️', 'color' => '#C62828'],
-    'comment_approved'        => ['label' => 'Commentaire approuvé',  'icon' => '✅', 'color' => '#2E7D32'],
-    'comment_deleted'         => ['label' => 'Commentaire supprimé',  'icon' => '🗑️', 'color' => '#C62828'],
-    'user_role_changed'       => ['label' => 'Rôle modifié',          'icon' => '👤', 'color' => '#E65100'],
-    'user_banned'             => ['label' => 'Utilisateur suspendu',  'icon' => '🚫', 'color' => '#6A1B9A'],
-    'user_unbanned'           => ['label' => 'Suspension levée',      'icon' => '✅', 'color' => '#2E7D32'],
-    'notification_sent'       => ['label' => 'Notification envoyée',  'icon' => '🔔', 'color' => '#F57F17'],
-    'category_created'        => ['label' => 'Catégorie créée',       'icon' => '➕', 'color' => '#2E7D32'],
-    'category_deleted'        => ['label' => 'Catégorie supprimée',   'icon' => '🗑️', 'color' => '#C62828'],
+    'incident_status_changed' => ['label' => 'Statut modifié', 'icon' => '🔄', 'color' => '#2D6F86'],
+    'incident.deleted_via_admin' => ['label' => 'Signalement supprimé', 'icon' => '🗑️', 'color' => '#C94B3C'],
+    'comment_report.dismissed' => ['label' => 'Signalement classé', 'icon' => '✅', 'color' => '#2F7D50'],
+    'comment.deleted_via_admin' => ['label' => 'Commentaire supprimé', 'icon' => '🗑️', 'color' => '#C94B3C'],
+    'comment.deleted_via_moderation' => ['label' => 'Commentaire supprimé', 'icon' => '🗑️', 'color' => '#C94B3C'],
+    'user.suspended_via_moderation' => ['label' => 'Utilisateur suspendu', 'icon' => '🚫', 'color' => '#A64B2A'],
+    'user_banned' => ['label' => 'Utilisateur suspendu', 'icon' => '🚫', 'color' => '#A64B2A'],
+    'notification_sent' => ['label' => 'Notification envoyée', 'icon' => '🔔', 'color' => '#D48B2C'],
 ];
+
+require_once __DIR__ . '/../includes/layout.php';
 ?>
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logs d'audit — <?= defined('APP_SHORT_NAME') ? e(APP_SHORT_NAME) : 'MaCommune' ?> Admin</title>
-    <link rel="stylesheet" href="/admin/assets/css/admin.css">
-    <style>
-        .filters-bar { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.06); display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
-        .filter-group { display: flex; flex-direction: column; gap: 4px; }
-        .filter-group label { font-size: 12px; color: #666; font-weight: 600; }
-        .filter-group select, .filter-group input { padding: 8px 12px; border: 1px solid #DDD; border-radius: 8px; font-size: 14px; }
-        .btn-filter { background: #1B5E20; color: #fff; border: none; padding: 9px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; align-self: flex-end; }
-        .btn-reset  { background: #EEE; color: #333; border: none; padding: 9px 16px; border-radius: 8px; cursor: pointer; align-self: flex-end; }
-        .log-table  { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
-        .log-table th { background: #F5F5F5; padding: 12px 16px; text-align: left; font-size: 13px; color: #666; border-bottom: 1px solid #EEE; }
-        .log-table td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #F5F5F5; vertical-align: middle; }
-        .log-table tr:hover td { background: #FAFAFA; }
-        .action-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-        .entity-badge { padding: 3px 8px; border-radius: 6px; font-size: 11px; background: #EEE; color: #555; }
-        .diff-btn { background: none; border: 1px solid #DDD; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; color: #666; }
-        .diff-btn:hover { background: #F5F5F5; }
-        .pagination { display: flex; gap: 8px; justify-content: center; margin-top: 24px; }
-        .page-btn { padding: 8px 14px; border: 1px solid #DDD; border-radius: 8px; background: #fff; cursor: pointer; font-size: 14px; text-decoration: none; color: #333; }
-        .page-btn.active { background: #1B5E20; color: #fff; border-color: #1B5E20; }
-        .stats-row { display: flex; gap: 16px; margin-bottom: 24px; }
-        .stat-mini { background: #fff; border-radius: 10px; padding: 14px 20px; box-shadow: 0 2px 8px rgba(0,0,0,.06); flex: 1; text-align: center; }
-        .stat-mini .n { font-size: 24px; font-weight: 700; color: #1B5E20; }
-        .stat-mini .l { font-size: 12px; color: #888; margin-top: 2px; }
-        /* Modal diff */
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-overlay.open { display: flex; }
-        .modal-box { background: #fff; border-radius: 16px; padding: 28px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
-        .diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
-        .diff-col { background: #F5F5F5; border-radius: 8px; padding: 12px; font-size: 13px; font-family: monospace; white-space: pre-wrap; word-break: break-all; }
-        .diff-col.old { background: #FFEBEE; }
-        .diff-col.new { background: #E8F5E9; }
-    </style>
-</head>
-<body>
-<?php include __DIR__ . '/../includes/layout.php'; ?>
+<style>
+.audit-hero {
+  background: linear-gradient(135deg, #0e3127 0%, #174b3a 52%, #2d6f86 100%);
+  color: #fff;
+  border-radius: 28px;
+  padding: 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 18px 38px rgba(14, 49, 39, .16);
+}
+.audit-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #f2d58c;
+  margin-bottom: 10px;
+}
+.audit-title {
+  font-size: 30px;
+  font-family: 'Merriweather', serif;
+  font-weight: 900;
+  line-height: 1.15;
+  margin-bottom: 10px;
+}
+.audit-text {
+  color: rgba(255,255,255,.82);
+  max-width: 640px;
+}
+.audit-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.audit-stat {
+  background: rgba(255,253,248,.94);
+  border: 1px solid #ece4d5;
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 10px 24px rgba(14, 49, 39, .06);
+}
+.audit-stat strong {
+  display: block;
+  font-size: 28px;
+  color: #183229;
+}
+.audit-stat span {
+  font-size: 13px;
+  color: #5e6c67;
+}
+.audit-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.audit-filters input,
+.audit-filters select {
+  min-width: 150px;
+}
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255,253,248,.94);
+  border: 1px solid #ece4d5;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(14, 49, 39, .06);
+}
+.audit-table th {
+  background: #f8f3e8;
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: #5e6c67;
+}
+.audit-table td {
+  padding: 12px 14px;
+  border-top: 1px solid #f2ebde;
+  vertical-align: middle;
+}
+.audit-table tr:hover td {
+  background: #fbf7ef;
+}
+.audit-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.audit-entity {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #efe7d7;
+  color: #5e6c67;
+  font-size: 11px;
+  font-weight: 700;
+}
+.audit-pagination {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+.audit-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid #d8d0c2;
+  color: #183229;
+  background: #fffdf8;
+  text-decoration: none;
+}
+.audit-page.active {
+  background: #174b3a;
+  border-color: #174b3a;
+  color: #fff;
+}
+.audit-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.audit-modal.open {
+  display: flex;
+}
+.audit-modal-box {
+  width: 760px;
+  max-width: 94vw;
+  max-height: 82vh;
+  overflow: auto;
+  background: #fffdf8;
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid #ece4d5;
+  box-shadow: 0 18px 38px rgba(14, 49, 39, .16);
+}
+.audit-modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+.audit-modal-col {
+  background: #f8f3e8;
+  border-radius: 16px;
+  padding: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: monospace;
+  font-size: 12px;
+}
+@media (max-width: 768px) {
+  .audit-modal-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
 
-<main class="admin-main">
-    <div class="page-header">
-        <h1>📋 Logs d'audit</h1>
-        <p class="page-subtitle">Traçabilité complète des actions administrateurs</p>
-    </div>
+<div class="audit-hero">
+  <div class="audit-kicker">Traçabilité</div>
+  <div class="audit-title">Suivre les actions sensibles du back-office</div>
+  <div class="audit-text">
+    Les logs d’audit permettent d’identifier qui a agi, sur quelle ressource, et à quel moment, afin de fiabiliser la gouvernance du service.
+  </div>
+</div>
 
-    <!-- Statistiques rapides -->
-    <div class="stats-row">
-        <div class="stat-mini">
-            <div class="n"><?= $total ?></div>
-            <div class="l">Entrées (période)</div>
-        </div>
-        <div class="stat-mini">
-            <div class="n"><?= $db->fetchOne("SELECT COUNT(DISTINCT admin_id) AS n FROM audit_logs WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)")['n'] ?? 0 ?></div>
-            <div class="l">Admins actifs (7j)</div>
-        </div>
-        <div class="stat-mini">
-            <div class="n"><?= $db->fetchOne("SELECT COUNT(*) AS n FROM audit_logs WHERE action LIKE '%deleted%' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)")['n'] ?? 0 ?></div>
-            <div class="l">Suppressions (30j)</div>
-        </div>
-        <div class="stat-mini">
-            <div class="n"><?= $db->fetchOne("SELECT COUNT(*) AS n FROM audit_logs WHERE action LIKE '%banned%' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)")['n'] ?? 0 ?></div>
-            <div class="l">Suspensions (30j)</div>
-        </div>
-    </div>
+<div class="audit-stats">
+  <div class="audit-stat"><strong><?= $total ?></strong><span>entrées sur la période</span></div>
+  <div class="audit-stat"><strong><?= $stats['actors_7d'] ?></strong><span>agents actifs sur 7 jours</span></div>
+  <div class="audit-stat"><strong><?= $stats['deletions_30d'] ?></strong><span>actions de suppression sur 30 jours</span></div>
+  <div class="audit-stat"><strong><?= $stats['suspensions_30d'] ?></strong><span>suspensions sur 30 jours</span></div>
+</div>
 
-    <!-- Filtres -->
-    <form method="GET" class="filters-bar">
-        <input type="hidden" name="page" value="audit_logs">
-        <div class="filter-group">
-            <label>Administrateur</label>
-            <select name="admin_id">
-                <option value="">Tous</option>
-                <?php foreach ($admins as $admin): ?>
-                    <option value="<?= $admin['id'] ?>" <?= $filterAdmin == $admin['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($admin['full_name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>Entité</label>
-            <select name="entity">
-                <option value="">Toutes</option>
-                <option value="incidents" <?= $filterEntity === 'incidents' ? 'selected' : '' ?>>Signalements</option>
-                <option value="comments"  <?= $filterEntity === 'comments'  ? 'selected' : '' ?>>Commentaires</option>
-                <option value="users"     <?= $filterEntity === 'users'     ? 'selected' : '' ?>>Utilisateurs</option>
-                <option value="categories" <?= $filterEntity === 'categories' ? 'selected' : '' ?>>Catégories</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>Recherche action</label>
-            <input type="text" name="action" value="<?= htmlspecialchars($filterAction) ?>" placeholder="ex: deleted">
-        </div>
-        <div class="filter-group">
-            <label>Du</label>
-            <input type="date" name="from" value="<?= $filterFrom ?>">
-        </div>
-        <div class="filter-group">
-            <label>Au</label>
-            <input type="date" name="to" value="<?= $filterTo ?>">
-        </div>
-        <button type="submit" class="btn-filter">🔍 Filtrer</button>
-        <a href="?page=audit_logs" class="btn-reset">Réinitialiser</a>
-    </form>
+<form method="GET" action="/admin/" class="audit-filters">
+  <input type="hidden" name="page" value="audit_logs">
+  <select name="admin_id" class="form-control">
+    <option value="">Tous les agents</option>
+    <?php foreach ($admins as $actor): ?>
+      <option value="<?= $actor['id'] ?>" <?= $filterAdmin === (int)$actor['id'] ? 'selected' : '' ?>><?= e($actor['full_name']) ?></option>
+    <?php endforeach; ?>
+  </select>
+  <input type="text" name="entity" class="form-control" value="<?= e($filterEntity) ?>" placeholder="Entité">
+  <input type="text" name="action" class="form-control" value="<?= e($filterAction) ?>" placeholder="Action">
+  <input type="date" name="from" class="form-control" value="<?= e($filterFrom) ?>">
+  <input type="date" name="to" class="form-control" value="<?= e($filterTo) ?>">
+  <button type="submit" class="btn btn-primary">Filtrer</button>
+  <a href="/admin/?page=audit_logs" class="btn btn-outline">Réinitialiser</a>
+</form>
 
-    <!-- Tableau des logs -->
-    <table class="log-table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Administrateur</th>
-                <th>Action</th>
-                <th>Entité</th>
-                <th>ID</th>
-                <th>IP</th>
-                <th>Détails</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if (empty($logs)): ?>
-                <tr><td colspan="7" style="text-align:center;padding:40px;color:#999">Aucun log pour cette période.</td></tr>
+<div class="table-wrapper">
+  <table class="audit-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Administrateur</th>
+        <th>Action</th>
+        <th>Entité</th>
+        <th>ID</th>
+        <th>IP</th>
+        <th>Détails</th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php if (empty($logs)): ?>
+        <tr><td colspan="7" class="text-center text-muted" style="padding:36px">Aucun log pour cette période.</td></tr>
+      <?php endif; ?>
+      <?php foreach ($logs as $log): ?>
+        <?php
+          $meta = $actionLabels[$log['action']] ?? ['label' => $log['action'], 'icon' => '⚙️', 'color' => '#5E6C67'];
+          $detailsPayload = $log['log_details'] ?? null;
+          $oldPayload = $log['log_old_value'] ?? null;
+          $newPayload = $log['log_new_value'] ?? null;
+        ?>
+        <tr>
+          <td class="text-small text-muted">
+            <?= format_date_short($log['created_at']) ?><br>
+            <strong><?= date('H:i:s', strtotime($log['created_at'])) ?></strong>
+          </td>
+          <td>
+            <strong><?= e($log['admin_name']) ?></strong><br>
+            <span class="text-small text-muted"><?= e($log['admin_email']) ?></span>
+          </td>
+          <td>
+            <span class="audit-action" style="background:<?= e($meta['color']) ?>22;color:<?= e($meta['color']) ?>">
+              <?= e($meta['icon']) ?> <?= e($meta['label']) ?>
+            </span>
+          </td>
+          <td><span class="audit-entity"><?= e((string)$log['log_target_type']) ?></span></td>
+          <td><?= $log['log_target_id'] !== null ? (int)$log['log_target_id'] : '—' ?></td>
+          <td class="text-small text-muted"><?= e($log['ip_address'] ?? '—') ?></td>
+          <td>
+            <?php if ($detailsPayload || $oldPayload || $newPayload): ?>
+              <button
+                type="button"
+                class="btn btn-outline btn-sm"
+                onclick='openAuditModal(<?= json_encode($detailsPayload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>, <?= json_encode($oldPayload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>, <?= json_encode($newPayload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'
+              >
+                Voir
+              </button>
             <?php else: ?>
-                <?php foreach ($logs as $log):
-                    $meta = $actionLabels[$log['action']] ?? ['label' => $log['action'], 'icon' => '⚙️', 'color' => '#666'];
-                ?>
-                <tr>
-                    <td style="white-space:nowrap;color:#666;font-size:12px">
-                        <?= date('d/m/Y', strtotime($log['created_at'])) ?><br>
-                        <strong><?= date('H:i:s', strtotime($log['created_at'])) ?></strong>
-                    </td>
-                    <td>
-                        <strong><?= htmlspecialchars($log['admin_name']) ?></strong><br>
-                        <span style="font-size:11px;color:#999"><?= htmlspecialchars($log['admin_email']) ?></span>
-                    </td>
-                    <td>
-                        <span class="action-badge" style="background:<?= $meta['color'] ?>22;color:<?= $meta['color'] ?>">
-                            <?= $meta['icon'] ?> <?= $meta['label'] ?>
-                        </span>
-                    </td>
-                    <td><span class="entity-badge"><?= htmlspecialchars($log['entity']) ?></span></td>
-                    <td style="color:#666"><?= $log['entity_id'] ?? '—' ?></td>
-                    <td style="font-size:12px;color:#999"><?= htmlspecialchars($log['ip_address'] ?? '—') ?></td>
-                    <td>
-                        <?php if ($log['old_value'] || $log['new_value']): ?>
-                            <button class="diff-btn" onclick="showDiff(<?= htmlspecialchars(json_encode($log['old_value'])) ?>, <?= htmlspecialchars(json_encode($log['new_value'])) ?>)">
-                                Voir diff
-                            </button>
-                        <?php else: ?>
-                            <span style="color:#CCC">—</span>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
+              <span class="text-muted">—</span>
             <?php endif; ?>
-        </tbody>
-    </table>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+</div>
 
-    <!-- Pagination -->
-    <?php if ($totalPages > 1): ?>
-        <div class="pagination">
-            <?php for ($p = 1; $p <= min($totalPages, 10); $p++): ?>
-                <a href="?page=audit_logs&admin_id=<?= $filterAdmin ?>&entity=<?= urlencode($filterEntity) ?>&action=<?= urlencode($filterAction) ?>&from=<?= $filterFrom ?>&to=<?= $filterTo ?>&page=<?= $p ?>"
-                   class="page-btn <?= $p === $page ? 'active' : '' ?>"><?= $p ?></a>
-            <?php endfor; ?>
-        </div>
-    <?php endif; ?>
-</main>
+<?php if ($totalPages > 1): ?>
+  <div class="audit-pagination">
+    <?php for ($p = 1; $p <= min($totalPages, 10); $p++): ?>
+      <?php if ($p === $pageNum): ?>
+        <span class="audit-page active"><?= $p ?></span>
+      <?php else: ?>
+        <a class="audit-page" href="/admin/?page=audit_logs&admin_id=<?= $filterAdmin ?>&entity=<?= urlencode($filterEntity) ?>&action=<?= urlencode($filterAction) ?>&from=<?= urlencode($filterFrom) ?>&to=<?= urlencode($filterTo) ?>&p=<?= $p ?>"><?= $p ?></a>
+      <?php endif; ?>
+    <?php endfor; ?>
+  </div>
+<?php endif; ?>
 
-<!-- Modal diff -->
-<div class="modal-overlay" id="diffModal" onclick="closeDiff(event)">
-    <div class="modal-box">
-        <h3 style="margin:0 0 8px">Détail de la modification</h3>
-        <p style="font-size:13px;color:#888;margin:0 0 16px">Comparaison avant / après</p>
-        <div class="diff-grid">
-            <div>
-                <div style="font-size:12px;font-weight:700;color:#C62828;margin-bottom:6px">AVANT</div>
-                <div class="diff-col old" id="diffOld"></div>
-            </div>
-            <div>
-                <div style="font-size:12px;font-weight:700;color:#2E7D32;margin-bottom:6px">APRÈS</div>
-                <div class="diff-col new" id="diffNew"></div>
-            </div>
-        </div>
-        <button onclick="document.getElementById('diffModal').classList.remove('open')" style="margin-top:20px;background:#EEE;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px">Fermer</button>
+<div class="audit-modal" id="auditModal" onclick="closeAuditModal(event)">
+  <div class="audit-modal-box">
+    <h3 style="font-size:24px;color:#183229">Détail de l’entrée d’audit</h3>
+    <p class="text-muted" style="margin-top:6px">Affichage du contenu enregistré par l’action.</p>
+    <div class="audit-modal-grid">
+      <div>
+        <div style="font-size:12px;font-weight:800;color:#5e6c67;margin-bottom:6px">DETAILS</div>
+        <div class="audit-modal-col" id="auditDetails"></div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:800;color:#5e6c67;margin-bottom:6px">AVANT / APRES</div>
+        <div class="audit-modal-col" id="auditDiff"></div>
+      </div>
     </div>
+    <div style="margin-top:18px;display:flex;justify-content:flex-end">
+      <button type="button" class="btn btn-outline" onclick="document.getElementById('auditModal').classList.remove('open')">Fermer</button>
+    </div>
+  </div>
 </div>
 
 <script>
-function showDiff(oldVal, newVal) {
-    const fmt = v => {
-        if (!v) return '(vide)';
-        try { return JSON.stringify(JSON.parse(v), null, 2); }
-        catch { return v; }
-    };
-    document.getElementById('diffOld').textContent = fmt(oldVal);
-    document.getElementById('diffNew').textContent = fmt(newVal);
-    document.getElementById('diffModal').classList.add('open');
+function auditFormat(value) {
+  if (!value) return '(vide)';
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2);
+  } catch (error) {
+    return String(value);
+  }
 }
-function closeDiff(e) {
-    if (e.target.id === 'diffModal') document.getElementById('diffModal').classList.remove('open');
+
+function openAuditModal(details, oldValue, newValue) {
+  document.getElementById('auditDetails').textContent = auditFormat(details);
+  document.getElementById('auditDiff').textContent = 'Avant:\n' + auditFormat(oldValue) + '\n\nAprès:\n' + auditFormat(newValue);
+  document.getElementById('auditModal').classList.add('open');
+}
+
+function closeAuditModal(event) {
+  if (event.target.id === 'auditModal') {
+    document.getElementById('auditModal').classList.remove('open');
+  }
 }
 </script>
-</body>
-</html>
+
+<?php require_once __DIR__ . '/../includes/layout_footer.php'; ?>

@@ -2,7 +2,7 @@
 
 > **Outil :** Expo Application Services (EAS) | **Version Expo :** SDK 50+
 
-Ce guide décrit la procédure complète pour générer les builds de production de l'application CCDS pour iOS (App Store) et Android (Google Play Store), en utilisant Expo Application Services (EAS Build).
+Ce guide décrit la procédure complète pour générer les builds de production de l'application `Ma Commune` pour iOS (App Store) et Android (Google Play Store), en utilisant Expo Application Services (EAS Build).
 
 ---
 
@@ -41,34 +41,33 @@ Avant de builder, vérifier et compléter le fichier `mobile/app.json` :
 ```json
 {
   "expo": {
-    "name": "CCDS Citoyen",
-    "slug": "ccds-app-citoyenne",
-    "version": "1.0.0",
+    "name": "Ma Commune",
+    "slug": "ma-commune",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1d4ed8"
+      "backgroundColor": "#0f4c2a"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "fr.ccds.app-citoyenne",
+      "bundleIdentifier": "com.netetfix.macommune",
       "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "CCDS utilise la caméra pour photographier les problèmes à signaler.",
-        "NSPhotoLibraryUsageDescription": "CCDS accède à votre galerie pour joindre des photos à vos signalements.",
-        "NSLocationWhenInUseUsageDescription": "CCDS utilise votre position pour localiser précisément votre signalement.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "CCDS utilise votre position pour localiser précisément votre signalement."
+        "NSCameraUsageDescription": "Ma Commune a besoin d'accéder à votre caméra pour photographier les anomalies à signaler.",
+        "NSPhotoLibraryUsageDescription": "Ma Commune a besoin d'accéder à vos photos pour joindre une image à votre signalement.",
+        "NSLocationWhenInUseUsageDescription": "Ma Commune utilise votre position pour localiser précisément les anomalies que vous signalez."
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1d4ed8"
+        "backgroundColor": "#0f4c2a"
       },
-      "package": "fr.ccds.app_citoyenne",
+      "package": "com.netetfix.macommune",
       "versionCode": 1,
       "permissions": [
         "CAMERA",
@@ -79,11 +78,13 @@ Avant de builder, vérifier et compléter le fichier `mobile/app.json` :
       ]
     },
     "plugins": [
-      ["expo-camera",   { "cameraPermission": "CCDS utilise la caméra pour photographier les problèmes." }],
-      ["expo-location", { "locationAlwaysAndWhenInUsePermission": "CCDS utilise votre position pour localiser le signalement." }],
-      "expo-image-picker"
+      ["expo-camera", { "cameraPermission": "Ma Commune a besoin d'accéder à votre caméra pour photographier les anomalies." }],
+      ["expo-location", { "locationAlwaysAndWhenInUsePermission": "Ma Commune utilise votre position pour localiser vos signalements." }]
     ],
     "extra": {
+      "API_BASE_URL": "https://api.ma-commune.fr/api",
+      "APP_TERRITORY": "Kourou",
+      "APP_REGION": "Guyane Française",
       "eas": {
         "projectId": "VOTRE_PROJECT_ID_EXPO"
       }
@@ -99,7 +100,7 @@ cd mobile/
 
 # Créer le fichier .env.production
 cat > .env.production << EOF
-API_BASE_URL=https://votre-domaine.fr/api
+EXPO_PUBLIC_API_URL=https://api.ma-commune.fr/api
 APP_ENV=production
 EOF
 ```
@@ -129,7 +130,7 @@ Créer `mobile/eas.json` :
       "ios": { "simulator": false },
       "android": { "buildType": "apk" },
       "env": {
-        "API_BASE_URL": "https://staging.votre-domaine.fr/api"
+        "EXPO_PUBLIC_API_URL": "https://preprod.ma-commune.fr/api"
       }
     },
     "production": {
@@ -137,7 +138,7 @@ Créer `mobile/eas.json` :
       "ios": { "buildConfiguration": "Release" },
       "android": { "buildType": "app-bundle" },
       "env": {
-        "API_BASE_URL": "https://votre-domaine.fr/api"
+        "EXPO_PUBLIC_API_URL": "https://api.ma-commune.fr/api"
       }
     }
   },
@@ -303,4 +304,4 @@ Adopter la convention **Semantic Versioning** :
 
 ---
 
-*Document maintenu par l'équipe CCDS — Mettre à jour à chaque nouvelle version de l'application.*
+*Document maintenu pour Ma Commune — Mettre à jour à chaque nouvelle version de l'application.*

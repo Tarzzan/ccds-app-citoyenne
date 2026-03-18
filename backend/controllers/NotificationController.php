@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS v1.3 — NotificationController (TECH-02)
+ * Ma Commune v1.3 — NotificationController (TECH-02)
  * Migration de backend/api/notifications.php vers l'architecture OO.
  */
 require_once __DIR__ . '/../core/BaseController.php';
@@ -14,7 +14,9 @@ class NotificationController extends BaseController
      */
     public function registerToken(): void
     {
-        $userId = $this->requireAuth();
+        $auth   = $this->requireAuth();
+        $userId = (int)($auth['sub'] ?? 0);
+        $this->requirePermission($auth, 'notification:register_token');
         $body   = $this->getBody();
 
         $token    = trim($body['token']    ?? '');
@@ -40,15 +42,16 @@ class NotificationController extends BaseController
      */
     public function list(): void
     {
-        $userId = $this->requireAuth();
+        $auth   = $this->requireAuth();
+        $userId = (int)($auth['sub'] ?? 0);
+        $this->requirePermission($auth, 'notification:read_own');
         $page   = max(1, (int)($_GET['page'] ?? 1));
         $limit  = 20;
         $offset = ($page - 1) * $limit;
 
-        $total = (int)$this->db->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ?")
-                               ->execute([$userId]) && true
-                 ? $this->db->query("SELECT COUNT(*) FROM notifications WHERE user_id = $userId")->fetchColumn()
-                 : 0;
+        $stmtTotal = $this->db->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ?');
+        $stmtTotal->execute([$userId]);
+        $total = (int)$stmtTotal->fetchColumn();
 
         $stmt = $this->db->prepare("
             SELECT n.*, i.reference AS incident_reference, i.title AS incident_title
@@ -61,9 +64,9 @@ class NotificationController extends BaseController
         $stmt->execute([$userId, $limit, $offset]);
         $notifications = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-        $unreadCount = (int)$this->db->query(
-            "SELECT COUNT(*) FROM notifications WHERE user_id = $userId AND is_read = 0"
-        )->fetchColumn();
+        $stmtUnread = $this->db->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0');
+        $stmtUnread->execute([$userId]);
+        $unreadCount = (int)$stmtUnread->fetchColumn();
 
         $this->success([
             'notifications' => array_map(function ($n) {
@@ -74,6 +77,7 @@ class NotificationController extends BaseController
                     'body'               => $n['body'],
                     'is_read'            => (bool)$n['is_read'],
                     'sent_at'            => $n['sent_at'],
+                    'incident_id'        => isset($n['incident_id']) ? (int)$n['incident_id'] : null,
                     'incident_reference' => $n['incident_reference'],
                     'incident_title'     => $n['incident_title'],
                 ];
@@ -92,7 +96,9 @@ class NotificationController extends BaseController
      */
     public function markRead(int $notifId): void
     {
-        $userId = $this->requireAuth();
+        $auth   = $this->requireAuth();
+        $userId = (int)($auth['sub'] ?? 0);
+        $this->requirePermission($auth, 'notification:mark_read');
 
         $stmt = $this->db->prepare("
             UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?
@@ -111,7 +117,9 @@ class NotificationController extends BaseController
      */
     public function markAllRead(): void
     {
-        $userId = $this->requireAuth();
+        $auth   = $this->requireAuth();
+        $userId = (int)($auth['sub'] ?? 0);
+        $this->requirePermission($auth, 'notification:mark_read');
 
         $this->db->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ?")
                  ->execute([$userId]);
@@ -124,8 +132,8 @@ class NotificationController extends BaseController
      */
     public function send(): void
     {
-        $this->requireAuth();
-        $this->requirePermission('notification:send');
+        $auth = $this->requireAuth();
+        $this->requirePermission($auth, 'notification:send');
 
         $body       = $this->getBody();
         $incidentId = (int)($body['incident_id'] ?? 0);
@@ -138,15 +146,20 @@ class NotificationController extends BaseController
         }
 
         // Récupérer les tokens push des destinataires
-        $sql = "SELECT pt.token, pt.user_id FROM push_tokens pt";
+        $sql = 'SELECT pt.token, pt.user_id FROM push_tokens pt';
+        $params = [];
         if ($targetUser) {
-            $sql .= " WHERE pt.user_id = $targetUser";
+            $sql .= ' WHERE pt.user_id = ?';
+            $params[] = $targetUser;
         } else {
             // Tous les utilisateurs ayant voté pour cet incident
-            $sql .= " JOIN votes v ON v.user_id = pt.user_id WHERE v.incident_id = $incidentId";
+            $sql .= ' JOIN votes v ON v.user_id = pt.user_id WHERE v.incident_id = ?';
+            $params[] = $incidentId;
         }
 
-        $tokens = $this->db->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
+        $stmtTokens = $this->db->prepare($sql);
+        $stmtTokens->execute($params);
+        $tokens = $stmtTokens->fetchAll(\PDO::FETCH_ASSOC);
 
         if (empty($tokens)) {
             $this->success(['sent' => 0, 'message' => 'Aucun destinataire trouvé.']);

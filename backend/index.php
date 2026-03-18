@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS v1.6 — Point d'entrée de l'API REST
+ * Ma Commune v1.6 — Point d'entrée de l'API REST
  * Architecture OO complète — tous les endpoints passent par des contrôleurs.
  * TECH-02 : Suppression des anciens fichiers procéduraux backend/api/
  */
@@ -48,7 +48,8 @@ $uri      = preg_replace('#^/(mc-api|api)#', '', $uri);
 $uri      = rtrim($uri, '/') ?: '/';
 $segments = array_values(array_filter(explode('/', $uri)));
 $resource = $segments[0] ?? '';
-$id       = isset($segments[1]) ? Security::sanitizeId($segments[1]) : null;
+$idRaw    = $segments[1] ?? null;
+$id       = $idRaw !== null ? Security::sanitizeId($idRaw) : null;
 $sub      = $segments[2] ?? null;
 
 // --- Dispatch ---
@@ -190,8 +191,11 @@ switch ($resource) {
     // ----------------------------------------------------------------
     case 'comments':
         require_once __DIR__ . '/controllers/CommentController.php';
-        $ctrl = new CommentController();
-        if ($id && $method === 'DELETE') {
+        require_once __DIR__ . '/controllers/ModerationController.php';
+        if ($id && $sub === 'report' && $method === 'POST') {
+            (new ModerationController())->reportComment((int) $id);
+        } elseif ($id && $method === 'DELETE') {
+            $ctrl = new CommentController();
             $ctrl->delete((int)$id);
         } else {
             http_response_code(405);
@@ -206,11 +210,11 @@ switch ($resource) {
         require_once __DIR__ . '/controllers/NotificationController.php';
         $ctrl = new NotificationController();
 
-        if ($sub === 'token' && $method === 'POST') {
+        if ($idRaw === 'token' && $method === 'POST') {
             $ctrl->registerToken();
-        } elseif ($id === 'read-all' && $method === 'PUT') {
+        } elseif ($idRaw === 'read-all' && $method === 'PUT') {
             $ctrl->markAllRead();
-        } elseif ($id === 'send' && $method === 'POST') {
+        } elseif ($idRaw === 'send' && $method === 'POST') {
             $ctrl->send();
         } elseif ($id && $sub === 'read' && $method === 'PUT') {
             $ctrl->markRead((int)$id);
@@ -228,7 +232,7 @@ switch ($resource) {
     case 'gamification':
         require_once __DIR__ . '/controllers/GamificationController.php';
         $ctrl = new GamificationController();
-        if ($sub === 'badges' && $method === 'GET') {
+        if ($idRaw === 'badges' && $method === 'GET') {
             $ctrl->badges();
         } elseif ($method === 'GET') {
             $ctrl->stats();
@@ -369,7 +373,8 @@ switch ($resource) {
     case 'admin':
         require_once __DIR__ . '/controllers/UserController.php';
         $adminResource = $segments[1] ?? '';
-        $adminId       = isset($segments[2]) ? Security::sanitizeId($segments[2]) : null;
+        $adminIdRaw    = $segments[2] ?? null;
+        $adminId       = $adminIdRaw !== null ? Security::sanitizeId($adminIdRaw) : null;
         $adminSub      = $segments[3] ?? null;
 
         if ($adminResource === 'users') {
@@ -398,7 +403,7 @@ switch ($resource) {
         } elseif ($adminResource === 'audit-logs') {
             require_once __DIR__ . '/controllers/AuditLogController.php';
             $auditCtrl = new AuditLogController();
-            if ($adminId === 'export' && $method === 'GET') {
+            if ($adminIdRaw === 'export' && $method === 'GET') {
                 $auditCtrl->exportCsv();
             } elseif ($method === 'GET') {
                 $auditCtrl->index();

@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS Back-Office — Layout HTML partagé
+ * Ma Commune Back-Office — Layout HTML partagé
  * Inclure ce fichier en début de chaque page avec les variables :
  *   $page_title  : titre de la page
  *   $active_nav  : clé du lien actif dans la sidebar
@@ -29,22 +29,24 @@ try {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= e($page_title) ?> — <?= defined('APP_SHORT_NAME') ? e(APP_SHORT_NAME) : 'MaCommune' ?> Admin</title>
+  <title><?= e($page_title) ?> — <?= defined('APP_NAME') ? e(APP_NAME) : 'Ma Commune' ?> Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/admin/assets/css/admin.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
-<body>
+<body class="admin-shell">
 <div class="layout">
 
   <!-- ===================== SIDEBAR ===================== -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="appSidebar">
     <div class="sidebar-brand">
-      <span class="brand-icon">🌿</span>
+      <img src="/admin/assets/img/ma-commune-guyane-mark.png" alt="Ma Commune Guyane" class="brand-icon">
       <div>
         <div class="brand-name"><?= defined('APP_NAME') ? e(APP_NAME) : 'Ma Commune' ?></div>
-        <div class="brand-sub"><?= defined('APP_SUBTITLE') ? e(APP_SUBTITLE) : 'Administration' ?></div>
+        <div class="brand-sub"><?= defined('APP_SUBTITLE') ? e(APP_SUBTITLE) : 'Administration territoriale' ?></div>
+        <div class="brand-territory">Guyane · Veille communale</div>
       </div>
     </div>
 
@@ -161,19 +163,43 @@ try {
   <!-- ===================== MAIN ===================== -->
   <main class="main">
     <header class="topbar">
-      <h1 class="topbar-title"><?= e($page_title) ?></h1>
-      <div class="topbar-actions" style="display:flex;align-items:center;gap:12px">
-        <form method="GET" action="/admin/" style="display:flex;align-items:center;gap:6px">
+      <div class="topbar-left">
+        <button
+          type="button"
+          class="topbar-menu-btn"
+          id="sidebarToggle"
+          aria-controls="appSidebar"
+          aria-expanded="false"
+          aria-label="Ouvrir la navigation"
+        >
+          ☰
+        </button>
+        <div class="topbar-heading">
+          <div class="topbar-kicker">Service public local</div>
+          <h1 class="topbar-title"><?= e($page_title) ?></h1>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <form method="GET" action="/admin/" class="quick-search-form">
           <input type="hidden" name="page" value="search">
-          <input type="text" name="q" placeholder="🔍 Recherche rapide…"
-                 style="padding:6px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:.8rem;width:200px;outline:none"
-                 autocomplete="off">
+          <input type="text" name="q" placeholder="Recherche rapide..."
+                 class="quick-search-input" autocomplete="off">
         </form>
-        <span class="text-muted text-small"><?= date('d/m/Y H:i') ?></span>
+        <div class="topbar-meta">
+          <span class="text-small"><?= date('d/m/Y H:i') ?></span>
+          <span class="topbar-separator">•</span>
+          <span class="text-small">Pilotage communal</span>
+        </div>
       </div>
     </header>
 
     <div class="page-content">
+      <button
+        type="button"
+        class="sidebar-overlay"
+        id="sidebarOverlay"
+        aria-label="Fermer la navigation"
+      ></button>
       <?php
       // Afficher les messages flash de session
       if (!empty($_SESSION['flash_success'])) {

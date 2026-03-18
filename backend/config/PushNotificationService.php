@@ -2,16 +2,16 @@
 /**
  * Service d'envoi de notifications push via l'API Expo Push
  * Documentation : https://docs.expo.dev/push-notifications/sending-notifications/
- * CCDS Citoyen v1.1
+ * Ma Commune — service de notifications push
  */
 class PushNotificationService
 {
     private const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
     private PDO $db;
 
-    public function __construct(PDO $db)
+    public function __construct(?PDO $db = null)
     {
-        $this->db = $db;
+        $this->db = $db ?? Database::getInstance();
     }
 
     /**
@@ -34,7 +34,7 @@ class PushNotificationService
     /**
      * Notifier le citoyen d'un changement de statut de son signalement
      */
-    public function notifyStatusChange(int $incident_id, string $new_status): void
+    public function notifyStatusChange(int $incident_id, string $new_status, ?string $note = null): void
     {
         // Récupérer le signalement et son auteur
         $stmt = $this->db->prepare("
@@ -60,6 +60,9 @@ class PushNotificationService
         $label = $statusLabels[$new_status] ?? $new_status;
         $title = "Mise à jour de votre signalement";
         $body  = "Bonjour {$incident['full_name']}, votre signalement \"{$incident['title']}\" est maintenant : {$label}.";
+        if ($note) {
+            $body .= "\n" . trim($note);
+        }
 
         // Enregistrer en base
         $this->saveNotification($incident['user_id'], $incident_id, 'status_change', $title, $body);
@@ -70,6 +73,7 @@ class PushNotificationService
             'incident_id' => $incident_id,
             'reference'   => $incident['reference'],
             'new_status'  => $new_status,
+            'note'        => $note,
         ]);
     }
 

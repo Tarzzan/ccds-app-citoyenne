@@ -24,18 +24,26 @@ class InitialDataSeeder extends AbstractSeed
             ['name' => 'Autre',               'icon' => '📌', 'color' => '#6B7280', 'is_active' => 1],
         ])->save();
 
-        // ── Utilisateur admin par défaut ───────────────────────
+        // ── Comptes métier par défaut ──────────────────────────
         $this->table('users')->insert([
             [
-                'full_name'  => 'Administrateur',
-                'email'      => 'admin@votre-domaine.com',
-                'password'   => password_hash('Admin@MaCommune2026!', PASSWORD_DEFAULT),
-                'role'       => 'admin',
-                'is_active'  => 1,
-                'created_at' => date('Y-m-d H:i:s'),
+                'full_name'     => 'Administrateur Ma Commune',
+                'email'         => 'admin@macommune.local',
+                'password_hash' => password_hash('Admin@MaCommune2026!', PASSWORD_DEFAULT),
+                'role'          => 'admin',
+                'is_active'     => 1,
+                'created_at'    => date('Y-m-d H:i:s'),
+            ],
+            [
+                'full_name'     => 'Agent Terrain Ma Commune',
+                'email'         => 'agent@macommune.local',
+                'password_hash' => password_hash('Agent@MaCommune2026!', PASSWORD_DEFAULT),
+                'role'          => 'agent',
+                'is_active'     => 1,
+                'created_at'    => date('Y-m-d H:i:s'),
             ],
         ])->save();
 
-        echo "✅ Données initiales insérées (8 catégories + 1 admin)\n";
+        echo "✅ Données initiales insérées (8 catégories + 1 admin + 1 agent)\n";
     }
 }

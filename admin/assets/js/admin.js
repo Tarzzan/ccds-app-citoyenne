@@ -1,8 +1,51 @@
 /**
- * CCDS Back-Office — JavaScript principal
+ * Ma Commune Back-Office — JavaScript principal
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  const body = document.body;
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+  const closeSidebar = () => {
+    body.classList.remove('nav-open');
+    if (sidebarToggle) {
+      sidebarToggle.setAttribute('aria-expanded', 'false');
+    }
+  };
+
+  const openSidebar = () => {
+    body.classList.add('nav-open');
+    if (sidebarToggle) {
+      sidebarToggle.setAttribute('aria-expanded', 'true');
+    }
+  };
+
+  if (sidebarToggle && sidebarOverlay) {
+    sidebarToggle.addEventListener('click', () => {
+      if (body.classList.contains('nav-open')) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    });
+
+    sidebarOverlay.addEventListener('click', closeSidebar);
+
+    document.querySelectorAll('.nav-item').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 1024) {
+          closeSidebar();
+        }
+      });
+    });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 1024) {
+        closeSidebar();
+      }
+    });
+  }
 
   // --- Auto-dismiss des alertes après 4 secondes ---
   document.querySelectorAll('.alert[data-auto-dismiss]').forEach(alert => {

@@ -1,9 +1,10 @@
 <?php
 /**
- * CCDS Back-Office — Détail et traitement d'un signalement
+ * Ma Commune Back-Office — Détail et traitement d'un signalement
  * v1.1 : affichage des votes + envoi de notification push aux citoyens
  */
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../../backend/config/PushNotificationService.php';
 $admin = require_admin_auth();
 
 $id = (int)($_GET['id'] ?? 0);
@@ -34,7 +35,7 @@ $photos = $photos_stmt->fetchAll(PDO::FETCH_ASSOC);
 $history_stmt = $db->prepare("
     SELECT sh.*, u.full_name AS changed_by_name
     FROM status_history sh
-    JOIN users u ON u.id = sh.changed_by
+    JOIN users u ON u.id = sh.user_id
     WHERE sh.incident_id = ?
     ORDER BY sh.changed_at DESC
 ");
@@ -84,62 +85,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!in_array($new_status, $valid_statuses)) {
             $_SESSION['flash_error'] = 'Statut invalide.';
         } else {
-            $db->prepare("UPDATE incidents SET status = ?, priority = ?, updated_at = NOW() WHERE id = ?")
-               ->execute([$new_status, $priority, $id]);
-            $db->prepare("INSERT INTO status_history (incident_id, old_status, new_status, changed_by, note, changed_at)
+            $updateFields = ['status = ?', 'priority = ?', 'updated_at = NOW()'];
+            $updateParams = [$new_status, $priority];
+            if ($new_status === 'resolved') {
+                $updateFields[] = 'resolved_at = NOW()';
+            }
+            $updateParams[] = $id;
+
+            $db->prepare('UPDATE incidents SET ' . implode(', ', $updateFields) . ' WHERE id = ?')
+               ->execute($updateParams);
+            $db->prepare("INSERT INTO status_history (incident_id, old_status, new_status, user_id, note, changed_at)
                           VALUES (?, ?, ?, ?, ?, NOW())")
                ->execute([$id, $inc['status'], $new_status, $admin['id'], $note ?: null]);
 
             // Envoyer une notification push si demandé (v1.1)
             if ($send_notif) {
                 try {
-                    $notif_title = 'Mise à jour de votre signalement';
-                    $status_labels = [
-                        'submitted'    => 'Soumis',
-                        'acknowledged' => 'Pris en charge',
-                        'in_progress'  => 'En cours de traitement',
-                        'resolved'     => 'Résolu ✅',
-                        'rejected'     => 'Rejeté',
-                    ];
-                    $notif_body = sprintf(
-                        'Votre signalement %s est maintenant : %s',
-                        $inc['reference'],
-                        $status_labels[$new_status] ?? $new_status
-                    );
-                    if ($note) $notif_body .= "\n" . $note;
-
-                    // Insérer la notification en base
-                    $db->prepare("
-                        INSERT INTO notifications (user_id, type, title, body, incident_id, sent_at)
-                        SELECT ?, 'status_change', ?, ?, ?, NOW()
-                    ")->execute([$inc['user_id'], $notif_title, $notif_body, $id]);
-
-                    // Envoyer via Expo Push API
-                    $tokens_stmt = $db->prepare("SELECT token FROM push_tokens WHERE user_id = ? AND is_active = 1");
-                    $tokens_stmt->execute([$inc['user_id']]);
-                    $tokens = $tokens_stmt->fetchAll(PDO::FETCH_COLUMN);
-
-                    if (!empty($tokens)) {
-                        $messages = array_map(fn($t) => [
-                            'to'    => $t,
-                            'title' => $notif_title,
-                            'body'  => $notif_body,
-                            'data'  => ['incident_reference' => $inc['reference']],
-                            'sound' => 'default',
-                        ], $tokens);
-
-                        $ch = curl_init('https://exp.host/--/api/v2/push/send');
-                        curl_setopt_array($ch, [
-                            CURLOPT_POST           => true,
-                            CURLOPT_POSTFIELDS     => json_encode($messages),
-                            CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'Accept: application/json'],
-                            CURLOPT_RETURNTRANSFER => true,
-                            CURLOPT_TIMEOUT        => 10,
-                        ]);
-                        curl_exec($ch);
-                        curl_close($ch);
-                    }
-
+                    (new PushNotificationService($db))->notifyStatusChange($id, $new_status, $note ?: null);
                     $_SESSION['flash_success'] = 'Statut mis à jour et notification envoyée.';
                 } catch (Exception $e) {
                     $_SESSION['flash_success'] = 'Statut mis à jour (notification non envoyée : ' . $e->getMessage() . ').';
@@ -166,15 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Notifier le citoyen d'un nouveau commentaire public (v1.1)
             if (!$is_internal) {
                 try {
-                    $db->prepare("
-                        INSERT INTO notifications (user_id, type, title, body, incident_id, sent_at)
-                        VALUES (?, 'new_comment', ?, ?, ?, NOW())
-                    ")->execute([
-                        $inc['user_id'],
-                        'Nouveau commentaire sur votre signalement',
-                        'Un agent a répondu à votre signalement ' . $inc['reference'],
-                        $id,
-                    ]);
+                    (new PushNotificationService($db))->notifyNewComment($id, $admin['full_name']);
                 } catch (PDOException $e) { /* Table pas encore créée */ }
             }
 

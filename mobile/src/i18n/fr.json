@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "CCDS Citoyen",
-    "tagline": "Signalez, suivez, améliorez votre territoire",
+    "name": "Ma Commune",
+    "tagline": "Signalez, suivez et prenez part au soin du territoire",
     "loading": "Chargement..."
   },
   "auth": {

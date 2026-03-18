@@ -1,7 +1,10 @@
-# Guide de Déploiement Serveur — CCDS Citoyen
+# Guide de Déploiement Serveur — Ma Commune
 
 > **Public Cible :** Administrateur Système
-> **Objectif :** Installer, configurer et sécuriser le backend et le back-office de l'application CCDS Citoyen sur un serveur de production.
+> **Objectif :** Installer, configurer et sécuriser le backend et le back-office de `Ma Commune` sur un serveur de production.
+
+> **Important :** Ce document reste une base de déploiement serveur classique.
+> L'environnement de référence réellement vérifié dans le dépôt est aujourd'hui l'environnement local Docker (`nginx`, `php`, `mysql`, `websocket`).
 
 ---
 
@@ -44,10 +47,10 @@ Créez le fichier `deploy.sh` :
 set -e
 
 # --- Variables (à personnaliser) ---
-DB_NAME="ccds_prod"
-DB_USER="ccds_user"
+DB_NAME="ma_commune_prod"
+DB_USER="ma_commune_user"
 DB_PASS="CHANGEME_password_solide"
-APP_DIR="/var/www/ccds-app-citoyenne"
+APP_DIR="/var/www/ma-commune"
 REPO_URL="https://github.com/Tarzzan/ccds-app-citoyenne.git"
 
 # --- Déploiement ---
@@ -100,14 +103,14 @@ echo "N'oubliez pas de configurer votre VirtualHost Apache."
 
 Créez un fichier de configuration VirtualHost pour le back-office.
 
-**Fichier :** `/etc/apache2/sites-available/admin.ccds-guyane.fr.conf`
+**Fichier :** `/etc/apache2/sites-available/admin.ma-commune.fr.conf`
 
 ```apache
 <VirtualHost *:80>
-    ServerName admin.ccds-guyane.fr
-    DocumentRoot /var/www/ccds-app-citoyenne/admin
+    ServerName admin.ma-commune.fr
+    DocumentRoot /var/www/ma-commune/admin
 
-    <Directory /var/www/ccds-app-citoyenne/admin>
+    <Directory /var/www/ma-commune/admin>
         Options Indexes FollowSymLinks
         AllowOverride All
         Require all granted
@@ -122,12 +125,12 @@ Créez un fichier de configuration VirtualHost pour le back-office.
 
 ```bash
 # Activer le site et le module rewrite
-sudo a2ensite admin.ccds-guyane.fr
+sudo a2ensite admin.ma-commune.fr
 sudo a2enmod rewrite
 sudo systemctl restart apache2
 
 # Générer le certificat SSL avec Let's Encrypt
-sudo certbot --apache -d admin.ccds-guyane.fr
+sudo certbot --apache -d admin.ma-commune.fr
 ```
 
 Certbot modifiera automatiquement votre configuration pour gérer la redirection HTTPS.
@@ -172,7 +175,7 @@ Configurez une tâche cron pour sauvegarder la base de données chaque nuit à 2
 sudo crontab -e
 
 # Ajouter cette ligne (adaptez les chemins et identifiants)
-0 2 * * * /usr/bin/mysqldump -u ccds_user -p'CHANGEME_password_solide' ccds_prod | gzip > /var/backups/ccds_db_$(date +\%Y-\%m-\%d).sql.gz
+0 2 * * * /usr/bin/mysqldump -u ma_commune_user -p'CHANGEME_password_solide' ma_commune_prod | gzip > /var/backups/ma_commune_db_$(date +\%Y-\%m-\%d).sql.gz
 ```
 
 ---
@@ -182,7 +185,7 @@ sudo crontab -e
 Pour mettre à jour l'application avec les dernières modifications du dépôt Git :
 
 ```bash
-cd /var/www/ccds-app-citoyenne
+cd /var/www/ma-commune
 
 # Récupérer les dernières modifications
 sudo -u deploy git pull
@@ -198,3 +201,14 @@ sudo chmod -R 775 backend/uploads
 
 echo "Mise à jour terminée."
 ```
+
+---
+
+## 6. Points de cohérence produit
+
+Avant une mise en production ou une préproduction stable :
+
+- verifier que les comptes techniques de demonstration restent alignes sur `@macommune.local` dans l'environnement cible
+- définir les domaines finaux `api.ma-commune.fr` et `admin.ma-commune.fr` ou leurs équivalents réels
+- rejouer la validation locale `bash scripts/audit_local_predeploy.sh`
+- prévoir une passe finale sur appareil Android physique avant diffusion terrain

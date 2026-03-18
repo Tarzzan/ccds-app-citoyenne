@@ -1,5 +1,5 @@
 /**
- * Composant OfflineBanner — CCDS Citoyen v1.1
+ * Composant OfflineBanner — Ma Commune v1.1
  *
  * Affiche une bannière en haut de l'écran quand l'appareil est hors-ligne
  * et indique le nombre de signalements en attente de synchronisation.

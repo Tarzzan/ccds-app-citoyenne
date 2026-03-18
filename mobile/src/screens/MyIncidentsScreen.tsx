@@ -1,5 +1,5 @@
 /**
- * CCDS v1.2 — Écran Mes Signalements (UX-01)
+ * Ma Commune v1.2 — Écran Mes signalements (UX-01)
  * Recherche textuelle, filtres par statut, tri (date / votes).
  */
 
@@ -7,15 +7,15 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   ActivityIndicator, RefreshControl, Alert, TextInput,
-  Animated,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { incidentsApi, Incident } from '../services/api';
 import { useAuth } from '../services/AuthContext';
-import { IncidentCard, COLORS, STATUS_LABELS } from '../components/ui';
+import { IncidentCard, COLORS, STATUS_LABELS, PRIORITY_LABELS } from '../components/ui';
 import { AppStackParamList } from '../navigation/RootNavigator';
+import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
 type NavProp = NativeStackNavigationProp<AppStackParamList>;
 
@@ -30,13 +30,28 @@ const STATUS_FILTERS = [
 
 const SORT_OPTIONS = [
   { key: 'created_at', label: 'Plus récents' },
+  { key: 'priority',   label: 'Priorité' },
   { key: 'votes',      label: 'Plus votés' },
   { key: 'updated_at', label: 'Mis à jour' },
 ];
 
+const QUEUE_OPTIONS = [
+  { key: 'open',   label: 'Ouverts' },
+  { key: '',       label: 'Tous' },
+  { key: 'closed', label: 'Terminés' },
+];
+
+const PRIORITY_FILTERS = [
+  { key: '', label: 'Toutes' },
+  { key: 'critical', label: 'Critique' },
+  { key: 'high', label: 'Haute' },
+  { key: 'medium', label: 'Normale' },
+  { key: 'low', label: 'Faible' },
+];
+
 export default function MyIncidentsScreen() {
   const navigation = useNavigation<NavProp>();
-  const { user, logout } = useAuth();
+  const { user, logout, isStaff } = useAuth();
 
   const [incidents,    setIncidents]    = useState<Incident[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -47,7 +62,10 @@ export default function MyIncidentsScreen() {
   const [filter,       setFilter]       = useState('');
   const [searchQuery,  setSearchQuery]  = useState('');
   const [sortBy,       setSortBy]       = useState('created_at');
+  const [priorityFilter, setPriorityFilter] = useState('');
   const [showFilters,  setShowFilters]  = useState(false);
+  const [scope,        setScope]        = useState<'mine' | 'territory'>(isStaff ? 'territory' : 'mine');
+  const [queue,        setQueue]        = useState(isStaff ? 'open' : '');
 
   // Debounce pour la recherche
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,13 +77,37 @@ export default function MyIncidentsScreen() {
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [searchQuery]);
 
+  useEffect(() => {
+    setScope(isStaff ? 'territory' : 'mine');
+    setQueue(isStaff ? 'open' : '');
+    setSortBy(isStaff ? 'priority' : 'created_at');
+  }, [isStaff]);
+
+  useEffect(() => {
+    if (scope === 'territory' && isStaff) {
+      setQueue((current) => current || 'open');
+      setSortBy((current) => current === 'created_at' ? 'priority' : current);
+    } else if (scope === 'mine') {
+      setQueue('');
+      setPriorityFilter('');
+    }
+  }, [scope, isStaff]);
+
   const loadIncidents = useCallback(async (p = 1, reset = false) => {
     if (p === 1) setLoading(true);
     else         setLoadingMore(true);
     try {
-      const params: Record<string, any> = { page: p, limit: 15, sort: sortBy, dir: 'DESC' };
+      const params: Record<string, any> = {
+        page: p,
+        limit: 15,
+        sort: sortBy,
+        dir: sortBy === 'priority' ? 'ASC' : 'DESC',
+        scope,
+      };
       if (filter)        params.status = filter;
       if (debouncedQuery) params.q    = debouncedQuery;
+      if (queue)         params.queue = queue;
+      if (priorityFilter) params.priority = priorityFilter;
 
       const res = await incidentsApi.list(params);
       if (res.data) {
@@ -81,9 +123,9 @@ export default function MyIncidentsScreen() {
       setRefreshing(false);
       setLoadingMore(false);
     }
-  }, [filter, debouncedQuery, sortBy]);
+  }, [filter, debouncedQuery, sortBy, scope, queue, priorityFilter]);
 
-  useEffect(() => { loadIncidents(1, true); }, [filter, debouncedQuery, sortBy]);
+  useEffect(() => { loadIncidents(1, true); }, [filter, debouncedQuery, sortBy, scope, queue, priorityFilter]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -96,12 +138,47 @@ export default function MyIncidentsScreen() {
     }
   };
 
+  const heroEyebrow = isStaff ? 'Pilotage terrain' : 'Suivi citoyen';
+  const heroTitle = isStaff
+    ? (scope === 'territory' ? 'File territoriale à traiter' : 'Mes interventions suivies')
+    : 'Mes preuves de terrain';
+  const heroText = isStaff
+    ? (scope === 'territory'
+      ? 'Retrouvez les signalements ouverts sur le territoire pour qualifier, traiter et valider l’exécution depuis le terrain.'
+      : 'Visualisez les dossiers qui vous sont assignés depuis votre compte métier, avec les mêmes filtres de terrain.')
+    : 'Retrouvez vos signalements, filtrez les situations en cours et gardez une vue claire sur ce qui avance dans votre quartier.';
+  const listLabel = isStaff
+    ? (scope === 'territory' ? 'dossiers à traiter' : 'interventions suivies')
+    : 'éléments affichés';
+  const stateLabel = isStaff ? (scope === 'territory' ? 'Territoire' : 'Mes interventions') : 'Tous';
+  const userRoleLabel = isStaff ? 'Pilotage opérationnel' : 'Veille locale en cours';
+  const queueLabel = QUEUE_OPTIONS.find((item) => item.key === queue)?.label ?? 'Tous';
+  const priorityLabel = PRIORITY_FILTERS.find((item) => item.key === priorityFilter)?.label ?? 'Toutes';
+
   const renderHeader = () => (
     <View>
-      {/* En-tête utilisateur */}
+      <View style={styles.heroCard}>
+        <Text style={styles.heroEyebrow}>{heroEyebrow}</Text>
+        <Text style={styles.heroTitle}>{heroTitle}</Text>
+        <Text style={styles.heroText}>{heroText}</Text>
+        <View style={styles.heroMetrics}>
+          <View style={styles.heroMetric}>
+            <Text style={styles.heroMetricValue}>{incidents.length}</Text>
+            <Text style={styles.heroMetricLabel}>{listLabel}</Text>
+          </View>
+          <View style={styles.heroMetric}>
+            <Text style={styles.heroMetricValue}>
+              {filter ? (STATUS_LABELS[filter] ?? filter) : stateLabel}
+            </Text>
+            <Text style={styles.heroMetricLabel}>état suivi</Text>
+          </View>
+        </View>
+      </View>
+
       <View style={styles.userHeader}>
         <View>
-          <Text style={styles.greeting}>Bonjour, {user?.full_name?.split(' ')[0] ?? 'Citoyen'} 👋</Text>
+          <Text style={styles.greeting}>Bonjour, {user?.full_name?.split(' ')[0] ?? 'Citoyen'}</Text>
+          <Text style={styles.userRole}>{userRoleLabel}</Text>
           <Text style={styles.userEmail}>{user?.email}</Text>
         </View>
         <View style={styles.headerActions}>
@@ -126,16 +203,54 @@ export default function MyIncidentsScreen() {
         onPress={() => navigation.navigate('CreateIncident')}
         activeOpacity={0.85}
       >
-        <Text style={styles.newBtnText}>📸  Signaler un problème</Text>
+        <Text style={styles.newBtnText}>
+          {isStaff ? 'Créer un signalement terrain' : 'Signaler un besoin du territoire'}
+        </Text>
       </TouchableOpacity>
 
-      {/* Barre de recherche */}
+      {isStaff && (
+        <View style={styles.scopeRow}>
+          <TouchableOpacity
+            style={[styles.scopeChip, scope === 'territory' && styles.scopeChipActive]}
+            onPress={() => setScope('territory')}
+          >
+            <Text style={[styles.scopeChipText, scope === 'territory' && styles.scopeChipTextActive]}>
+              File territoriale
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.scopeChip, scope === 'mine' && styles.scopeChipActive]}
+            onPress={() => setScope('mine')}
+          >
+            <Text style={[styles.scopeChipText, scope === 'mine' && styles.scopeChipTextActive]}>
+              Mes interventions
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {isStaff && scope === 'territory' && (
+        <View style={styles.queueRow}>
+          {QUEUE_OPTIONS.map((item) => (
+            <TouchableOpacity
+              key={item.key || 'all'}
+              style={[styles.queueChip, queue === item.key && styles.queueChipActive]}
+              onPress={() => setQueue(item.key)}
+            >
+              <Text style={[styles.queueChipText, queue === item.key && styles.queueChipTextActive]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Rechercher un signalement..."
+            placeholder="Rechercher une référence, un lieu ou une situation..."
             placeholderTextColor={COLORS.gray}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -147,11 +262,12 @@ export default function MyIncidentsScreen() {
           style={[styles.filterToggle, showFilters && styles.filterToggleActive]}
           onPress={() => setShowFilters(v => !v)}
         >
-          <Text style={styles.filterToggleText}>⚙️</Text>
+          <Text style={[styles.filterToggleText, showFilters && styles.filterToggleTextActive]}>
+            Filtres
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Filtres avancés (dépliables) */}
       {showFilters && (
         <View style={styles.advancedFilters}>
           <Text style={styles.filterLabel}>Statut</Text>
@@ -183,12 +299,41 @@ export default function MyIncidentsScreen() {
               </TouchableOpacity>
             ))}
           </View>
+
+          {isStaff && scope === 'territory' && (
+            <>
+              <Text style={styles.filterLabel}>Priorité terrain</Text>
+              <View style={styles.filtersRow}>
+                {PRIORITY_FILTERS.map((item) => (
+                  <TouchableOpacity
+                    key={item.key || 'all-priority'}
+                    style={[
+                      styles.filterChip,
+                      priorityFilter === item.key && styles.filterChipActive,
+                    ]}
+                    onPress={() => setPriorityFilter(item.key)}
+                  >
+                    <Text
+                      style={[
+                        styles.filterText,
+                        priorityFilter === item.key && styles.filterTextActive,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
         </View>
       )}
 
       <Text style={styles.sectionTitle}>
-        Mes signalements
+        {isStaff && scope === 'territory' ? 'File d’intervention' : 'Journal de suivi'}
         {debouncedQuery ? ` · "${debouncedQuery}"` : ''}
+        {isStaff && scope === 'territory' && queue ? ` · ${queueLabel}` : ''}
+        {isStaff && scope === 'territory' && priorityFilter ? ` · priorité ${priorityLabel.toLowerCase()}` : ''}
         {filter ? ` · ${STATUS_LABELS[filter] ?? filter}` : ''}
       </Text>
     </View>
@@ -198,14 +343,18 @@ export default function MyIncidentsScreen() {
     <View style={styles.emptyBox}>
       <Text style={styles.emptyIcon}>{debouncedQuery ? '🔍' : '📋'}</Text>
       <Text style={styles.emptyTitle}>
-        {debouncedQuery ? 'Aucun résultat' : 'Aucun signalement'}
+        {debouncedQuery ? 'Aucun résultat utile' : isStaff && scope === 'territory' ? 'Aucun dossier à traiter' : 'Aucun signalement enregistré'}
       </Text>
       <Text style={styles.emptyText}>
         {debouncedQuery
           ? `Aucun signalement ne correspond à "${debouncedQuery}".`
           : filter
             ? `Aucun signalement avec le statut "${STATUS_LABELS[filter] ?? filter}".`
-            : "Vous n'avez pas encore effectué de signalement.\nAppuyez sur le bouton ci-dessus pour commencer."
+            : priorityFilter
+              ? `Aucun signalement avec la priorité "${PRIORITY_LABELS[priorityFilter] ?? priorityFilter}".`
+            : isStaff && scope === 'territory'
+              ? "Aucun signalement n'est actuellement visible dans la file territoriale.\nRevenez plus tard ou créez un dossier terrain."
+              : "Votre historique est encore vide.\nCommencez par documenter un premier besoin sur le territoire."
         }
       </Text>
     </View>
@@ -237,6 +386,9 @@ export default function MyIncidentsScreen() {
           categoryName={item.category_name}
           categoryColor={item.category_color}
           date={item.created_at}
+          priority={isStaff ? item.priority : undefined}
+          assignedToName={isStaff ? item.assigned_to_name : undefined}
+          address={item.address}
           onPress={() => navigation.navigate('IncidentDetail', { id: item.id })}
         />
       )}
@@ -252,74 +404,172 @@ export default function MyIncidentsScreen() {
 }
 
 const styles = StyleSheet.create({
-  list:        { flex: 1, backgroundColor: '#f8fafc' },
-  listContent: { padding: 16, paddingTop: 56 },
+  list:        { flex: 1, backgroundColor: BRAND.colors.mist },
+  listContent: { padding: 16, paddingTop: 28, paddingBottom: 120 },
   centered:    { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
+  heroCard: {
+    backgroundColor: BRAND.colors.canopyDeep,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+    ...BRAND_SHADOW,
+  },
+  heroEyebrow: {
+    color: BRAND.colors.awara,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 10,
+  },
+  heroTitle: {
+    color: BRAND.colors.white,
+    fontSize: 28,
+    fontWeight: '800',
+    fontFamily: BRAND.displayFont,
+    marginBottom: 10,
+  },
+  heroText: {
+    color: '#D7E7DF',
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  heroMetrics: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+  heroMetric: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 16,
+    padding: 12,
+  },
+  heroMetricValue: {
+    color: BRAND.colors.white,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  heroMetricLabel: {
+    color: '#D7E7DF',
+    fontSize: 11,
+    marginTop: 4,
+  },
   userHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
   },
-  greeting:   { fontSize: 20, fontWeight: '800', color: COLORS.dark },
-  userEmail:  { fontSize: 13, color: COLORS.gray, marginTop: 2 },
+  greeting:   { fontSize: 20, fontWeight: '800', color: COLORS.dark, fontFamily: BRAND.displayFont },
+  userRole:   { fontSize: 12, color: BRAND.colors.canopy, fontWeight: '700', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.9 },
+  userEmail:  { fontSize: 13, color: COLORS.gray, marginTop: 4 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   profileBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: COLORS.light, justifyContent: 'center', alignItems: 'center',
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: BRAND.colors.sand, justifyContent: 'center', alignItems: 'center',
   },
   profileBtnText: { fontSize: 18 },
-  logoutIcon: { fontSize: 24 },
+  logoutIcon: { fontSize: 20 },
 
   newBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 14,
+    backgroundColor: BRAND.colors.awara,
+    borderRadius: 18,
     paddingVertical: 16,
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
+    ...BRAND_SHADOW,
   },
-  newBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
+  newBtnText: { color: BRAND.colors.canopyDeep, fontSize: 16, fontWeight: '800' },
+  scopeRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  scopeChip: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 16,
+    backgroundColor: '#FFFDF8',
+    borderWidth: 1.5,
+    borderColor: '#E7DECF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scopeChipActive: {
+    backgroundColor: BRAND.colors.canopy,
+    borderColor: BRAND.colors.canopy,
+  },
+  scopeChipText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: BRAND.colors.canopy,
+  },
+  scopeChipTextActive: {
+    color: BRAND.colors.white,
+  },
+  queueRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  queueChip: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 14,
+    backgroundColor: '#F3EEE2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  queueChipActive: {
+    backgroundColor: BRAND.colors.awara,
+  },
+  queueChipText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: BRAND.colors.canopyDeep,
+  },
+  queueChipTextActive: {
+    color: BRAND.colors.canopyDeep,
+  },
 
-  // Recherche
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   searchBox: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
+    backgroundColor: '#FFFDF8',
+    borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: '#E7DECF',
     paddingHorizontal: 12,
-    height: 44,
+    height: 52,
   },
   searchIcon:  { fontSize: 16, marginRight: 8 },
-  searchInput: { flex: 1, fontSize: 14, color: COLORS.dark, height: 44 },
+  searchInput: { flex: 1, fontSize: 14, color: COLORS.dark, height: 52 },
   filterToggle: {
-    width: 44, height: 44, borderRadius: 12,
-    backgroundColor: COLORS.white,
-    borderWidth: 1.5, borderColor: COLORS.border,
+    minWidth: 88, height: 52, borderRadius: 16,
+    paddingHorizontal: 14,
+    backgroundColor: '#FFFDF8',
+    borderWidth: 1.5, borderColor: '#E7DECF',
     justifyContent: 'center', alignItems: 'center',
   },
   filterToggleActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  filterToggleText: { fontSize: 18 },
+  filterToggleText: { fontSize: 13, fontWeight: '800', color: BRAND.colors.canopy },
+  filterToggleTextActive: { color: COLORS.white },
 
-  // Filtres avancés
   advancedFilters: {
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
+    backgroundColor: '#FFFDF8',
+    borderRadius: 18,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#ECE4D5',
+    ...BRAND_SHADOW,
   },
-  filterLabel: { fontSize: 12, fontWeight: '700', color: COLORS.gray, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  filterLabel: { fontSize: 12, fontWeight: '800', color: COLORS.gray, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
   filtersRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -330,18 +580,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: BRAND.surfaces.mutedCard,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: '#E4D9C6',
   },
   filterChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   filterText:       { fontSize: 13, color: COLORS.gray, fontWeight: '500' },
   filterTextActive: { color: COLORS.white },
 
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.dark, marginBottom: 12 },
+  sectionTitle: { fontSize: 17, fontWeight: '800', color: COLORS.dark, marginBottom: 12 },
 
   emptyBox:  { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 24 },
   emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyTitle:{ fontSize: 18, fontWeight: '700', color: COLORS.dark, marginBottom: 8 },
+  emptyTitle:{ fontSize: 18, fontWeight: '800', color: COLORS.dark, marginBottom: 8, textAlign: 'center' },
   emptyText: { fontSize: 14, color: COLORS.gray, textAlign: 'center', lineHeight: 22 },
 });

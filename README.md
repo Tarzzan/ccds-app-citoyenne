@@ -1,228 +1,188 @@
-<div align="center">
+# Ma Commune
 
-<br/>
+Plateforme civique territoriale de proximite pour signaler, suivre et documenter la reponse publique locale.
 
-<img src="https://img.shields.io/badge/version-1.0.0--stable-brightgreen?style=for-the-badge" alt="Version"/>
-<img src="https://img.shields.io/badge/statut-Livré%20v1.0.0-brightgreen?style=for-the-badge" alt="Statut"/>
-<img src="https://img.shields.io/badge/licence-Privé-red?style=for-the-badge" alt="Licence"/>
-<img src="https://img.shields.io/badge/plateforme-iOS%20%7C%20Android-lightgrey?style=for-the-badge&logo=react" alt="Plateforme"/>
+## Etat Reel Du Depot
 
-<br/><br/>
+Le projet est en phase de reprise et de recentrage produit au 18 mars 2026.
 
-<h1>🏙️ CCDS — Application Citoyenne de Signalement</h1>
+Il ne doit plus etre presente comme "livre 100 %", mais comme un socle deja large en cours de stabilisation autour d'un MVP commercialisable pour :
 
-<p><em>Signalez. Suivez. Améliorez votre commune.</em></p>
+- Kourou
+- la Guyane
+- Android en priorite
+- un back-office web responsive
 
-</div>
+Voir les documents de cadrage actifs :
 
----
+- `docs/OBJECTIF_LIVRAISON_RAPIDE_MA_COMMUNE_2026-03-18.md`
+- `docs/CHECKLIST_REPRISE_FONCTIONNELLE_2026-03-18.md`
+- `docs/TODO_REPRISE_MA_COMMUNE_2026-03-18.md`
+- `docs/AUDIT_REPRISE_PRODUIT_UX_2026-03-18.md`
+- `docs/STRATEGIE_COMMERCIALISATION_MA_COMMUNE_2026-03-18.md`
+- `docs/DOSSIER_LIVRAISON_LOCALE_MA_COMMUNE_2026-03-18.md`
+- `docs/MATRICE_READINESS_MA_COMMUNE_2026-03-18.md`
+- `docs/CREDENTIALS_DEMO_MA_COMMUNE_2026-03-18.md`
+- `docs/MODE_OPERATOIRE_DEMO_MA_COMMUNE_2026-03-18.md`
 
-## 🎯 Présentation du Projet
+## Documentation Active Vs Archive
 
-**CCDS** (Commune Citoyenne De Signalement) est une solution numérique complète permettant aux habitants d'une commune de signaler facilement des anomalies dans l'espace public — un trou dans la chaussée, un luminaire en panne, un espace vert non entretenu — directement depuis leur smartphone, en joignant une photo et en géolocalisant le problème.
+Documents actifs a privilegier pour comprendre l'etat reel du produit :
 
-Les signalements sont transmis en temps réel à un serveur central qui les dispatche automatiquement aux services municipaux compétents. Les agents peuvent ensuite prendre en charge, traiter et clôturer les incidents depuis un back-office dédié, tandis que le citoyen suit l'évolution de sa demande.
+- `README.md`
+- `docs/AUDIT_PRE_DEPLOIEMENT_LOCAL_MA_COMMUNE_2026-03-18.md`
+- `docs/STRATEGIE_COMMERCIALISATION_MA_COMMUNE_2026-03-18.md`
+- `docs/DOSSIER_LIVRAISON_LOCALE_MA_COMMUNE_2026-03-18.md`
+- `docs/MATRICE_READINESS_MA_COMMUNE_2026-03-18.md`
+- `docs/CREDENTIALS_DEMO_MA_COMMUNE_2026-03-18.md`
+- `docs/MODE_OPERATOIRE_DEMO_MA_COMMUNE_2026-03-18.md`
+- `docs/RECETTE_MVP_CITOYEN_AGENT_ADMIN_2026-03-18.md`
+- `docs/GUIDE_TESTS_MOBILES.md`
 
----
+Documents historiques a lire comme archives ou matiere de reprise :
 
-## 📊 Tableau de Bord de l'Avancement
+- `docs/planning/`
+- `docs/slides_mobile_content.md`
+- `docs/slides_ccds_content.md`
+- `docs/Rapport_Phase_3_Mobile.md`
 
-<div align="center">
+## Promesse Produit
 
-<table>
-<thead>
-<tr>
-<th>Phase</th>
-<th>Titre</th>
-<th>Statut</th>
-<th>Avancement</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td align="center"><b>1</b></td>
-<td>Initialisation &amp; Architecture</td>
-<td align="center">✅ Terminée</td>
-<td align="center">
-<img src="https://progress-bar.xyz/100/?title=100%25&width=120&color=22c55e" alt="100%"/>
-</td>
-</tr>
-<tr>
-<td align="center"><b>2</b></td>
-<td>Backend — API REST PHP/MySQL</td>
-<td align="center">✅ Terminée</td>
-<td align="center">
-<img src="https://progress-bar.xyz/100/?title=100%25&width=120&color=22c55e" alt="100%"/>
-</td>
-</tr>
-<tr>
-<td align="center"><b>3</b></td>
-<td>Application Mobile React Native</td>
-<td align="center">✅ Terminée</td>
-<td align="center">
-<img src="https://progress-bar.xyz/100/?title=100%25&width=120&color=22c55e" alt="100%"/>
-</td>
-</tr>
-<tr>
-<td align="center"><b>4</b></td>
-<td>Back-Office Web d'Administration</td>
-<td align="center">✅ Terminée</td>
-<td align="center">
-<img src="https://progress-bar.xyz/100/?title=100%25&width=120&color=22c55e" alt="100%"/>
-</td>
-</tr>
-<tr>
-<td align="center"><b>5</b></td>
-<td>Tests &amp; Déploiement</td>
-<td align="center">✅ Terminée</td>
-<td align="center">
-<img src="https://progress-bar.xyz/100/?title=100%25&width=120&color=22c55e" alt="100%"/>
-</td>
-</tr>
-<tr>
-<td align="center"><b>6</b></td>
-<td>Documentation &amp; Finalisation</td>
-<td align="center">✅ Terminée</td>
-<td align="center">
-<img src="https://progress-bar.xyz/100/?title=100%25&width=120&color=22c55e" alt="100%"/>
-</td>
-</tr>
-</tbody>
-</table>
+La V1 ne cherche pas a etre une plateforme municipale complete.
 
-> **Dernière mise à jour :** 27 Février 2026 — **✅ Projet livré en version 1.0.0 stable**
+La bonne promesse actuelle est :
 
-</div>
+> un habitant signale un probleme utile a la commune, voit sa prise en charge, puis un agent peut documenter et valider l'execution
 
----
+Cette boucle doit etre fluide sur trois surfaces :
 
-## 🏗️ Architecture Technique
+- mobile citoyen
+- mobile terrain pour agent
+- admin web pour supervision
 
-Le projet repose sur un stack technique éprouvé, pensé pour la robustesse et la maintenabilité.
+## Positionnement
 
-<div align="center">
+`Ma Commune` ne doit pas etre percue comme une simple app de plainte.
 
-| Composant | Technologie | Rôle |
-|---|---|---|
-| **Serveur** | Apache + PHP 8+ | Hébergement de l'API et du back-office |
-| **Base de Données** | MySQL 8 | Stockage des utilisateurs, signalements et médias |
-| **API** | REST + JWT | Communication sécurisée entre le serveur et les clients |
-| **Application Mobile** | React Native (Expo) | Application iOS et Android depuis une base de code unique |
-| **Back-Office** | PHP + HTML/CSS/JS | Interface de gestion pour les agents municipaux |
+Le bon positionnement est :
 
-</div>
+- interface de vigilance civique de proximite
+- outil de preuve de traitement entre habitants et services
+- produit territorial ancre en Guyane, extensible ensuite a d'autres communes
 
----
+## Parcours Critiques A Verrouiller
 
-## 📁 Structure du Projet
+### Cote citoyen
 
-```
-ccds-app-citoyenne/
-│
-├── 📂 backend/                 # Serveur PHP
-│   ├── 📂 api/                 # Endpoints de l'API REST
-│   ├── 📂 config/              # Configuration BDD et constantes
-│   └── 📂 uploads/             # Stockage des photos uploadées
-│
-├── 📂 mobile/                  # Application React Native (Expo)
-│   └── 📂 src/
-│       ├── 📂 screens/         # Composants des écrans
-│       ├── 📂 components/      # Composants réutilisables
-│       ├── 📂 navigation/      # Configuration de la navigation
-│       └── 📂 services/        # Appels à l'API (fetch)
-│
-├── 📂 docs/                    # Documentation technique
-│
-├── 📄 ROADMAP.md               # Feuille de route détaillée (source de vérité)
-└── 📄 README.md                # Ce fichier
-```
+- configurer le serveur
+- creer un compte
+- se connecter
+- creer un signalement avec photo et position
+- suivre le statut et les commentaires
+- consulter son bilan de contribution
 
----
+### Cote agent
 
-## ✨ Fonctionnalités Clés
+- se connecter avec un role metier
+- ouvrir la file territoriale
+- qualifier une priorite
+- changer le statut
+- documenter l'execution
 
-<div align="center">
+### Cote admin
 
-| Pour le Citoyen | Pour les Agents Municipaux |
-|---|---|
-| 📸 Photo du problème depuis l'app | 📋 Tableau de bord de tous les signalements |
-| 📍 Géolocalisation automatique | 🔀 Dispatching par catégorie et service |
-| 🗂️ Choix de la catégorie (voirie, espaces verts...) | ✅ Changement de statut des incidents |
-| 🔔 Notifications de suivi en temps réel | 💬 Commentaires internes et publics |
-| 🗺️ Carte interactive des signalements | 📊 Statistiques et tableaux de bord |
-| 📜 Historique de mes signalements | 👥 Gestion des comptes agents |
+- superviser les dossiers
+- gerer categories et utilisateurs
+- consulter tableau de bord, liste et detail
+- piloter depuis tablette ou poste web
+- publier des consultations flash a choix unique
+- publier des rendez-vous communaux
 
-</div>
+## Architecture
 
----
+- `backend/` : API REST PHP/MySQL, auth, incidents, commentaires, notifications, supervision
+- `mobile/` : application React Native / Expo
+- `admin/` : back-office web responsive
+- `docs/` : cadrage produit, reprise, checklists et audit
+- `docs/CREDENTIALS_DEMO_MA_COMMUNE_2026-03-18.md` : comptes locaux de demonstration
+- `docs/MODE_OPERATOIRE_DEMO_MA_COMMUNE_2026-03-18.md` : deroule recommande de demonstration
+- `scripts/recette_mvp_local.sh` : recette locale rapide de la boucle citoyen -> agent -> admin
+- `scripts/audit_local_predeploy.sh` : pre-audit automatisé du noyau fonctionnel local
+- `scripts/seed_demo_local.sh` : seed additif d'un terrain de demonstration local coherent
+- `scripts/prepare_livraison_locale.sh` : rejoue audit + seed et produit un resume Markdown de preparation dans `/tmp`
+- `scripts/build_release_tablette.sh` : construit un APK Android cible tablette par ABI, a privilegier pour la validation appareil
+  Sans argument, le script detecte l'ABI de la tablette `adb` connectee. La tablette Samsung `SM-T590` locale remonte `armeabi-v7a`
+- `scripts/gate_avant_tablette.sh` : verifie que le projet est autorise a entrer en phase de validation tablette, sans declarer la livraison finale appareil
+  Les comptes de demonstration et de recette locale utilisent desormais `@macommune.local` pour une coherence produit plus propre
+- `scripts/export_manifest_livraison_locale.sh` : rejoue le gate et exporte un manifeste JSON de livraison locale dans `/tmp`
+- `scripts/check_branding_residuals.sh` : echoue si une ancienne nomenclature reapparait dans la couche active hors legacy et archives autorisees
+- `scripts/generate_audit_final_local.sh` : produit un rapport Markdown final unique de l'etat local verifie dans `/tmp`
+- `scripts/package_livraison_locale.sh` : assemble un zip unique avec audit, manifeste, docs actives et APK tablette courant
+- `scripts/verify_livraison_bundle.sh` : verifie l'integrite, la structure et les checksums d'un bundle zip de livraison locale
+- `scripts/publish_latest_livraison_aliases.sh` : publie des alias stables `/tmp/ma-commune-latest-*` vers les derniers artefacts verifies
+- `scripts/verify_latest_livraison_aliases.sh` : controle que les alias `/tmp/ma-commune-latest-*` pointent vers un bundle coherent et encore valide
+  Le checksum du zip publie est expose via `/tmp/ma-commune-latest-livraison-bundle.zip.sha256`
+- `scripts/show_latest_livraison_status.sh` : affiche en une commande le statut, les alias stables et les credentials de demonstration du dernier lot valide
+- `scripts/show_tablette_validation_brief.sh` : affiche le brief operateur complet de la future phase tablette depuis le manifeste latest
+- `scripts/publish_latest_handoff.sh` : publie un handoff Markdown stable `/tmp/ma-commune-latest-handoff.md` pour la future phase tablette
+- `scripts/show_local_network_access.sh` : affiche l IP LAN reelle de la machine, les URLs reseau du projet et la commande SSH a utiliser
 
-## 🔑 Catégories de Signalement
+## Commandes Utiles
 
-Le système supporte les catégories suivantes, extensibles depuis le back-office :
-
-`🛣️ Voirie & Chaussée` &nbsp; `💡 Éclairage Public` &nbsp; `🌿 Espaces Verts` &nbsp; `🗑️ Propreté & Déchets` &nbsp; `🚧 Mobilier Urbain` &nbsp; `🌊 Réseaux & Inondations` &nbsp; `🚦 Signalisation` &nbsp; `🏚️ Bâtiments Communaux`
-
----
-
-## 🚀 Démarrage Rapide (Pour les Développeurs)
-
-### Prérequis
-
-- PHP 8.1+, MySQL 8+, Apache avec `mod_rewrite` activé
-- Node.js 18+, `npm` ou `yarn`
-- Expo CLI (`npm install -g expo-cli`)
-
-### Installation du Backend
+### Mobile
 
 ```bash
-# 1. Cloner le dépôt
-git clone https://github.com/Tarzzan/ccds-app-citoyenne.git
-cd ccds-app-citoyenne/backend
-
-# 2. Configurer la base de données
-# Importer le fichier docs/database.sql dans votre MySQL
-# Copier et renseigner le fichier de configuration
-cp config/config.example.php config/config.php
-
-# 3. Configurer Apache pour pointer vers le dossier backend/
+cd mobile
+pnpm run typecheck
+cd android
+./gradlew assembleRelease
 ```
-
-### Installation de l'Application Mobile
 
 ```bash
-cd ccds-app-citoyenne/mobile
-
-# Installer les dépendances
-npm install
-
-# Lancer en mode développement
-npx expo start
+bash scripts/build_release_tablette.sh
 ```
 
----
+### Backend / recette
 
-## 📦 Documentation de Déploiement
+```bash
+curl -sS http://127.0.0.1:8080/api/categories
+bash scripts/recette_mvp_local.sh
+bash scripts/audit_local_predeploy.sh
+bash scripts/seed_demo_local.sh
+```
 
-Le projet est livré avec une documentation de déploiement complète, adaptée à chaque acteur du projet :
+### Admin
 
-| Guide | Public Cible | Description |
-|---|---|---|
-| [📡 Guide de Déploiement Serveur](./docs/deployment/GUIDE_SERVEUR.md) | Administrateur Système | Installation LAMP, script `deploy.sh`, VirtualHost Apache, SSL, Fail2Ban, sauvegardes et mises à jour |
-| [📱 Guide de Build & Publication Mobile](./docs/deployment/GUIDE_MOBILE_BUILD.md) | Développeur | Build Android/iOS avec Expo EAS, soumission aux stores, mises à jour OTA |
-| [🙋 Guide d'Installation Utilisateur](./docs/deployment/GUIDE_UTILISATEUR.md) | Citoyen | Téléchargement via QR Code, installation et première connexion |
+```bash
+curl -sSI http://127.0.0.1:8080/admin/
+curl -sSI http://127.0.0.1:8080/admin/?page=login
+```
 
----
+## Vision Commercialisable
 
-## 🤖 Note pour l'Agent IA
+La version vendable de `Ma Commune` doit demontrer trois choses :
 
-> Ce dépôt est géré de manière autonome par un agent IA. En cas de reprise de mission, la **première action impérative** est de lire le fichier [`ROADMAP.md`](./ROADMAP.md) pour connaître l'état exact du projet et la prochaine tâche à accomplir. Ce fichier est la seule source de vérité.
+1. utilite terrain immediate pour l'habitant
+2. capacite de traitement visible pour les services
+3. qualite de supervision exploitable pour la commune
 
----
+Le produit ne sera juge credible que si la preuve de traitement est plus forte que l'effet vitrine.
 
-<div align="center">
+Sur la couche communaute de la V1, le perimetre doit rester strict :
 
-<br/>
+- consultations a choix unique
+- evenements publies par la commune
+- pas de promesse de participation complexe tant que le schema et le mobile ne la supportent pas reellement
 
-Développé avec ❤️ pour améliorer la vie citoyenne · Projet **CCDS** · 2026
+## Regle De Reprise
 
-</div>
+Ne plus declarer une fonctionnalite "terminee" sans verification sur :
+
+- backend reel
+- admin reel
+- build mobile release
+- parcours utilisateur reel
+
+Le prochain jalon est l'audit final local, puis seulement ensuite le redeploiement sur tablette avec mode operatoire et credentials de demonstration.
+
+Pour la phase tablette, l'APK cible par ABI doit etre privilegie sur l'APK universel, afin de limiter la taille installee et de coller au materiel reel. Dans l'environnement local actuel, la tablette connectee `SM-T590` attend `armeabi-v7a`.

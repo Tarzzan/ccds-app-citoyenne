@@ -1,16 +1,17 @@
 /**
- * CCDS — Écran d'Inscription
+ * Ma Commune — Écran d'inscription
  */
 
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView,
+  View, Text, StyleSheet, ScrollView, Image,
   TouchableOpacity, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../services/AuthContext';
 import { Button, Input, COLORS } from '../components/ui';
 import { AuthStackParamList } from '../navigation/RootNavigator';
+import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
 type Props = { navigation: NativeStackNavigationProp<AuthStackParamList, 'Register'> };
 
@@ -52,16 +53,25 @@ export default function RegisterScreen({ navigation }: Props) {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <View style={styles.heroBackdrop} />
+        <View style={styles.riverShape} />
+        <View style={styles.earthShape} />
 
         <View style={styles.header}>
-          <Text style={styles.logo}>🌿</Text>
-          <Text style={styles.appName}>CCDS Citoyen</Text>
-          <Text style={{ fontSize: 12, color: '#6ee7b7', marginTop: 2 }}>Guyane Française</Text>
+          <Image source={require('../../assets/icon.png')} style={styles.logo} />
+          <Text style={styles.eyebrow}>Engagement citoyen</Text>
+          <Text style={styles.appName}>{BRAND.name}</Text>
+          <Text style={styles.territory}>{BRAND.territory}</Text>
+          <Text style={styles.statement}>
+            Rejoignez une application qui aide les habitants à protéger leur cadre de vie et à mieux dialoguer avec la commune.
+          </Text>
         </View>
 
         <View style={styles.form}>
           <Text style={styles.title}>Créer un compte</Text>
-          <Text style={styles.subtitle}>Rejoignez les citoyens actifs de Kourou, Sinnamary et Iracoubo.</Text>
+          <Text style={styles.subtitle}>
+            Votre compte vous permet de signaler, suivre, voter et documenter les besoins du territoire.
+          </Text>
 
           <Input
             label="Nom complet"
@@ -128,28 +138,84 @@ export default function RegisterScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#0f4c2a',
+    backgroundColor: BRAND.colors.mist,
     justifyContent: 'center',
     padding: 24,
   },
+  heroBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 320,
+    backgroundColor: BRAND.colors.canopyDeep,
+  },
+  riverShape: {
+    position: 'absolute',
+    top: 84,
+    right: -34,
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    backgroundColor: '#2D6F8630',
+  },
+  earthShape: {
+    position: 'absolute',
+    top: 170,
+    left: -18,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#A64B2A24',
+  },
   header: {
-    alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 30,
   },
-  logo: { fontSize: 48, marginBottom: 6 },
-  appName: { fontSize: 28, fontWeight: '800', color: COLORS.primary, letterSpacing: 2 },
+  logo: {
+    width: 78,
+    height: 78,
+    borderRadius: 22,
+    marginBottom: 14,
+  },
+  eyebrow: {
+    color: '#D2A13A',
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 8,
+  },
+  appName: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: BRAND.colors.white,
+    fontFamily: BRAND.displayFont,
+  },
+  territory: {
+    fontSize: 13,
+    color: '#DCE7E0',
+    marginTop: 6,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+  },
+  statement: {
+    fontSize: 17,
+    color: '#F4F1E7',
+    lineHeight: 24,
+    marginTop: 16,
+    maxWidth: 320,
+    fontWeight: '700',
+  },
   form: {
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
+    backgroundColor: '#FFFCF6',
+    borderRadius: 24,
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#ECE4D5',
+    ...BRAND_SHADOW,
   },
-  title:    { fontSize: 22, fontWeight: '700', color: COLORS.dark, marginBottom: 6 },
-  subtitle: { fontSize: 14, color: COLORS.gray, marginBottom: 24 },
+  title:    { fontSize: 22, fontWeight: '800', color: COLORS.dark, marginBottom: 6 },
+  subtitle: { fontSize: 14, color: COLORS.gray, marginBottom: 24, lineHeight: 22 },
   linkRow:  { alignItems: 'center', marginTop: 20 },
   linkText: { fontSize: 14, color: COLORS.gray },
   link:     { color: COLORS.primary, fontWeight: '600' },

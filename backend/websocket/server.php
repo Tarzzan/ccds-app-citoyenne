@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 /**
- * CCDS v1.3 — Serveur WebSocket (RT-01)
+ * Ma Commune v1.3 — Serveur WebSocket (RT-01)
  * Diffuse les nouveaux signalements en temps réel aux clients connectés.
  *
  * Démarrage :
@@ -17,7 +17,7 @@
  *   - Le serveur WebSocket diffuse le message à tous les clients connectés
  */
 
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/../config/config.php';
 require __DIR__ . '/../config/helpers.php';
 

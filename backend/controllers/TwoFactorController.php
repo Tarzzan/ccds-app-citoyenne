@@ -135,12 +135,12 @@ class TwoFactorController extends BaseController
         $body   = json_decode(file_get_contents('php://input'), true) ?? [];
 
         $stmt = $this->db->prepare(
-            'SELECT password FROM users WHERE id = ?'
+            'SELECT password_hash FROM users WHERE id = ?'
         );
         $stmt->execute([$userId]);
         $user = $stmt->fetch();
 
-        if (!password_verify($body['password'] ?? '', $user['password'])) {
+        if (!$user || !password_verify($body['password'] ?? '', $user['password_hash'])) {
             $this->error('Mot de passe incorrect.', 401);
             return;
         }

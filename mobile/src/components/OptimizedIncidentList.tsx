@@ -1,5 +1,5 @@
 /**
- * CCDS v1.3 — OptimizedIncidentList (PERF-01)
+ * Ma Commune v1.3 — OptimizedIncidentList (PERF-01)
  * FlatList optimisé avec :
  * - getItemLayout pour éviter les mesures dynamiques
  * - keyExtractor stable

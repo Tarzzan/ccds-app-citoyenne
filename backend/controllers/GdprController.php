@@ -7,6 +7,11 @@
  */
 class GdprController extends BaseController
 {
+    private function getExportDir(): string
+    {
+        return rtrim(UPLOAD_DIR, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'exports' . DIRECTORY_SEPARATOR;
+    }
+
     /**
      * POST /auth/gdpr/request
      * Demande d'export — génère l'archive et envoie un email avec le lien.
@@ -14,17 +19,16 @@ class GdprController extends BaseController
     public function requestExport(): void
     {
         $user = $this->requireAuth();
-        $this->applyRateLimit('gdpr_export', $user['id']);
-
-        $userId = (int) $user['id'];
+        $userId = $this->getAuthUserId($user);
+        $this->applyRateLimit('gdpr_export', $userId);
 
         // Collecter toutes les données de l'utilisateur
         $data = $this->collectUserData($userId);
 
         // Générer l'archive JSON
-        $exportDir  = __DIR__ . '/../exports/';
-        if (!is_dir($exportDir)) {
-            mkdir($exportDir, 0700, true);
+        $exportDir  = $this->getExportDir();
+        if (!is_dir($exportDir) && !@mkdir($exportDir, 0755, true) && !is_dir($exportDir)) {
+            $this->serverError('Impossible de préparer l’espace d’export RGPD.');
         }
 
         $filename   = "" . (defined('APP_SLUG') ? APP_SLUG : 'ma_commune') . "_export_user_{$userId}_" . date('Ymd_His') . '.json';
@@ -36,14 +40,18 @@ class GdprController extends BaseController
             'data'          => $data,
         ];
 
-        file_put_contents($filepath, json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        if (file_put_contents($filepath, json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) === false) {
+            $this->serverError('Impossible d’écrire l’archive RGPD.');
+        }
 
         // Enregistrer la demande d'export en base
-        $stmt = $this->db->prepare("
-            INSERT INTO gdpr_export_requests (user_id, status, file_path, requested_at)
-            VALUES (?, 'completed', ?, NOW())
-        ");
-        $stmt->execute([$userId, $filename]);
+        if ($this->hasTable('gdpr_export_requests')) {
+            $stmt = $this->db->prepare("
+                INSERT INTO gdpr_export_requests (user_id, status, file_path, requested_at)
+                VALUES (?, 'completed', ?, NOW())
+            ");
+            $stmt->execute([$userId, $filename]);
+        }
 
         // En production : envoyer un email avec le lien de téléchargement
         // mail($user['email'], 'Votre export RGPD ' . (defined('APP_NAME') ? APP_NAME : 'Ma Commune'), "Votre archive est disponible...");
@@ -62,7 +70,11 @@ class GdprController extends BaseController
     public function download(string $filename): void
     {
         $user   = $this->requireAuth();
-        $userId = (int) $user['id'];
+        $userId = $this->getAuthUserId($user);
+
+        if (!$this->hasTable('gdpr_export_requests')) {
+            $this->error('Historique des exports indisponible sur cette instance.', 503);
+        }
 
         // Vérifier que le fichier appartient à cet utilisateur
         $stmt = $this->db->prepare("
@@ -77,7 +89,7 @@ class GdprController extends BaseController
             $this->error('Fichier introuvable ou lien expiré.', 404);
         }
 
-        $filepath = __DIR__ . '/../exports/' . basename($filename);
+        $filepath = $this->getExportDir() . basename($filename);
         if (!file_exists($filepath)) {
             $this->error('Fichier introuvable.', 404);
         }
@@ -96,7 +108,7 @@ class GdprController extends BaseController
     public function deleteAccount(): void
     {
         $user   = $this->requireAuth();
-        $userId = (int) $user['id'];
+        $userId = $this->getAuthUserId($user);
 
         $input = json_decode(file_get_contents('php://input'), true);
         if (empty($input['password'])) {
@@ -104,11 +116,11 @@ class GdprController extends BaseController
         }
 
         // Vérifier le mot de passe
-        $stmt = $this->db->prepare("SELECT password FROM users WHERE id = ?");
+        $stmt = $this->db->prepare("SELECT password_hash FROM users WHERE id = ?");
         $stmt->execute([$userId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$row || !password_verify($input['password'], $row['password'])) {
+        if (!$row || !password_verify($input['password'], $row['password_hash'])) {
             $this->error('Mot de passe incorrect.', 401);
         }
 
@@ -117,7 +129,7 @@ class GdprController extends BaseController
             UPDATE users SET
                 full_name = 'Utilisateur supprimé',
                 email     = CONCAT('deleted_', id, '@" . (defined('APP_SLUG') ? APP_SLUG : 'ma_commune') . ".deleted'),
-                password  = '',
+                password_hash = '',
                 phone     = NULL,
                 is_active = 0
             WHERE id = ?
@@ -128,15 +140,17 @@ class GdprController extends BaseController
         $this->db->prepare("DELETE FROM push_tokens WHERE user_id = ?")->execute([$userId]);
 
         // Supprimer les exports RGPD
-        $exports = $this->db->prepare("SELECT file_path FROM gdpr_export_requests WHERE user_id = ?");
-        $exports->execute([$userId]);
-        foreach ($exports->fetchAll(PDO::FETCH_COLUMN) as $filename) {
-            $filepath = __DIR__ . '/../exports/' . basename($filename);
-            if (file_exists($filepath)) {
-                unlink($filepath);
+        if ($this->hasTable('gdpr_export_requests')) {
+            $exports = $this->db->prepare("SELECT file_path FROM gdpr_export_requests WHERE user_id = ?");
+            $exports->execute([$userId]);
+            foreach ($exports->fetchAll(PDO::FETCH_COLUMN) as $filename) {
+                $filepath = $this->getExportDir() . basename($filename);
+                if (file_exists($filepath)) {
+                    unlink($filepath);
+                }
             }
+            $this->db->prepare("DELETE FROM gdpr_export_requests WHERE user_id = ?")->execute([$userId]);
         }
-        $this->db->prepare("DELETE FROM gdpr_export_requests WHERE user_id = ?")->execute([$userId]);
 
         $this->success(null, 200, 'Votre compte a été supprimé avec succès.');
     }
@@ -191,7 +205,7 @@ class GdprController extends BaseController
     private function getComments(int $userId): array
     {
         $stmt = $this->db->prepare("
-            SELECT c.id, c.content, c.incident_id, i.title AS incident_title,
+            SELECT c.id, c.comment, c.incident_id, i.title AS incident_title,
                    c.created_at, c.updated_at
             FROM comments c
             JOIN incidents i ON i.id = c.incident_id
@@ -204,8 +218,8 @@ class GdprController extends BaseController
     private function getNotifications(int $userId): array
     {
         $stmt = $this->db->prepare("
-            SELECT id, title, body, type, is_read, created_at
-            FROM notifications WHERE user_id = ? ORDER BY created_at DESC
+            SELECT id, title, body, type, is_read, sent_at
+            FROM notifications WHERE user_id = ? ORDER BY sent_at DESC
         ");
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -213,17 +227,24 @@ class GdprController extends BaseController
 
     private function getGamification(int $userId): array
     {
-        $stmt = $this->db->prepare("
-            SELECT points, last_action_at FROM user_gamification WHERE user_id = ?
-        ");
-        $stmt->execute([$userId]);
-        $gamif = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['points' => 0];
+        $gamif = ['points' => 0, 'badges' => []];
 
-        $stmt2 = $this->db->prepare("
-            SELECT badge_key, awarded_at FROM user_badges WHERE user_id = ?
-        ");
-        $stmt2->execute([$userId]);
-        $gamif['badges'] = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+        if ($this->hasTable('user_gamification')) {
+            $stmt = $this->db->prepare("
+                SELECT points, last_action_at FROM user_gamification WHERE user_id = ?
+            ");
+            $stmt->execute([$userId]);
+            $gamif = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['points' => 0];
+            $gamif['badges'] = [];
+        }
+
+        if ($this->hasTable('user_badges')) {
+            $stmt2 = $this->db->prepare("
+                SELECT badge_key, awarded_at FROM user_badges WHERE user_id = ?
+            ");
+            $stmt2->execute([$userId]);
+            $gamif['badges'] = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+        }
 
         return $gamif;
     }

@@ -1,5 +1,5 @@
 /**
- * CCDS — Écran Création de Signalement
+ * Ma Commune — Écran de création de signalement
  * v1.1 : mode hors-ligne via OfflineQueue + OfflineBanner
  */
 
@@ -16,6 +16,7 @@ import { categoriesApi, incidentsApi, Category } from '../services/api';
 import { Button, Input, COLORS }                 from '../components/ui';
 import { OfflineBanner }                          from '../components/OfflineBanner';
 import { OfflineQueue }                           from '../services/OfflineQueue';
+import { BRAND, BRAND_SHADOW }                    from '../theme/brand';
 
 export default function CreateIncidentScreen() {
   const navigation = useNavigation();
@@ -148,7 +149,14 @@ export default function CreateIncidentScreen() {
       e.description = 'La description doit contenir au moins 10 caractères.';
     if (!coords)
       e.location    = 'La localisation est obligatoire.';
+
     setErrors(e);
+
+    if (Object.keys(e).length > 0) {
+      const firstError = e.category ?? e.description ?? e.location ?? 'Veuillez corriger le formulaire.';
+      Alert.alert('Formulaire incomplet', firstError);
+    }
+
     return Object.keys(e).length === 0;
   };
 
@@ -253,6 +261,13 @@ export default function CreateIncidentScreen() {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.introCard}>
+          <Text style={styles.introEyebrow}>Action citoyenne</Text>
+          <Text style={styles.introTitle}>{BRAND.copy.incidentTitle}</Text>
+          <Text style={styles.introText}>
+            Décrivez un problème utile à traiter par la commune. Une bonne fiche aide les agents à intervenir plus vite et plus justement.
+          </Text>
+        </View>
 
         {/* Indicateur mode hors-ligne dans le formulaire */}
         {!isConnected && (
@@ -380,27 +395,56 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 56 : 16,
     paddingBottom: 12,
-    backgroundColor: COLORS.white,
+    backgroundColor: BRAND.colors.canopyDeep,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: '#22473D',
   },
   closeBtn:    { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  closeText:   { fontSize: 18, color: COLORS.gray },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: COLORS.dark },
+  closeText:   { fontSize: 18, color: '#F4F1E7' },
+  headerTitle: { fontSize: 17, fontWeight: '800', color: '#F4F1E7' },
 
-  scroll:  { flex: 1, backgroundColor: '#f8fafc' },
+  scroll:  { flex: 1, backgroundColor: BRAND.colors.mist },
   content: { padding: 16, paddingBottom: 40 },
+  introCard: {
+    backgroundColor: '#FFF9F0',
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E6DCC8',
+    ...BRAND_SHADOW,
+  },
+  introEyebrow: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: BRAND.colors.laterite,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 6,
+  },
+  introTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: BRAND.colors.ink,
+    marginBottom: 8,
+    fontFamily: BRAND.displayFont,
+  },
+  introText: {
+    fontSize: 14,
+    color: '#355248',
+    lineHeight: 21,
+  },
 
   // Mode hors-ligne
   offlineNotice: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: '#F8E8C8',
     borderRadius: 10,
     padding: 12,
     marginBottom: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#f59e0b',
+    borderLeftColor: BRAND.colors.warning,
   },
-  offlineNoticeText: { fontSize: 13, color: '#92400e', fontWeight: '500' },
+  offlineNoticeText: { fontSize: 13, color: '#83541B', fontWeight: '600' },
 
   sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.dark, marginBottom: 10, marginTop: 8 },
   required:     { color: COLORS.danger },
@@ -414,7 +458,7 @@ const styles = StyleSheet.create({
     height: 180,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#FFFCF6',
     overflow: 'hidden',
   },
   photoBoxFilled:  { borderStyle: 'solid', borderColor: COLORS.primary },
@@ -447,7 +491,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 10,
     padding: 14,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFDF8',
     marginBottom: 8,
   },
   locationInfo:    { flexDirection: 'row', alignItems: 'center', gap: 10 },

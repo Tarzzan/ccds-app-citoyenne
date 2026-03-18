@@ -1,6 +1,6 @@
 <?php
 /**
- * CCDS Back-Office — Page de connexion
+ * Ma Commune Back-Office — Page de connexion
  */
 require_once __DIR__ . '/../includes/bootstrap.php';
 
@@ -25,15 +25,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$email]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($user && password_verify($password, $user['password'])) {
+            $passwordHash = $user['password_hash'] ?? $user['password'] ?? null;
+            $passwordOk = $user && $passwordHash ? password_verify($password, $passwordHash) : false;
+
+            if ($passwordOk) {
                 $_SESSION['admin_user'] = [
                     'id'        => $user['id'],
                     'email'     => $user['email'],
                     'full_name' => $user['full_name'],
                     'role'      => $user['role'],
                 ];
-                // Mettre à jour last_login
-                $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")->execute([$user['id']]);
+                // Le schéma local n'expose pas toujours last_login.
+                try {
+                    $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")->execute([$user['id']]);
+                } catch (Throwable $e) {
+                    // Ne pas bloquer la connexion si cette colonne n'existe pas.
+                }
                 header('Location: /admin/?page=dashboard');
                 exit;
             } else {
@@ -50,18 +57,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Connexion — <?= defined('APP_SHORT_NAME') ? e(APP_SHORT_NAME) : 'MaCommune' ?> Admin</title>
+  <title>Connexion — <?= defined('APP_NAME') ? e(APP_NAME) : 'Ma Commune' ?> Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/admin/assets/css/admin.css">
 </head>
 <body>
 <div class="login-page">
   <div class="login-card">
+    <div class="login-kicker">Administration communale</div>
     <div class="login-logo">
-      <div class="logo-icon">🏛️</div>
-      <div class="logo-name"><?= defined('APP_SHORT_NAME') ? e(APP_SHORT_NAME) : 'MaCommune' ?></div>
-      <div class="logo-sub">Espace Administration</div>
+      <img src="/admin/assets/img/ma-commune-guyane-mark.png" alt="Ma Commune Guyane" class="logo-icon">
+      <div class="logo-name"><?= defined('APP_NAME') ? e(APP_NAME) : 'Ma Commune' ?></div>
+      <div class="logo-sub">Guyane · devoir de suivi public</div>
+    </div>
+
+    <div class="login-intro">
+      Le back-office permet de suivre, prioriser et documenter les réponses apportées aux signalements citoyens.
     </div>
 
     <?php if ($error): ?>
@@ -85,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </button>
     </form>
 
-    <p style="text-align:center;margin-top:20px;font-size:12px;color:#94a3b8;">
+    <p class="login-footnote">
       Accès réservé aux agents et administrateurs municipaux.
     </p>
   </div>

@@ -20,7 +20,13 @@ export interface ShareableIncident {
   photo_url?: string;
 }
 
-const APP_URL = process.env.EXPO_PUBLIC_APP_URL ?? 'https://votre-domaine.com';
+const APP_URL = process.env.EXPO_PUBLIC_APP_URL ?? '';
+const PLACEHOLDER_APP_URLS = new Set([
+  '',
+  'https://votre-domaine.com',
+  'https://votre-domaine.fr',
+  'https://staging.votre-domaine.fr',
+]);
 
 const STATUS_LABELS: Record<string, string> = {
   submitted:   'Soumis',
@@ -28,6 +34,11 @@ const STATUS_LABELS: Record<string, string> = {
   resolved:    'Résolu',
   rejected:    'Rejeté',
 };
+
+function getPublicAppUrl(): string | null {
+  const clean = APP_URL.trim().replace(/\/$/, '');
+  return PLACEHOLDER_APP_URLS.has(clean) ? null : clean;
+}
 
 /**
  * Partager un incident via la feuille de partage native.
@@ -37,8 +48,9 @@ export async function shareIncident(incident: ShareableIncident): Promise<void> 
   const statusLabel = STATUS_LABELS[incident.status] ?? incident.status;
   const addressLine = incident.address ? `📍 ${incident.address}\n` : '';
   const votesLine   = incident.votes_count > 0 ? `👍 ${incident.votes_count} citoyen${incident.votes_count > 1 ? 's' : ''} concerné${incident.votes_count > 1 ? 's' : ''}\n` : '';
+  const publicAppUrl = getPublicAppUrl();
 
-  const message = [
+  const messageLines = [
     `📍 ${process.env.EXPO_PUBLIC_APP_NAME ?? 'Ma Commune'} — Signalement`,
     ``,
     `${incident.title}`,
@@ -47,8 +59,15 @@ export async function shareIncident(incident: ShareableIncident): Promise<void> 
     `🔖 Réf. : ${incident.reference}`,
     ``,
     `Signalez aussi les problèmes de votre quartier sur l'application ${process.env.EXPO_PUBLIC_APP_NAME ?? 'Ma Commune'}.`,
-    `${APP_URL}`,
-  ].join('\n');
+  ];
+
+  if (publicAppUrl) {
+    messageLines.push(`${publicAppUrl}`);
+  } else {
+    messageLines.push(`Partagez la référence ${incident.reference} avec votre commune pour retrouver rapidement ce dossier.`);
+  }
+
+  const message = messageLines.join('\n');
 
   // Tenter le partage avec image si disponible
   if (incident.photo_url && (await Sharing.isAvailableAsync())) {
@@ -74,7 +93,7 @@ export async function shareIncident(incident: ShareableIncident): Promise<void> 
     {
       title:   `Signalement ${process.env.EXPO_PUBLIC_APP_NAME ?? 'Ma Commune'} — ${incident.reference}`,
       message: Platform.OS === 'ios' ? message : message,
-      url:     Platform.OS === 'ios' ? `${APP_URL}/incidents/${incident.id}` : undefined,
+      url:     Platform.OS === 'ios' && publicAppUrl ? `${publicAppUrl}/incidents/${incident.id}` : undefined,
     },
     {
       dialogTitle:   `Partager : ${incident.title}`,
@@ -108,5 +127,6 @@ async function downloadPhotoForSharing(url: string, reference: string): Promise<
  * Générer un lien de partage court pour un incident.
  */
 export function getShareUrl(incidentId: number): string {
-  return `${APP_URL}/incidents/${incidentId}`;
+  const publicAppUrl = getPublicAppUrl();
+  return publicAppUrl ? `${publicAppUrl}/incidents/${incidentId}` : '';
 }
