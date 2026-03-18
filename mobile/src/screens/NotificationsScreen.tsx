@@ -6,6 +6,7 @@ import {
 import { notificationsApi, Notification } from '../services/api';
 import { useNavigation } from '@react-navigation/native';
 import { clearBadge } from '../services/NotificationService';
+import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { COLORS } from '../components/ui';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
@@ -16,6 +17,47 @@ const TYPE_ICONS: Record<string, string> = {
   system:          '📢',
   event:           '📅',
 };
+
+function getNotificationsCompanion(
+  notifications: Notification[],
+  unreadCount: number
+): { tone: 'guide' | 'thanks' | 'status'; title: string; body: string; bullets: string[] } {
+  const latest = notifications[0];
+
+  if (!latest) {
+    return {
+      tone: 'guide',
+      title: `${BRAND.companion.name} vous previendra au bon moment`,
+      body: 'Cette boite sert a rendre le suivi moins opaque. Vous y verrez les changements de statut, les commentaires utiles et les informations communales.',
+      bullets: [
+        'suivre vos changements de statut ici',
+        'ouvrir un dossier des qu une notification importante arrive',
+      ],
+    };
+  }
+
+  if (unreadCount > 0) {
+    return {
+      tone: 'status',
+      title: `${BRAND.companion.name} a repere ${unreadCount} mise(s) a jour utile(s)`,
+      body: 'Votre pile de notifications doit vous dire quoi ouvrir tout de suite, pas seulement empiler des alertes.',
+      bullets: [
+        'commencer par les notifications non lues',
+        latest.incident_reference ? `ouvrir ${latest.incident_reference} si besoin` : 'ouvrir la mise a jour la plus recente',
+      ],
+    };
+  }
+
+  return {
+    tone: 'thanks',
+    title: `${BRAND.companion.name} garde votre suivi au clair`,
+    body: 'Toutes les notifications visibles ont deja ete lues. Vous pouvez revenir ici pour relire une etape, un commentaire ou un evenement communal.',
+    bullets: [
+      'utiliser cette vue comme journal de suivi',
+      'ouvrir un dossier si un doute revient',
+    ],
+  };
+}
 
 const formatDate = (iso: string): string => {
   const d = new Date(iso);
@@ -123,6 +165,8 @@ export const NotificationsScreen: React.FC = () => {
     );
   }
 
+  const companion = getNotificationsCompanion(notifications, unreadCount);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -142,6 +186,16 @@ export const NotificationsScreen: React.FC = () => {
             </TouchableOpacity>
           )}
         </View>
+      </View>
+
+      <View style={styles.companionWrap}>
+        <CivicCompanionCard
+          tone={companion.tone}
+          title={companion.title}
+          body={companion.body}
+          bullets={companion.bullets}
+          compact
+        />
       </View>
 
       <FlatList
@@ -204,6 +258,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     marginTop: 16,
+  },
+  companionWrap: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
   badgePill: {
     backgroundColor: BRAND.colors.canopyDeep,

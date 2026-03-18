@@ -14,6 +14,7 @@ import { RouteProp, useRoute } from '@react-navigation/native';
 import { incidentsApi, commentsApi, Incident, Comment } from '../services/api';
 import { StatusBadge, COLORS, STATUS_LABELS, STATUS_COLORS } from '../components/ui';
 import { CategoryMark } from '../components/CategoryMark';
+import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { VoteButton } from '../components/VoteButton';
 import { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../services/AuthContext';
@@ -96,6 +97,68 @@ function getRecommendedStaffAction(incident: Incident, isAssignedToMe: boolean) 
         cta: 'Préparer une mise à jour',
         status: 'acknowledged' as StaffStatus,
         note: 'Analyse terrain en cours.',
+      };
+  }
+}
+
+function getCitizenStatusCompanion(incident: Incident) {
+  switch (incident.status) {
+    case 'submitted':
+      return {
+        tone: 'thanks' as const,
+        title: `${BRAND.companion.name} a bien transmis votre signalement`,
+        body: 'Le dossier est maintenant depose. La prochaine etape utile est que la commune accuse reception ou qualifie la prise en charge.',
+        bullets: [
+          'surveiller le passage en prise en compte',
+          'ajouter une precision si le terrain evolue',
+        ],
+      };
+    case 'acknowledged':
+      return {
+        tone: 'status' as const,
+        title: `${BRAND.companion.name} vous confirme la prise en compte`,
+        body: 'La commune a reconnu le dossier. Il entre maintenant dans une phase ou le suivi doit devenir plus concret et plus visible.',
+        bullets: [
+          'verifier si un commentaire agent apparait',
+          'surveiller le passage en cours',
+        ],
+      };
+    case 'in_progress':
+      return {
+        tone: 'status' as const,
+        title: `${BRAND.companion.name} voit un traitement en cours`,
+        body: 'Une action est en train de se construire. Le plus important ici est de garder la trace de ce qui a deja ete fait et de ce qui reste a valider.',
+        bullets: [
+          'lire les derniers commentaires',
+          'revenir verifier la validation finale',
+        ],
+      };
+    case 'resolved':
+      return {
+        tone: 'uplift' as const,
+        title: `${BRAND.companion.name} vous remercie pour cette vigilance utile`,
+        body: 'Le dossier est marque comme resolu. Ce suivi sert maintenant de preuve de reponse locale, pas seulement d archive.',
+        bullets: [
+          'verifier que le resultat correspond bien au terrain',
+          'signaler a nouveau si le probleme reapparait',
+        ],
+      };
+    case 'rejected':
+      return {
+        tone: 'guide' as const,
+        title: `${BRAND.companion.name} vous aide a lire ce classement`,
+        body: 'Le dossier a ete classe sans suite. Si un element manque ou si la situation change, vous pouvez ajouter une precision ou refaire un signalement plus documente.',
+        bullets: [
+          'relire le motif dans l historique',
+          'ajouter une precision utile si besoin',
+        ],
+      };
+    default:
+      return {
+        tone: 'guide' as const,
+        title: `${BRAND.companion.name} suit ce dossier avec vous`,
+        body: 'Cet espace sert a lire clairement l etat du dossier et la prochaine etape utile.',
+        bullets: [],
       };
   }
 }
@@ -213,6 +276,7 @@ export default function IncidentDetailScreen() {
   const publicComments = comments.filter(c => !c.is_internal);
   const staffRoleLabel = user?.role === 'admin' ? 'Administrateur' : 'Agent municipal';
   const recommendedAction = getRecommendedStaffAction(incident, Boolean(assignToMe));
+  const citizenCompanion = getCitizenStatusCompanion(incident);
 
   const applyRecommendedAction = () => {
     setStaffStatus(recommendedAction.status);
@@ -253,6 +317,18 @@ export default function IncidentDetailScreen() {
             Ce dossier documente un besoin concret du territoire, son état d’avancement et les échanges utiles entre habitants et commune.
           </Text>
         </View>
+
+        {!isStaff && (
+          <View style={styles.companionWrap}>
+            <CivicCompanionCard
+              tone={citizenCompanion.tone}
+              title={citizenCompanion.title}
+              body={citizenCompanion.body}
+              bullets={citizenCompanion.bullets}
+              compact
+            />
+          </View>
+        )}
 
         <View style={styles.card}>
           <View style={styles.refRow}>
@@ -558,6 +634,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     marginTop: 10,
+  },
+  companionWrap: {
+    marginHorizontal: 16,
+    marginTop: 16,
   },
 
   photoSection: { backgroundColor: COLORS.primaryDark, marginTop: 16 },
