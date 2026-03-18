@@ -171,9 +171,8 @@ export default function ServerConfigScreen({ onConfigured, isFirstLaunch = true 
           <Text style={styles.sectionTitle}>Exemples d'URL</Text>
           {[
             { label: 'Débogage USB local', url: 'http://127.0.0.1:8080/api' },
-            { label: 'API production', url: 'https://api.macommune.netetfix.com/api' },
+            { label: 'API production', url: 'https://api.netetfix.com/api' },
             { label: 'Serveur local en Wi-Fi', url: 'http://192.168.1.100:8080/api' },
-            { label: 'API de préproduction', url: 'https://preprod.macommune.netetfix.com/api' },
           ].map((ex) => (
             <TouchableOpacity
               key={ex.url}
@@ -191,6 +190,9 @@ export default function ServerConfigScreen({ onConfigured, isFirstLaunch = true 
               <Text style={styles.exampleArrow}>→</Text>
             </TouchableOpacity>
           ))}
+          <Text style={styles.hint}>
+            Back-office web : <Text style={styles.code}>https://admin.netetfix.com/admin/?page=login</Text>
+          </Text>
         </View>
 
         {/* Bouton Enregistrer */}

@@ -103,6 +103,7 @@ Le bon positionnement est :
 - `backend/` : API REST PHP/MySQL, auth, incidents, commentaires, notifications, supervision
 - `mobile/` : application React Native / Expo
 - `admin/` : back-office web responsive
+- `site/` : page de garde publique servie sur le domaine racine
 - `docs/` : cadrage produit, reprise, checklists et audit
 - `docs/CREDENTIALS_DEMO_MA_COMMUNE_2026-03-18.md` : comptes locaux de demonstration
 - `docs/MODE_OPERATOIRE_DEMO_MA_COMMUNE_2026-03-18.md` : deroule recommande de demonstration

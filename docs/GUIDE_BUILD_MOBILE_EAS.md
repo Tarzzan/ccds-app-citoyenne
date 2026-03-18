@@ -82,7 +82,7 @@ Avant de builder, vérifier et compléter le fichier `mobile/app.json` :
       ["expo-location", { "locationAlwaysAndWhenInUsePermission": "Ma Commune utilise votre position pour localiser vos signalements." }]
     ],
     "extra": {
-      "API_BASE_URL": "https://api.macommune.netetfix.com/api",
+      "API_BASE_URL": "https://api.netetfix.com/api",
       "APP_TERRITORY": "Kourou",
       "APP_REGION": "Guyane Française",
       "eas": {
@@ -100,7 +100,7 @@ cd mobile/
 
 # Créer le fichier .env.production
 cat > .env.production << EOF
-EXPO_PUBLIC_API_URL=https://api.macommune.netetfix.com/api
+EXPO_PUBLIC_API_URL=https://api.netetfix.com/api
 APP_ENV=production
 EOF
 ```
@@ -130,7 +130,7 @@ Créer `mobile/eas.json` :
       "ios": { "simulator": false },
       "android": { "buildType": "apk" },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.macommune.netetfix.com/api"
+        "EXPO_PUBLIC_API_URL": "https://api.netetfix.com/api"
       }
     },
     "production": {
@@ -138,7 +138,7 @@ Créer `mobile/eas.json` :
       "ios": { "buildConfiguration": "Release" },
       "android": { "buildType": "app-bundle" },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.macommune.netetfix.com/api"
+        "EXPO_PUBLIC_API_URL": "https://api.netetfix.com/api"
       }
     }
   },

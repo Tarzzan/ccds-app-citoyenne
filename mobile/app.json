@@ -55,7 +55,7 @@
     ],
     "scheme": "macommune",
     "extra": {
-      "API_BASE_URL": "https://api.macommune.netetfix.com/api",
+      "API_BASE_URL": "https://api.netetfix.com/api",
       "APP_TERRITORY": "Kourou",
       "APP_REGION": "Guyane Fran\u00e7aise",
       "eas": {
