@@ -18,6 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { incidentsApi, Incident } from '../services/api';
 import { CategoryMark } from '../components/CategoryMark';
+import { CivicCompanionStage } from '../components/CivicCompanionStage';
 import { AppStackParamList } from '../navigation/RootNavigator';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
@@ -89,6 +90,14 @@ export default function MapScreen() {
       ),
     [incidents]
   );
+  const openIncidents = useMemo(
+    () => geolocatedIncidents.filter((incident) => !['resolved', 'rejected'].includes(incident.status)),
+    [geolocatedIncidents]
+  );
+  const resolvedIncidents = useMemo(
+    () => geolocatedIncidents.filter((incident) => incident.status === 'resolved'),
+    [geolocatedIncidents]
+  );
 
   const selectedIncident =
     geolocatedIncidents.find((incident) => incident.id === selectedIncidentId) ??
@@ -151,11 +160,34 @@ export default function MapScreen() {
           </Text>
         </View>
 
+        <View style={styles.stageWrap}>
+          <CivicCompanionStage
+            eyebrow="Awa · Lecture territoire"
+            title="Voir ou la vigilance doit produire une reponse."
+            body="La carte ne sert pas a collectionner des points. Elle sert a rendre visibles les zones a surveiller, les dossiers encore ouverts et les signaux deja traites."
+            aside="Commencez par le point mis en avant, puis descendez vers les autres reperes."
+          />
+        </View>
+
         <View style={styles.missionCard}>
           <Text style={styles.missionTitle}>Voir, situer, agir</Text>
           <Text style={styles.missionText}>
             La lecture géographique aide à repérer les zones où la vigilance citoyenne doit produire une réponse publique.
           </Text>
+          <View style={styles.missionStats}>
+            <View style={styles.missionStat}>
+              <Text style={styles.missionStatValue}>{geolocatedIncidents.length}</Text>
+              <Text style={styles.missionStatLabel}>reperes visibles</Text>
+            </View>
+            <View style={styles.missionStat}>
+              <Text style={styles.missionStatValue}>{openIncidents.length}</Text>
+              <Text style={styles.missionStatLabel}>encore ouverts</Text>
+            </View>
+            <View style={styles.missionStat}>
+              <Text style={styles.missionStatValue}>{resolvedIncidents.length}</Text>
+              <Text style={styles.missionStatLabel}>deja resolus</Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.mapCard}>
@@ -415,6 +447,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     maxWidth: 310,
   },
+  stageWrap: {
+    marginHorizontal: 16,
+    marginBottom: 14,
+  },
   missionCard: {
     marginHorizontal: 16,
     marginTop: 6,
@@ -436,6 +472,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#355248',
     lineHeight: 21,
+  },
+  missionStats: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+  missionStat: {
+    flex: 1,
+    borderRadius: 16,
+    backgroundColor: '#FFFDF8',
+    borderWidth: 1,
+    borderColor: '#E7DDCD',
+    padding: 12,
+  },
+  missionStatValue: {
+    color: BRAND.colors.canopyDeep,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  missionStatLabel: {
+    marginTop: 4,
+    color: BRAND.colors.slate,
+    fontSize: 11,
+    lineHeight: 15,
   },
   mapCard: {
     marginHorizontal: 16,
