@@ -2,7 +2,7 @@
 /**
  * Ma Commune v1.2 — Gestion des catégories (ADMIN-02)
  * CRUD complet : liste, création, modification, activation/désactivation, suppression.
- * Nouvelles colonnes : icône emoji, votes totaux, édition inline.
+ * Nouvelles colonnes : univers visuel, votes totaux, édition inline.
  */
 require_once __DIR__ . '/../includes/bootstrap.php';
 $admin      = require_admin_auth();
@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Créer une catégorie
     if ($action === 'create') {
         $name    = trim($_POST['name']    ?? '');
-        $icon    = trim($_POST['icon']    ?? '📌');
+        $icon    = trim($_POST['icon']    ?? 'road');
         $color   = trim($_POST['color']   ?? '#1d4ed8');
         $service = trim($_POST['service'] ?? '');
 
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif ($action === 'update') {
         $id      = (int)($_POST['id']      ?? 0);
         $name    = trim($_POST['name']     ?? '');
-        $icon    = trim($_POST['icon']     ?? '📌');
+        $icon    = trim($_POST['icon']     ?? 'road');
         $color   = trim($_POST['color']    ?? '#1d4ed8');
         $service = trim($_POST['service']  ?? '');
 
@@ -107,6 +107,11 @@ if ($edit_id) {
     }
 }
 
+$visual_catalog  = category_visuals_catalog();
+$selected_visual = category_visual_resolve($edit_cat['icon'] ?? 'road', $edit_cat['name'] ?? '');
+$default_icon    = $selected_visual['key'] ?? ($edit_cat['icon'] ?? 'road');
+$default_color   = $edit_cat['color'] ?? ($selected_visual['accent'] ?? '#1d4ed8');
+
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
@@ -132,7 +137,7 @@ require_once __DIR__ . '/../includes/layout.php';
       <table>
         <thead>
           <tr>
-            <th style="width:50px">Icône</th>
+            <th style="width:64px">Repère</th>
             <th>Nom</th>
             <th>Service</th>
             <th>Couleur</th>
@@ -145,7 +150,7 @@ require_once __DIR__ . '/../includes/layout.php';
         <tbody>
           <?php foreach ($categories as $cat): ?>
           <tr style="<?= !(bool)$cat['is_active'] ? 'opacity:.45' : '' ?>">
-            <td style="font-size:24px;text-align:center"><?= e($cat['icon'] ?? '📌') ?></td>
+            <td style="text-align:center"><?= category_visual_html($cat['icon'] ?? 'road', $cat['name'], 'md', $cat['color'] ?? null) ?></td>
             <td>
               <span style="font-weight:700;font-size:14px"><?= e($cat['name']) ?></span>
             </td>
@@ -236,32 +241,90 @@ require_once __DIR__ . '/../includes/layout.php';
       </div>
 
       <div class="form-group">
-        <label class="form-label">Icône (emoji)</label>
-        <input type="text" name="icon" class="form-control"
-               value="<?= e($edit_cat['icon'] ?? '📌') ?>"
-               placeholder="Ex: 🛣️ 💡 🌳 🚰"
-               maxlength="10"
-               style="font-size:22px;text-align:center;letter-spacing:4px">
-        <div class="text-muted text-small" style="margin-top:4px">Copiez un emoji depuis votre clavier ou <a href="https://emojipedia.org" target="_blank">emojipedia.org</a></div>
+        <label class="form-label">Univers visuel</label>
+        <input type="hidden" name="icon" id="categoryIconInput" value="<?= e($default_icon) ?>">
+        <div class="category-preset-grid">
+          <?php foreach ($visual_catalog as $visual): ?>
+            <?php $is_selected = ($default_icon === ($visual['key'] ?? '')); ?>
+            <label
+              class="category-preset<?= $is_selected ? ' is-selected' : '' ?>"
+              data-category-key="<?= e($visual['key'] ?? '') ?>"
+              data-category-color="<?= e($visual['accent'] ?? '#1d4ed8') ?>"
+            >
+              <input type="radio" name="category_icon_preview" value="<?= e($visual['key'] ?? '') ?>" <?= $is_selected ? 'checked' : '' ?>>
+              <div class="category-preset-top">
+                <?= category_visual_html($visual['key'] ?? 'road', $visual['label'] ?? '', 'lg', $visual['accent'] ?? null) ?>
+                <span class="category-preset-dot" style="background:<?= e($visual['accent'] ?? '#1d4ed8') ?>"></span>
+              </div>
+              <div class="category-preset-title"><?= e($visual['label'] ?? '') ?></div>
+              <div class="category-preset-text"><?= e($visual['description'] ?? '') ?></div>
+            </label>
+          <?php endforeach; ?>
+        </div>
+        <div class="text-muted text-small" style="margin-top:6px">Chaque catégorie dispose maintenant d’un pictogramme premium cohérent entre mobile, back-office et administration.</div>
       </div>
 
       <div class="form-group">
         <label class="form-label">Couleur d'identification</label>
         <div style="display:flex;gap:8px;align-items:center">
           <input type="color" name="color" id="colorPicker"
-                 value="<?= e($edit_cat['color'] ?? '#1d4ed8') ?>"
+                 value="<?= e($default_color) ?>"
                  style="width:48px;height:40px;border:none;cursor:pointer;border-radius:8px;padding:2px">
           <input type="text" id="colorHexInput" class="form-control"
-                 value="<?= e($edit_cat['color'] ?? '#1d4ed8') ?>"
+                 value="<?= e($default_color) ?>"
                  placeholder="#1d4ed8" maxlength="7" style="flex:1;font-family:monospace">
         </div>
         <script>
-          const picker = document.getElementById('colorPicker');
-          const hexIn  = document.getElementById('colorHexInput');
-          picker.addEventListener('input', () => hexIn.value = picker.value);
-          hexIn.addEventListener('input', () => { if (/^#[0-9a-fA-F]{6}$/.test(hexIn.value)) picker.value = hexIn.value; });
-          // Synchroniser le champ caché
-          hexIn.addEventListener('change', () => { picker.name = ''; hexIn.name = 'color'; });
+          (() => {
+            const picker = document.getElementById('colorPicker');
+            const hexIn = document.getElementById('colorHexInput');
+            const iconInput = document.getElementById('categoryIconInput');
+            const presets = Array.from(document.querySelectorAll('.category-preset'));
+
+            if (!picker || !hexIn || !iconInput) {
+              return;
+            }
+
+            const syncColorFieldNames = () => {
+              picker.name = '';
+              hexIn.name = 'color';
+            };
+
+            picker.addEventListener('input', () => {
+              hexIn.value = picker.value;
+              syncColorFieldNames();
+            });
+
+            hexIn.addEventListener('input', () => {
+              if (/^#[0-9a-fA-F]{6}$/.test(hexIn.value)) {
+                picker.value = hexIn.value;
+              }
+            });
+
+            hexIn.addEventListener('change', syncColorFieldNames);
+
+            presets.forEach((preset) => {
+              preset.addEventListener('click', () => {
+                const key = preset.getAttribute('data-category-key') || 'road';
+                const color = preset.getAttribute('data-category-color') || picker.value;
+
+                iconInput.value = key;
+                picker.value = color;
+                hexIn.value = color;
+                syncColorFieldNames();
+
+                presets.forEach((entry) => entry.classList.remove('is-selected'));
+                preset.classList.add('is-selected');
+
+                const radio = preset.querySelector('input[type="radio"]');
+                if (radio) {
+                  radio.checked = true;
+                }
+              });
+            });
+
+            syncColorFieldNames();
+          })();
         </script>
       </div>
 
@@ -273,7 +336,7 @@ require_once __DIR__ . '/../includes/layout.php';
       </div>
 
       <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px">
-        <?= $edit_cat ? '💾 Enregistrer les modifications' : '➕ Créer la catégorie' ?>
+        <?= $edit_cat ? '💾 Enregistrer les modifications' : '➕ Créer la catégorie premium' ?>
       </button>
     </form>
   </div>

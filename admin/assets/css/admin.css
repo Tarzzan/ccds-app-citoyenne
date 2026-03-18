@@ -43,6 +43,79 @@ a { color: var(--primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
 img { max-width: 100%; }
 
+.category-mark {
+  --category-accent: #174b3a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--category-accent) 12%, #fff);
+  border: 1px solid color-mix(in srgb, var(--category-accent) 26%, #fff);
+  box-shadow: 0 10px 24px rgba(14,49,39,.08);
+  overflow: hidden;
+}
+.category-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.category-mark--sm { width: 40px; height: 40px; border-radius: 13px; }
+.category-mark--md { width: 52px; height: 52px; border-radius: 16px; }
+.category-mark--lg { width: 68px; height: 68px; border-radius: 22px; }
+
+.category-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.category-preset {
+  position: relative;
+  border: 1px solid #e6decf;
+  border-radius: 18px;
+  padding: 12px;
+  background: #fffdf8;
+  cursor: pointer;
+  transition: border-color .15s, transform .15s, box-shadow .15s, background .15s;
+}
+.category-preset:hover {
+  border-color: var(--primary);
+  box-shadow: 0 12px 26px rgba(14,49,39,.08);
+  transform: translateY(-1px);
+}
+.category-preset.is-selected {
+  border-color: var(--primary);
+  background: #f7fbf9;
+  box-shadow: 0 14px 28px rgba(23,75,58,.12);
+}
+.category-preset input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.category-preset-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.category-preset-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+.category-preset-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--gray-800);
+  margin-bottom: 4px;
+}
+.category-preset-text {
+  font-size: 12px;
+  color: var(--gray-600);
+  line-height: 1.45;
+}
+
 /* --- Layout ------------------------------------------------ */
 .layout { display: flex; min-height: 100vh; }
 

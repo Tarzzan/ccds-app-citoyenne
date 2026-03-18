@@ -13,6 +13,7 @@ import { RouteProp, useRoute } from '@react-navigation/native';
 
 import { incidentsApi, commentsApi, Incident, Comment } from '../services/api';
 import { StatusBadge, COLORS, STATUS_LABELS, STATUS_COLORS } from '../components/ui';
+import { CategoryMark } from '../components/CategoryMark';
 import { VoteButton } from '../components/VoteButton';
 import { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../services/AuthContext';
@@ -260,6 +261,12 @@ export default function IncidentDetailScreen() {
           </View>
 
           <View style={[styles.categoryTag, { backgroundColor: incident.category_color + '22' }]}>
+            <CategoryMark
+              icon={incident.category_icon}
+              name={incident.category_name}
+              color={incident.category_color}
+              size={38}
+            />
             <Text style={[styles.categoryTagText, { color: incident.category_color }]}>
               {incident.category_name}
             </Text>
@@ -584,9 +591,12 @@ const styles = StyleSheet.create({
   categoryTag: {
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
     marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   categoryTagText: { fontSize: 13, fontWeight: '600' },
   metaChipsRow: {

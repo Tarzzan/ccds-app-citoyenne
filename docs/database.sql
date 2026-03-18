@@ -148,14 +148,14 @@ CREATE TABLE IF NOT EXISTS `status_history` (
 
 -- Catégories par défaut
 INSERT INTO `categories` (`name`, `slug`, `icon`, `color`, `description`, `sort_order`) VALUES
-('Voirie & Chaussée',    'voirie',         'road',          '#ef4444', 'Nids-de-poule, affaissements, fissures sur la chaussée.',         1),
-('Éclairage Public',     'eclairage',      'lightbulb',     '#f59e0b', 'Luminaires en panne, câbles apparents, ampoules à remplacer.',    2),
-('Espaces Verts',        'espaces-verts',  'tree',          '#22c55e', 'Végétation non entretenue, arbres dangereux, pelouses.',          3),
-('Propreté & Déchets',   'proprete',       'trash',         '#8b5cf6', 'Dépôts sauvages, poubelles débordantes, tags et graffitis.',      4),
-('Mobilier Urbain',      'mobilier',       'bench',         '#06b6d4', 'Bancs, abribus, panneaux, barrières endommagés.',                 5),
-('Réseaux & Inondations','reseaux',        'droplets',      '#3b82f6', 'Inondations, bouches d\'égout bouchées, fuites d\'eau.',          6),
-('Signalisation',        'signalisation',  'triangle-alert','#f97316', 'Panneaux manquants, marquages au sol effacés, feux défaillants.', 7),
-('Bâtiments Communaux',  'batiments',      'building-2',    '#6b7280', 'Dégradations sur les bâtiments et équipements municipaux.',      8);
+('Voirie & Chaussée',    'voirie',         'road',          '#D96B2B', 'Nids-de-poule, affaissements, fissures sur la chaussée.',         1),
+('Éclairage Public',     'eclairage',      'lightbulb',     '#D9A22E', 'Luminaires en panne, câbles apparents, ampoules à remplacer.',    2),
+('Espaces Verts',        'espaces-verts',  'tree',          '#2E8B57', 'Végétation non entretenue, arbres dangereux, pelouses.',          3),
+('Propreté & Déchets',   'proprete',       'trash',         '#7C4FD9', 'Dépôts sauvages, poubelles débordantes, tags et graffitis.',      4),
+('Mobilier Urbain',      'mobilier',       'bench',         '#287C96', 'Bancs, abribus, panneaux, barrières endommagés.',                 5),
+('Réseaux & Inondations','reseaux',        'droplets',      '#2676D2', 'Inondations, bouches d\'égout bouchées, fuites d\'eau.',          6),
+('Signalisation',        'signalisation',  'triangle-alert','#E07A22', 'Panneaux manquants, marquages au sol effacés, feux défaillants.', 7),
+('Bâtiments Communaux',  'batiments',      'building-2',    '#5A6F7F', 'Dégradations sur les bâtiments et équipements municipaux.',      8);
 
 -- Compte administrateur par défaut (mot de passe : Admin@MaCommune2026! — à changer impérativement)
 -- Hash bcrypt généré pour 'Admin@MaCommune2026!'

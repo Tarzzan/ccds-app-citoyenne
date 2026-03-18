@@ -247,7 +247,7 @@ require_once __DIR__ . '/../includes/layout.php';
     <div class="search-section-title">📍 Signalements <span class="search-section-count"><?= count($results['incidents']) ?></span></div>
     <?php foreach ($results['incidents'] as $incident): ?>
       <a href="/admin/?page=incident_detail&id=<?= $incident['id'] ?>" class="result-card">
-        <div class="result-icon" style="background:#dce6ea"><?= e($incident['category_icon']) ?></div>
+        <?= category_visual_html($incident['category_icon'] ?? 'road', $incident['category_name'], 'sm') ?>
         <div class="result-main">
           <div class="result-title"><?= e($incident['reference']) ?> — <?= e($incident['title'] ?: 'Sans titre') ?></div>
           <div class="result-sub"><?= e($incident['category_name']) ?> · <?= e($incident['reporter_name']) ?> · <?= format_date_short($incident['created_at']) ?></div>
@@ -283,7 +283,7 @@ require_once __DIR__ . '/../includes/layout.php';
     <div class="search-section-title">🏷️ Catégories <span class="search-section-count"><?= count($results['categories']) ?></span></div>
     <?php foreach ($results['categories'] as $category): ?>
       <a href="/admin/?page=categories" class="result-card">
-        <div class="result-icon" style="background:<?= e($category['color']) ?>22"><?= e($category['icon']) ?></div>
+        <?= category_visual_html($category['icon'] ?? 'road', $category['name'], 'sm', $category['color'] ?? null) ?>
         <div class="result-main">
           <div class="result-title"><?= e($category['name']) ?></div>
           <div class="result-sub"><?= (int)$category['incidents_count'] ?> signalement<?= ((int)$category['incidents_count']) > 1 ? 's' : '' ?></div>

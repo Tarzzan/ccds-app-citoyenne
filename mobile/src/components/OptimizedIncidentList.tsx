@@ -19,6 +19,7 @@ import {
   ActivityIndicator,
   ListRenderItemInfo,
 } from 'react-native';
+import { CategoryMark } from './CategoryMark';
 
 const ITEM_HEIGHT = 100; // Hauteur fixe de chaque carte d'incident
 
@@ -83,7 +84,7 @@ const IncidentCard = memo(({ item, onPress }: {
         />
       ) : (
         <View style={[styles.thumbnail, styles.thumbnailPlaceholder]}>
-          <Text style={styles.categoryIcon}>{item.category_icon ?? '📍'}</Text>
+          <CategoryMark icon={item.category_icon} name={item.category_name} size={54} />
         </View>
       )}
 
@@ -202,9 +203,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  categoryIcon: {
-    fontSize: 28,
   },
   content: {
     flex: 1,

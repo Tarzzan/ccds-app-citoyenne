@@ -17,6 +17,7 @@ import MapView, { Marker, Region } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { incidentsApi, Incident } from '../services/api';
+import { CategoryMark } from '../components/CategoryMark';
 import { AppStackParamList } from '../navigation/RootNavigator';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
@@ -278,9 +279,15 @@ export default function MapScreen() {
             </Text>
 
             <View style={styles.featuredFooter}>
-              <Text style={styles.featuredMeta}>
-                {selectedIncident.category_icon || '📌'} {selectedIncident.category_name}
-              </Text>
+              <View style={styles.categoryMeta}>
+                <CategoryMark
+                  icon={selectedIncident.category_icon}
+                  name={selectedIncident.category_name}
+                  color={selectedIncident.category_color}
+                  size={40}
+                />
+                <Text style={styles.featuredMeta}>{selectedIncident.category_name}</Text>
+              </View>
               <Text style={styles.featuredMeta}>
                 👍 {selectedIncident.votes_count ?? 0}
               </Text>
@@ -330,6 +337,15 @@ export default function MapScreen() {
                 📍 {incident.address || 'Adresse non renseignée'}
               </Text>
               <View style={styles.cardFooter}>
+                <View style={styles.categoryMeta}>
+                  <CategoryMark
+                    icon={incident.category_icon}
+                    name={incident.category_name}
+                    color={incident.category_color}
+                    size={34}
+                  />
+                  <Text style={styles.votes}>{incident.category_name}</Text>
+                </View>
                 <View
                   style={[
                     styles.badge,
@@ -348,9 +364,6 @@ export default function MapScreen() {
                     {STATUS_LABELS[incident.status] || incident.status}
                   </Text>
                 </View>
-                <Text style={styles.votes}>
-                  {(incident.category_icon || '📌') + ' ' + incident.category_name}
-                </Text>
               </View>
             </TouchableOpacity>
           ))
@@ -603,7 +616,14 @@ const styles = StyleSheet.create({
     marginTop: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     gap: 12,
+  },
+  categoryMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flexShrink: 1,
   },
   featuredMeta: {
     color: BRAND.colors.slate,
@@ -700,8 +720,8 @@ const styles = StyleSheet.create({
   },
   cardFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 10,
   },
   badge: {
@@ -714,10 +734,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   votes: {
-    flex: 1,
-    textAlign: 'right',
     fontSize: 12,
     color: BRAND.colors.slate,
+    fontWeight: '700',
+    flexShrink: 1,
   },
   fab: {
     marginTop: 8,

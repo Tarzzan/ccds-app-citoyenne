@@ -384,6 +384,7 @@ export default function MyIncidentsScreen() {
           description={item.description}
           status={item.status}
           categoryName={item.category_name}
+          categoryIcon={item.category_icon}
           categoryColor={item.category_color}
           date={item.created_at}
           priority={isStaff ? item.priority : undefined}

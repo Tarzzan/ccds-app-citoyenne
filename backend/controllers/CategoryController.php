@@ -42,7 +42,7 @@ class CategoryController extends BaseController
 
         $this->validate($body, [
             'name'  => 'required|min:2|max:100',
-            'icon'  => 'required|max:10',
+            'icon'  => 'required|max:40',
             'color' => 'required|max:7',
         ]);
 

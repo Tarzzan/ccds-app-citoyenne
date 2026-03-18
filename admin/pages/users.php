@@ -509,11 +509,12 @@ require_once __DIR__ . '/../includes/layout.php';
         <?php if ($userIncidents): ?>
           <table class="user-mini-table">
             <thead>
-              <tr><th>Réf.</th><th>Titre</th><th>Votes</th></tr>
+              <tr><th>Cat.</th><th>Réf.</th><th>Titre</th><th>Votes</th></tr>
             </thead>
             <tbody>
               <?php foreach ($userIncidents as $incident): ?>
                 <tr>
+                  <td><?= category_visual_html($incident['category_icon'] ?? 'road', $incident['category_name'], 'sm') ?></td>
                   <td><a href="/admin/?page=incident_detail&id=<?= $incident['id'] ?>"><?= e($incident['reference']) ?></a></td>
                   <td><?= e(mb_strimwidth($incident['title'] ?: 'Sans titre', 0, 32, '...')) ?></td>
                   <td><?= (int)$incident['votes_count'] ?></td>

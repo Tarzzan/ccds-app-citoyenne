@@ -11,6 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { authApi, Incident, UserStats } from '../services/api';
+import { CategoryMark } from '../components/CategoryMark';
 import { useTheme } from '../theme/ThemeContext';
 import { AppStackParamList } from '../navigation/RootNavigator';
 
@@ -259,9 +260,12 @@ export default function ImpactScreen() {
                 activeOpacity={0.85}
               >
                 <View style={styles.incidentTopRow}>
-                  <Text style={[styles.incidentIcon, { color: theme.textPrimary }]}>
-                    {incident.category_icon || '📍'}
-                  </Text>
+                  <CategoryMark
+                    icon={incident.category_icon}
+                    name={incident.category_name}
+                    color={incident.category_color}
+                    size={42}
+                  />
                   <View style={styles.incidentMain}>
                     <Text style={[styles.incidentTitle, { color: theme.textPrimary }]} numberOfLines={2}>
                       {incident.title}
@@ -470,11 +474,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-  },
-  incidentIcon: {
-    fontSize: 24,
-    width: 28,
-    textAlign: 'center',
   },
   incidentMain: {
     flex: 1,

@@ -15,8 +15,10 @@ import { useNavigation } from '@react-navigation/native';
 import { categoriesApi, incidentsApi, Category } from '../services/api';
 import { Button, Input, COLORS }                 from '../components/ui';
 import { OfflineBanner }                          from '../components/OfflineBanner';
+import { CategoryMark }                           from '../components/CategoryMark';
 import { OfflineQueue }                           from '../services/OfflineQueue';
 import { BRAND, BRAND_SHADOW }                    from '../theme/brand';
+import { resolveCategoryVisual }                  from '../theme/categoryVisuals';
 
 export default function CreateIncidentScreen() {
   const navigation = useNavigation();
@@ -307,20 +309,33 @@ export default function CreateIncidentScreen() {
         </Text>
         {errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
         <View style={styles.categoriesGrid}>
-          {categories.map(cat => (
-            <TouchableOpacity
-              key={cat.id}
-              style={[
-                styles.catChip,
-                categoryId === cat.id && { backgroundColor: cat.color, borderColor: cat.color },
-              ]}
-              onPress={() => setCategoryId(cat.id)}
-            >
-              <Text style={[styles.catChipText, categoryId === cat.id && { color: COLORS.white }]}>
-                {cat.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {categories.map(cat => {
+            const visual = resolveCategoryVisual(cat.icon, cat.name);
+            const isSelected = categoryId === cat.id;
+
+            return (
+              <TouchableOpacity
+                key={cat.id}
+                style={[
+                  styles.categoryCard,
+                  isSelected && { borderColor: visual.accent, backgroundColor: `${visual.accent}14` },
+                ]}
+                onPress={() => setCategoryId(cat.id)}
+                activeOpacity={0.88}
+              >
+                <View style={styles.categoryCardTop}>
+                  <CategoryMark icon={cat.icon} name={cat.name} color={visual.accent} size={62} />
+                  <View style={[styles.categoryPulse, { backgroundColor: `${visual.accent}1F` }]} />
+                </View>
+                <Text style={[styles.categoryCardTitle, isSelected && { color: BRAND.colors.canopyDeep }]}>
+                  {cat.name}
+                </Text>
+                <Text style={styles.categoryCardDescription}>
+                  {visual.description}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Description */}
@@ -473,18 +488,42 @@ const styles = StyleSheet.create({
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 12,
     marginBottom: 16,
   },
-  catChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+  categoryCard: {
+    width: '48%',
+    minWidth: 150,
+    borderRadius: 22,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
+    borderColor: '#E5DECF',
+    backgroundColor: '#FFFDF8',
+    padding: 14,
+    minHeight: 184,
+    ...BRAND_SHADOW,
   },
-  catChipText: { fontSize: 13, fontWeight: '600', color: COLORS.dark },
+  categoryCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  categoryPulse: {
+    width: 14,
+    height: 14,
+    borderRadius: 999,
+  },
+  categoryCardTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: BRAND.colors.ink,
+    marginBottom: 8,
+  },
+  categoryCardDescription: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#52655D',
+  },
 
   locationBox: {
     borderWidth: 1.5,

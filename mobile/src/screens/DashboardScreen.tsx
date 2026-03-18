@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { authApi, incidentsApi, Incident, UserStats } from '../services/api';
+import { CategoryMark } from '../components/CategoryMark';
 import { useAuth } from '../services/AuthContext';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
@@ -417,7 +418,12 @@ export default function DashboardScreen() {
                 onPress={() => navigation.navigate('IncidentDetail', { id: incident.id })}
               >
                 <View style={styles.incidentLeft}>
-                  <Text style={styles.incidentIcon}>{incident.category_icon || '📌'}</Text>
+                  <CategoryMark
+                    icon={incident.category_icon}
+                    name={incident.category_name}
+                    color={incident.category_color}
+                    size={42}
+                  />
                   <View style={styles.incidentInfo}>
                     <Text style={styles.incidentTitle} numberOfLines={1}>{incident.title || 'Signalement citoyen'}</Text>
                     <Text style={styles.incidentRef}>
@@ -460,7 +466,12 @@ export default function DashboardScreen() {
                 onPress={() => navigation.navigate('IncidentDetail', { id: incident.id })}
               >
                 <View style={styles.incidentLeft}>
-                  <Text style={styles.incidentIcon}>{incident.category_icon || '📌'}</Text>
+                  <CategoryMark
+                    icon={incident.category_icon}
+                    name={incident.category_name}
+                    color={incident.category_color}
+                    size={42}
+                  />
                   <View style={styles.incidentInfo}>
                     <Text style={styles.incidentTitle} numberOfLines={1}>{incident.title}</Text>
                     <Text style={styles.incidentRef}>{incident.reference}</Text>
@@ -565,8 +576,7 @@ const styles = StyleSheet.create({
   badgeIcon:      { fontSize: 24, marginBottom: 6 },
   badgeLabel:     { fontSize: 11, color: '#444', textAlign: 'center', fontWeight: '700' },
   incidentRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F2EBDE' },
-  incidentLeft:   { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  incidentIcon:   { fontSize: 24, marginRight: 12 },
+  incidentLeft:   { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
   incidentInfo:   { flex: 1 },
   incidentTitle:  { fontSize: 14, fontWeight: '700', color: '#333' },
   incidentRef:    { fontSize: 11, color: BRAND.colors.slate, marginTop: 2 },

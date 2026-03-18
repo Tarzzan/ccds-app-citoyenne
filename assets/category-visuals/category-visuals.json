@@ -1,0 +1,74 @@
+[
+  {
+    "key": "road",
+    "label": "Voirie & Chaussee",
+    "short_label": "Voirie",
+    "description": "Chaussées lateritiques, nids-de-poule, accotements et affaissements.",
+    "accent": "#D96B2B",
+    "glow": "#F4B46A",
+    "aliases": ["voirie", "voiriechaussee", "chaussée", "chaussee", "road"]
+  },
+  {
+    "key": "lightbulb",
+    "label": "Eclairage Public",
+    "short_label": "Eclairage",
+    "description": "Lampadaires, câbles, armoires et points lumineux défaillants.",
+    "accent": "#D9A22E",
+    "glow": "#F6D47C",
+    "aliases": ["eclairage", "eclairagepublic", "éclairage", "éclairagepublic", "lightbulb"]
+  },
+  {
+    "key": "tree",
+    "label": "Espaces Verts",
+    "short_label": "Espaces verts",
+    "description": "Végétation dense, branches, débroussaillage et entretien des abords.",
+    "accent": "#2E8B57",
+    "glow": "#6FCF97",
+    "aliases": ["espacesverts", "espaces verts", "tree", "vegetation", "végétation"]
+  },
+  {
+    "key": "trash",
+    "label": "Proprete & Dechets",
+    "short_label": "Proprete",
+    "description": "Poubelles, dépôts sauvages, encombrants et propreté du domaine public.",
+    "accent": "#7C4FD9",
+    "glow": "#B69BFF",
+    "aliases": ["proprete", "propreté", "dechets", "déchets", "trash"]
+  },
+  {
+    "key": "bench",
+    "label": "Mobilier Urbain",
+    "short_label": "Mobilier",
+    "description": "Bancs, abribus, barrières et équipements d’usage quotidien.",
+    "accent": "#287C96",
+    "glow": "#73C5DB",
+    "aliases": ["mobilier", "mobilierurbain", "bench"]
+  },
+  {
+    "key": "droplets",
+    "label": "Reseaux & Inondations",
+    "short_label": "Reseaux",
+    "description": "Caniveaux, grilles, ruissellement, fuites et stagnations d’eau.",
+    "accent": "#2676D2",
+    "glow": "#78B3FF",
+    "aliases": ["reseaux", "réseaux", "reseauxinondations", "réseauxinondations", "droplets", "eau", "inondations"]
+  },
+  {
+    "key": "triangle-alert",
+    "label": "Signalisation",
+    "short_label": "Signalisation",
+    "description": "Panneaux, marquages, sécurité routière et alertes de circulation.",
+    "accent": "#E07A22",
+    "glow": "#FFC680",
+    "aliases": ["signalisation", "trianglealert", "triangle-alert", "panneaux"]
+  },
+  {
+    "key": "building-2",
+    "label": "Batiments Communaux",
+    "short_label": "Batiments",
+    "description": "Écoles, mairies annexes, équipements et bâtiments communaux.",
+    "accent": "#5A6F7F",
+    "glow": "#B8C5CF",
+    "aliases": ["batiments", "bâtiments", "batimentscommunaux", "bâtimentscommunaux", "building-2", "batimentspublics", "bâtimentspublics"]
+  }
+]

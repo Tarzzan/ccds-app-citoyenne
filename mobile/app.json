@@ -17,7 +17,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Ma Commune a besoin d'acc\u00e9der \u00e0 votre cam\u00e9ra pour photographier les anomalies \u00e0 signaler.",
         "NSPhotoLibraryUsageDescription": "Ma Commune a besoin d'acc\u00e9der \u00e0 vos photos pour joindre une image \u00e0 votre signalement.",
-        "NSLocationWhenInUseUsageDescription": "Ma Commune utilise votre position pour localiser pr\u00e9cis\u00e9ment les anomalies que vous signalez."
+        "NSLocationWhenInUseUsageDescription": "Ma Commune utilise votre position pour localiser pr\u00e9cis\u00e9ment les anomalies que vous signalez.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "buildNumber": "1"
     },

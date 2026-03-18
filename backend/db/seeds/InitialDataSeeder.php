@@ -14,14 +14,14 @@ class InitialDataSeeder extends AbstractSeed
     {
         // ── Catégories ─────────────────────────────────────────
         $this->table('categories')->insert([
-            ['name' => 'Voirie',              'icon' => '🚧', 'color' => '#F59E0B', 'is_active' => 1],
-            ['name' => 'Éclairage',           'icon' => '💡', 'color' => '#EAB308', 'is_active' => 1],
-            ['name' => 'Eau / Assainissement','icon' => '🌊', 'color' => '#3B82F6', 'is_active' => 1],
-            ['name' => 'Propreté',            'icon' => '🗑️', 'color' => '#10B981', 'is_active' => 1],
-            ['name' => 'Espaces verts',       'icon' => '🌿', 'color' => '#22C55E', 'is_active' => 1],
-            ['name' => 'Sécurité',            'icon' => '🚨', 'color' => '#EF4444', 'is_active' => 1],
-            ['name' => 'Bâtiments publics',   'icon' => '🏛️', 'color' => '#8B5CF6', 'is_active' => 1],
-            ['name' => 'Autre',               'icon' => '📌', 'color' => '#6B7280', 'is_active' => 1],
+            ['name' => 'Voirie & Chaussée',     'icon' => 'road',           'color' => '#D96B2B', 'is_active' => 1],
+            ['name' => 'Éclairage Public',      'icon' => 'lightbulb',      'color' => '#D9A22E', 'is_active' => 1],
+            ['name' => 'Espaces Verts',         'icon' => 'tree',           'color' => '#2E8B57', 'is_active' => 1],
+            ['name' => 'Propreté & Déchets',    'icon' => 'trash',          'color' => '#7C4FD9', 'is_active' => 1],
+            ['name' => 'Mobilier Urbain',       'icon' => 'bench',          'color' => '#287C96', 'is_active' => 1],
+            ['name' => 'Réseaux & Inondations', 'icon' => 'droplets',       'color' => '#2676D2', 'is_active' => 1],
+            ['name' => 'Signalisation',         'icon' => 'triangle-alert', 'color' => '#E07A22', 'is_active' => 1],
+            ['name' => 'Bâtiments Communaux',   'icon' => 'building-2',     'color' => '#5A6F7F', 'is_active' => 1],
         ])->save();
 
         // ── Comptes métier par défaut ──────────────────────────
@@ -44,6 +44,6 @@ class InitialDataSeeder extends AbstractSeed
             ],
         ])->save();
 
-        echo "✅ Données initiales insérées (8 catégories + 1 admin + 1 agent)\n";
+        echo "✅ Données initiales insérées (8 catégories + 2 comptes métier)\n";
     }
 }

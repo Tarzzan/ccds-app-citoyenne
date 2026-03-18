@@ -8,6 +8,7 @@ import {
   StyleSheet, TextInputProps, ViewStyle, TextStyle,
 } from 'react-native';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
+import { CategoryMark } from './CategoryMark';
 
 // ----------------------------------------------------------------
 // Palette de couleurs Ma Commune
@@ -143,6 +144,7 @@ interface IncidentCardProps {
   description: string;
   status: string;
   categoryName: string;
+  categoryIcon?: string;
   categoryColor: string;
   date: string;
   priority?: string;
@@ -152,7 +154,7 @@ interface IncidentCardProps {
 }
 
 export function IncidentCard({
-  reference, title, description, status, categoryName, categoryColor, date, priority, assignedToName, address, onPress,
+  reference, title, description, status, categoryName, categoryIcon, categoryColor, date, priority, assignedToName, address, onPress,
 }: IncidentCardProps) {
   const priorityColor = priority ? (PRIORITY_COLORS[priority] ?? COLORS.gray) : null;
   const priorityLabel = priority ? (PRIORITY_LABELS[priority] ?? priority) : null;
@@ -160,8 +162,10 @@ export function IncidentCard({
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.cardHeader}>
-        <View style={[styles.categoryDot, { backgroundColor: categoryColor }]} />
-        <Text style={styles.categoryLabel}>{categoryName}</Text>
+        <View style={styles.categoryHeader}>
+          <CategoryMark icon={categoryIcon} name={categoryName} color={categoryColor} size={38} />
+          <Text style={styles.categoryLabel}>{categoryName}</Text>
+        </View>
         <StatusBadge status={status} />
       </View>
       <Text style={styles.cardRef}>{reference}</Text>
@@ -254,19 +258,21 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 8,
-    gap: 8,
   },
-  categoryDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    marginRight: 12,
   },
   categoryLabel: {
-    flex: 1,
     fontSize: 13,
     color: COLORS.gray,
-    fontWeight: '500',
+    fontWeight: '600',
+    flexShrink: 1,
   },
   cardRef: {
     fontSize: 12,
