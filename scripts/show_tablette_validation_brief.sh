@@ -67,6 +67,7 @@ printf -- '- checksum bundle: /tmp/ma-commune-latest-livraison-bundle.zip.sha256
 printf -- '- audit final local: /tmp/ma-commune-latest-audit-final-local.md\n'
 printf -- '- index latest: /tmp/ma-commune-latest-livraison-index.md\n'
 printf -- '- brief acces latest: /tmp/ma-commune-latest-access-brief.txt\n'
+printf -- '- controle brief acces latest: /tmp/ma-commune-latest-access-brief-check.log\n'
 printf -- '- alias APK tablette: /tmp/ma-commune-latest-app-release-tablette.apk\n'
 printf '\n'
 printf 'Checklist immediate quand la phase tablette sera autorisee:\n'
