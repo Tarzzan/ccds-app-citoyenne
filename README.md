@@ -129,6 +129,7 @@ Le bon positionnement est :
   Le checksum du zip publie est expose via `/tmp/ma-commune-latest-livraison-bundle.zip.sha256`
 - `scripts/show_latest_livraison_status.sh` : affiche en une commande le statut, les alias stables, les credentials et l alignement `HEAD local vs bundle latest`
 - `scripts/show_latest_access_brief.sh` : affiche directement le brief d acces stable publie dans `/tmp/ma-commune-latest-access-brief.txt` puis rappelle l alignement `HEAD local vs bundle latest`
+  Le bloc de controle inclut aussi l'empreinte SHA-256 du brief commun
 - `scripts/show_tablette_validation_brief.sh` : affiche le brief operateur complet de la future phase tablette depuis le manifeste latest
 - `scripts/publish_latest_handoff.sh` : publie un handoff Markdown stable `/tmp/ma-commune-latest-handoff.md` pour la future phase tablette
   Le brief d acces stable est aussi expose via `/tmp/ma-commune-latest-access-brief.txt`

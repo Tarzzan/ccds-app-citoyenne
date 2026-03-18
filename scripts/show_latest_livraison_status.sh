@@ -27,6 +27,7 @@ require_cmd jq
 }
 
 ACCESS_BRIEF_CHECK_STATUS="$(sed -n '1p' "$ACCESS_BRIEF_CHECK_LOG")"
+ACCESS_BRIEF_SHA="$(sed -n 's/^sha256: //p' "$ACCESS_BRIEF_CHECK_LOG")"
 CURRENT_HEAD="$(git -C "$SCRIPT_DIR/.." rev-parse --short HEAD)"
 LATEST_HEAD="$(jq -r '.project.git.head_commit_short // "inconnu"' "$MANIFEST")"
 LATEST_HEAD_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST")"
@@ -84,6 +85,9 @@ printf -- '- handoff latest: /tmp/ma-commune-latest-handoff.md\n'
 printf -- '- brief acces latest: /tmp/ma-commune-latest-access-brief.txt\n'
 printf -- '- controle brief acces: /tmp/ma-commune-latest-access-brief-check.log\n'
 printf -- '- statut controle brief acces: %s\n' "$ACCESS_BRIEF_CHECK_STATUS"
+if [[ -n "${ACCESS_BRIEF_SHA:-}" ]]; then
+  printf -- '- empreinte brief acces: %s\n' "$ACCESS_BRIEF_SHA"
+fi
 printf -- '- APK tablette: /tmp/ma-commune-latest-app-release-tablette.apk\n'
 printf -- '- ABI tablette: %s\n' "$(jq -r '.artifacts.apk_tablette.abi' "$MANIFEST")"
 printf '\n'

@@ -37,6 +37,11 @@ LATEST_HEAD_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST
 LATEST_UPSTREAM_REF="$(jq -r '.project.git.upstream_ref // ""' "$MANIFEST")"
 LATEST_UPSTREAM_COMMIT="$(jq -r '.project.git.upstream_commit_short // ""' "$MANIFEST")"
 LATEST_WORKTREE_CLEAN="$(jq -r '.project.git.worktree_clean' "$MANIFEST")"
+ACCESS_BRIEF_CHECK_LOG="/tmp/ma-commune-latest-access-brief-check.log"
+ACCESS_BRIEF_SHA=""
+if [[ -f "$ACCESS_BRIEF_CHECK_LOG" ]]; then
+  ACCESS_BRIEF_SHA="$(sed -n 's/^sha256: //p' "$ACCESS_BRIEF_CHECK_LOG")"
+fi
 LAN_IP="$("$SCRIPT_DIR/detect_primary_lan_ip.sh" 2>/dev/null || true)"
 SSH_USER="$(getent passwd 1000 2>/dev/null | cut -d: -f1 || true)"
 
@@ -96,6 +101,9 @@ ${INCIDENTS}
 - manifeste latest : \`/tmp/ma-commune-latest-manifest-livraison-locale.json\`
 - brief acces latest : \`/tmp/ma-commune-latest-access-brief.txt\`
 - controle brief acces latest : \`/tmp/ma-commune-latest-access-brief-check.log\`
+$(if [[ -n "${ACCESS_BRIEF_SHA:-}" ]]; then
+  printf '%s\n' "- empreinte brief acces : \`${ACCESS_BRIEF_SHA}\`"
+fi)
 - APK tablette : \`/tmp/ma-commune-latest-app-release-tablette.apk\`
 - ABI tablette : \`${APK_TABLETTE_ABI}\`
 - APK tablette source : \`${APK_TABLETTE}\`

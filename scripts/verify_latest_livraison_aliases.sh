@@ -185,6 +185,11 @@ grep -q '\[access-brief\] OK' "$ACCESS_BRIEF_LOG_REAL" || {
   exit 1
 }
 
+grep -q '^sha256: ' "$ACCESS_BRIEF_LOG_REAL" || {
+  printf 'ECHEC: log latest du brief acces ne contient pas l empreinte SHA-256\n' >&2
+  exit 1
+}
+
 grep -q 'gate local avant tablette : PASS' "$HANDOFF_REAL" || {
   printf 'ECHEC: handoff latest ne rappelle pas le PASS local\n' >&2
   exit 1
