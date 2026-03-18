@@ -107,6 +107,7 @@ sha256sum "$OUTPUT_ZIP" > "$OUTPUT_ZIP_SHA"
 bash "$ROOT_DIR/scripts/verify_livraison_bundle.sh" "$OUTPUT_ZIP" >/tmp/ma-commune-verify-bundle.log
 bash "$ROOT_DIR/scripts/publish_latest_livraison_aliases.sh" "$OUTPUT_ZIP" "$BUNDLE_DIR" "$OUTPUT_ZIP_SHA" >/tmp/ma-commune-publish-latest.log
 bash "$ROOT_DIR/scripts/verify_latest_livraison_aliases.sh" >/tmp/ma-commune-verify-latest.log
+bash "$ROOT_DIR/scripts/publish_macommune_access_brief.sh" >/tmp/ma-commune-publish-brief.log
 
 printf 'OUTPUT=%s\n' "$OUTPUT_ZIP"
 printf 'DIR=%s\n' "$BUNDLE_DIR"
