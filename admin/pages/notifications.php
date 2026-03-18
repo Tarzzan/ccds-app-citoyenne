@@ -113,6 +113,47 @@ $active_nav = 'notifications';
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
+<div class="page-hero">
+  <div class="page-hero-copy">
+    <div class="page-hero-kicker">Lien citoyen</div>
+    <h2 class="page-hero-title">Parler peu, mais au bon moment.</h2>
+    <p class="page-hero-text">
+      Les notifications doivent remercier, informer ou orienter. Cette surface sert a garder ce canal utile, lisible et non intrusif.
+    </p>
+  </div>
+  <div class="page-hero-metrics">
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$stats['users_with_tokens'] ?></span>
+      <span class="hero-chip-label">appareil(s) joignable(s)</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$stats['total_notifs'] ?></span>
+      <span class="hero-chip-label">notification(s) envoye(e)s</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$stats['unread_notifs'] ?></span>
+      <span class="hero-chip-label">encore non lue(s)</span>
+    </div>
+  </div>
+</div>
+
+<div class="admin-guidance-grid">
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Bonne pratique</div>
+    <h3>Ne notifier que lorsqu il y a une vraie valeur pour l habitant.</h3>
+    <p>
+      Une notification utile explique un changement, un commentaire ou une information municipale importante. Elle n existe pas pour remplir la pile.
+    </p>
+  </div>
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Objectif produit</div>
+    <h3>Transformer l alerte en signe de confiance.</h3>
+    <p>
+      Chaque envoi doit renforcer l impression d une commune attentive, capable de remercier, d expliquer et d orienter sans sur-solliciter.
+    </p>
+  </div>
+</div>
+
 <!-- Statistiques -->
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
   <div class="card" style="text-align:center;padding:20px">

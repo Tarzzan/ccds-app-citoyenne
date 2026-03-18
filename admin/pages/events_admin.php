@@ -144,6 +144,48 @@ $page_title = 'Événements';
 $active_nav = 'events';
 require_once __DIR__ . '/../includes/layout.php';
 ?>
+
+<div class="page-hero">
+  <div class="page-hero-copy">
+    <div class="page-hero-kicker">Vie communale</div>
+    <h2 class="page-hero-title">Donner de la visibilite aux rendez-vous utiles.</h2>
+    <p class="page-hero-text">
+      Cette vue doit permettre a la commune de publier un evenement clair, bien situe et immediatement compréhensible par les habitants.
+    </p>
+  </div>
+  <div class="page-hero-metrics">
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$upcomingCount ?></span>
+      <span class="hero-chip-label">rendez-vous a venir</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$attendeesTotal ?></span>
+      <span class="hero-chip-label">participation(s) annoncee(s)</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)count($events) ?></span>
+      <span class="hero-chip-label">evenement(s) au total</span>
+    </div>
+  </div>
+</div>
+
+<div class="admin-guidance-grid">
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Bonne pratique</div>
+    <h3>Un rendez-vous utile doit etre compris en quelques secondes.</h3>
+    <p>
+      Titre explicite, lieu net, date fiable et description courte suffisent souvent a rendre l information beaucoup plus actionnable pour les habitants.
+    </p>
+  </div>
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Objectif produit</div>
+    <h3>Passer d une annonce brute a une mobilisation lisible.</h3>
+    <p>
+      La valeur de cette surface ne vient pas du volume publie, mais de la clarte des rendez-vous qui comptent vraiment pour la vie communale.
+    </p>
+  </div>
+</div>
+
 <div class="page-header">
     <h1>Événements</h1>
     <span class="badge badge-blue"><?= $upcomingCount ?> à venir</span>

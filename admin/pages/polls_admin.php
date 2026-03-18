@@ -167,6 +167,48 @@ $page_title = 'Sondages';
 $active_nav = 'polls';
 require_once __DIR__ . '/../includes/layout.php';
 ?>
+
+<div class="page-hero">
+  <div class="page-hero-copy">
+    <div class="page-hero-kicker">Concertation citoyenne</div>
+    <h2 class="page-hero-title">Poser une question simple, lire un signal clair.</h2>
+    <p class="page-hero-text">
+      Cette surface doit aider la commune a publier une consultation rapide, compréhensible et exploitable, sans promesse de participation plus complexe que la V1.
+    </p>
+  </div>
+  <div class="page-hero-metrics">
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$activePolls ?></span>
+      <span class="hero-chip-label">consultation(s) active(s)</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$totalVotes ?></span>
+      <span class="hero-chip-label">vote(s) deja exprime(s)</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)count($polls) ?></span>
+      <span class="hero-chip-label">consultation(s) au total</span>
+    </div>
+  </div>
+</div>
+
+<div class="admin-guidance-grid">
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Bonne pratique</div>
+    <h3>Moins d options, plus de lisibilite.</h3>
+    <p>
+      Une question claire, quelques options distinctes et une date de cloture explicite donnent un resultat plus utilisable qu une consultation trop large.
+    </p>
+  </div>
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Objectif produit</div>
+    <h3>Faire remonter un arbitrage, pas ouvrir un debat flou.</h3>
+    <p>
+      La V1 doit aider a prioriser une decision communale rapidement. Le bon usage est de publier, lire un signal net, puis cloturer proprement.
+    </p>
+  </div>
+</div>
+
 <div class="page-header">
     <h1>Consultations citoyennes</h1>
     <span class="badge badge-blue"><?= $activePolls ?> active(s)</span>
