@@ -191,7 +191,7 @@ grep -q '^sha256: ' "$ACCESS_BRIEF_LOG_REAL" || {
 }
 
 ACCESS_BRIEF_SHA="$(sed -n 's/^sha256: //p' "$ACCESS_BRIEF_LOG_REAL")"
-HANDOFF_BRIEF_SHA="$(sed -n 's/^- empreinte brief acces : `\\(.*\\)`/\\1/p' "$HANDOFF_REAL")"
+HANDOFF_BRIEF_SHA="$(sed -n 's/^- empreinte brief acces : `\(.*\)`/\1/p' "$HANDOFF_REAL")"
 
 [[ -n "$ACCESS_BRIEF_SHA" && -n "$HANDOFF_BRIEF_SHA" ]] || {
   printf 'ECHEC: empreinte du brief acces absente du handoff ou du log latest\n' >&2
