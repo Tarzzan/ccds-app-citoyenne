@@ -103,11 +103,11 @@ echo "N'oubliez pas de configurer votre VirtualHost Apache."
 
 Créez un fichier de configuration VirtualHost pour le back-office.
 
-**Fichier :** `/etc/apache2/sites-available/admin.ma-commune.fr.conf`
+**Fichier :** `/etc/apache2/sites-available/admin.macommune.netetfix.com.conf`
 
 ```apache
 <VirtualHost *:80>
-    ServerName admin.ma-commune.fr
+    ServerName admin.macommune.netetfix.com
     DocumentRoot /var/www/ma-commune/admin
 
     <Directory /var/www/ma-commune/admin>
@@ -125,12 +125,12 @@ Créez un fichier de configuration VirtualHost pour le back-office.
 
 ```bash
 # Activer le site et le module rewrite
-sudo a2ensite admin.ma-commune.fr
+sudo a2ensite admin.macommune.netetfix.com
 sudo a2enmod rewrite
 sudo systemctl restart apache2
 
 # Générer le certificat SSL avec Let's Encrypt
-sudo certbot --apache -d admin.ma-commune.fr
+sudo certbot --apache -d admin.macommune.netetfix.com
 ```
 
 Certbot modifiera automatiquement votre configuration pour gérer la redirection HTTPS.
@@ -209,6 +209,6 @@ echo "Mise à jour terminée."
 Avant une mise en production ou une préproduction stable :
 
 - verifier que les comptes techniques de demonstration restent alignes sur `@macommune.local` dans l'environnement cible
-- définir les domaines finaux `api.ma-commune.fr` et `admin.ma-commune.fr` ou leurs équivalents réels
+- définir les domaines finaux `api.macommune.netetfix.com`, `admin.macommune.netetfix.com` et `macommune.netetfix.com`
 - rejouer la validation locale `bash scripts/audit_local_predeploy.sh`
 - prévoir une passe finale sur appareil Android physique avant diffusion terrain

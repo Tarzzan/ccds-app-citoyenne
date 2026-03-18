@@ -24,10 +24,11 @@ const expoConfiguredApiUrl = getAppJsonApiUrl();
 
 export const DEFAULT_SERVER_URL = process.env.EXPO_PUBLIC_API_URL
   ?? expoConfiguredApiUrl
-  ?? 'https://votre-domaine.com/api';
+  ?? 'https://api.macommune.netetfix.com/api';
 export const PLACEHOLDER_SERVER_URLS = new Set([
   'https://votre-domaine.com/api',
   'https://votre-domaine.com/backend',
+  'https://api.macommune.netetfix.com/backend',
 ]);
 
 function normalizeUrl(url: string): string {

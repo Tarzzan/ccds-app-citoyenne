@@ -180,7 +180,7 @@ class TwoFactorController extends BaseController
         // Envoyer l'email
         $subject = '[' . (defined('APP_SHORT_NAME') ? APP_SHORT_NAME : 'MaCommune') . '] Votre code de vérification';
         $message = "Bonjour {$user['full_name']},\n\nVotre code de vérification est : {$code}\n\nCe code expire dans 10 minutes.\n\nSi vous n'avez pas demandé ce code, ignorez cet email.";
-        mail($user['email'], $subject, $message, 'From: ' . (defined('APP_EMAIL_FROM') ? APP_EMAIL_FROM : 'noreply@votre-domaine.com'));
+        mail($user['email'], $subject, $message, 'From: ' . (defined('APP_EMAIL_FROM') ? APP_EMAIL_FROM : 'noreply@macommune.netetfix.com'));
 
         $this->success(['sent' => true, 'expires_in' => 600]);
     }

@@ -37,7 +37,7 @@ class PhotoController extends BaseController
         $stmt->execute([$incidentId]);
         $photos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $base = rtrim($_ENV['APP_URL'] ?? (defined('APP_URL') ? APP_URL : 'https://votre-domaine.com'), '/');
+        $base = rtrim($_ENV['APP_URL'] ?? (defined('APP_URL') ? APP_URL : 'https://api.macommune.netetfix.com'), '/');
         foreach ($photos as &$p) {
             $p['url'] = $base . '/uploads/incidents/' . basename($p['file_path']);
         }
@@ -113,7 +113,7 @@ class PhotoController extends BaseController
         }
         $photoId = (int)$this->db->lastInsertId();
 
-        $base = rtrim($_ENV['APP_URL'] ?? (defined('APP_URL') ? APP_URL : 'https://votre-domaine.com'), '/');
+        $base = rtrim($_ENV['APP_URL'] ?? (defined('APP_URL') ? APP_URL : 'https://api.macommune.netetfix.com'), '/');
         $this->json([
             'success'  => true,
             'photo_id' => $photoId,

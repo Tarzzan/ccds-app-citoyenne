@@ -166,7 +166,7 @@ define('JWT_EXPIRY', 86400); // 24 heures
 
 // Upload
 define('UPLOAD_DIR', '/var/www/ma-commune/backend/uploads/');
-define('UPLOAD_URL', 'https://votre-domaine.fr/uploads/');
+define('UPLOAD_URL', 'https://api.macommune.netetfix.com/uploads/');
 define('MAX_FILE_SIZE', 10 * 1024 * 1024); // 10 Mo
 
 // CORS — Remplacer par le domaine de l'app mobile en production
@@ -199,8 +199,7 @@ sudo nano /etc/apache2/sites-available/ma-commune.conf
 
 ```apache
 <VirtualHost *:80>
-    ServerName votre-domaine.fr
-    ServerAlias www.votre-domaine.fr
+    ServerName api.macommune.netetfix.com
 
     # Redirection HTTPS
     RewriteEngine On
@@ -209,14 +208,13 @@ sudo nano /etc/apache2/sites-available/ma-commune.conf
 </VirtualHost>
 
 <VirtualHost *:443>
-    ServerName votre-domaine.fr
-    ServerAlias www.votre-domaine.fr
+    ServerName api.macommune.netetfix.com
     DocumentRoot /var/www/ma-commune
 
     # SSL (Let's Encrypt — voir section 6)
     SSLEngine on
-    SSLCertificateFile    /etc/letsencrypt/live/votre-domaine.fr/fullchain.pem
-    SSLCertificateKeyFile /etc/letsencrypt/live/votre-domaine.fr/privkey.pem
+    SSLCertificateFile    /etc/letsencrypt/live/api.macommune.netetfix.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/api.macommune.netetfix.com/privkey.pem
 
     # En-têtes de sécurité
     Header always set X-Content-Type-Options "nosniff"
@@ -273,7 +271,7 @@ sudo systemctl reload apache2
 
 ```bash
 sudo apt-get install -y certbot python3-certbot-apache
-sudo certbot --apache -d votre-domaine.fr -d www.votre-domaine.fr
+sudo certbot --apache -d api.macommune.netetfix.com -d admin.macommune.netetfix.com -d macommune.netetfix.com
 
 # Renouvellement automatique (déjà configuré par Certbot)
 sudo certbot renew --dry-run
@@ -349,8 +347,8 @@ find "$BACKUP_DIR" -name "*.tar.gz" -mtime +7 -delete
 
 echo ""
 echo "✅ [Ma Commune Deploy] Déploiement terminé avec succès !"
-echo "   URL API    : https://votre-domaine.fr/api/"
-echo "   URL Admin  : https://votre-domaine.fr/admin/"
+echo "   URL API    : https://api.macommune.netetfix.com/api/"
+echo "   URL Admin  : https://admin.macommune.netetfix.com/admin/"
 ```
 
 ```bash
@@ -368,7 +366,7 @@ Exécuter ces vérifications après chaque déploiement :
 sudo systemctl status apache2
 
 # Tester l'API
-curl -s https://votre-domaine.fr/api/categories | python3 -m json.tool
+curl -s https://api.macommune.netetfix.com/api/categories | python3 -m json.tool
 
 # Vérifier les logs d'erreur
 sudo tail -50 /var/log/apache2/ma-commune_error.log
@@ -406,7 +404,7 @@ Ajouter :
 
 ```bash
 sudo apt-get install -y logwatch
-sudo logwatch --output mail --mailto admin@votre-domaine.fr --detail high
+sudo logwatch --output mail --mailto admin@macommune.netetfix.com --detail high
 ```
 
 ---
