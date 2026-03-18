@@ -12,8 +12,8 @@ Valider rapidement la boucle minimale de service public local :
 
 ## Comptes locaux de reference
 
-- `admin@macommune.local` / `Admin@MaCommune2026!` : Administrateur Ma Commune
-- `agent@macommune.local` / `Agent@MaCommune2026!` : Agent Terrain Ma Commune
+- `admin@macommune.local` / `admin@test.fr` : Administrateur Ma Commune
+- `agent@macommune.local` / `agent@test.fr` : Agent Terrain Ma Commune
 - comptes citoyens de demonstration : generes par `bash scripts/seed_demo_local.sh`
 - mot de passe citoyen seed : `Citoyen@MaCommune2026!`
 
@@ -65,7 +65,7 @@ Ce script verifie localement :
 ## Parcours 3 - Admin Web
 
 1. Ouvrir `http://127.0.0.1:8080/admin/?page=login`
-2. Se connecter avec `admin@macommune.local` / `Admin@MaCommune2026!`
+2. Se connecter avec `admin@macommune.local` / `admin@test.fr`
 3. Verifier le dashboard sur tablette.
 4. Ouvrir le signalement traite par l'agent.
 5. Verifier l'historique de statut et la note.

@@ -5,9 +5,9 @@ BASE_URL="${1:-http://127.0.0.1:8080/api}"
 STAMP="$(date +%s)"
 
 ADMIN_EMAIL="admin@macommune.local"
-ADMIN_PASSWORD="Admin@MaCommune2026!"
+ADMIN_PASSWORD="admin@test.fr"
 AGENT_EMAIL="agent@macommune.local"
-AGENT_PASSWORD="Agent@MaCommune2026!"
+AGENT_PASSWORD="agent@test.fr"
 CITIZEN_PASSWORD="Citoyen@MaCommune2026!"
 
 SUMMARY_FILE="/tmp/ma-commune-demo-seed-${STAMP}.json"

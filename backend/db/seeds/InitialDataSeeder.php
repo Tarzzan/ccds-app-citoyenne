@@ -29,7 +29,7 @@ class InitialDataSeeder extends AbstractSeed
             [
                 'full_name'     => 'Administrateur Ma Commune',
                 'email'         => 'admin@macommune.local',
-                'password_hash' => password_hash('Admin@MaCommune2026!', PASSWORD_DEFAULT),
+                'password_hash' => password_hash('admin@test.fr', PASSWORD_DEFAULT),
                 'role'          => 'admin',
                 'is_active'     => 1,
                 'created_at'    => date('Y-m-d H:i:s'),
@@ -37,7 +37,7 @@ class InitialDataSeeder extends AbstractSeed
             [
                 'full_name'     => 'Agent Terrain Ma Commune',
                 'email'         => 'agent@macommune.local',
-                'password_hash' => password_hash('Agent@MaCommune2026!', PASSWORD_DEFAULT),
+                'password_hash' => password_hash('agent@test.fr', PASSWORD_DEFAULT),
                 'role'          => 'agent',
                 'is_active'     => 1,
                 'created_at'    => date('Y-m-d H:i:s'),

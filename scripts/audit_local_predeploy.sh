@@ -123,13 +123,13 @@ TMPDIR="$(mktemp -d)"
 curl -sS -c "$TMPDIR/cookies.txt" "$ADMIN_LOGIN_URL" >/dev/null
 ADMIN_HEADERS="$(curl -sS -b "$TMPDIR/cookies.txt" -c "$TMPDIR/cookies.txt" -X POST "$ADMIN_LOGIN_URL" \
   -H 'Content-Type: application/x-www-form-urlencoded' \
-  --data 'email=admin@macommune.local&password=Admin@MaCommune2026!' -D - -o /tmp/ma-commune-admin-dashboard.html)"
+  --data 'email=admin@macommune.local&password=admin@test.fr' -D - -o /tmp/ma-commune-admin-dashboard.html)"
 assert_contains "$ADMIN_HEADERS" 'Location: /admin/?page=dashboard' 'redirection dashboard admin'
 printf 'OK admin login\n'
 
 ADMIN_API_LOGIN="$(curl -sS -X POST "$BASE_URL/login" \
   -H 'Content-Type: application/json' \
-  -d '{"email":"admin@macommune.local","password":"Admin@MaCommune2026!"}')"
+  -d '{"email":"admin@macommune.local","password":"admin@test.fr"}')"
 ADMIN_TOKEN="$(printf '%s' "$ADMIN_API_LOGIN" | extract_json_field token)"
 assert_not_empty "$ADMIN_TOKEN" 'token admin API'
 
@@ -163,7 +163,7 @@ assert_contains "$COMMENT" '"success":true' 'comment creation'
 
 AGENT_LOGIN="$(curl -sS -X POST "$BASE_URL/login" \
   -H 'Content-Type: application/json' \
-  -d '{"email":"agent@macommune.local","password":"Agent@MaCommune2026!"}')"
+  -d '{"email":"agent@macommune.local","password":"agent@test.fr"}')"
 AGENT_TOKEN="$(printf '%s' "$AGENT_LOGIN" | extract_json_field token)"
 
 STATUS_UPDATE="$(curl -sS -X PUT "$BASE_URL/incidents/${INCIDENT_ID}" \
@@ -227,7 +227,7 @@ TMPDIR_ADMIN="$(mktemp -d)"
 curl -sS -c "$TMPDIR_ADMIN/cookies.txt" "$ADMIN_LOGIN_URL" >/dev/null
 curl -sS -b "$TMPDIR_ADMIN/cookies.txt" -c "$TMPDIR_ADMIN/cookies.txt" -X POST "$ADMIN_LOGIN_URL" \
   -H 'Content-Type: application/x-www-form-urlencoded' \
-  --data 'email=admin@macommune.local&password=Admin@MaCommune2026!' >/dev/null
+  --data 'email=admin@macommune.local&password=admin@test.fr' >/dev/null
 
 curl -sS -b "$TMPDIR_ADMIN/cookies.txt" -X POST "http://127.0.0.1:8080/admin/?page=incident_detail&id=${INCIDENT_ADMIN_ID}" \
   -H 'Content-Type: application/x-www-form-urlencoded' \
@@ -393,7 +393,7 @@ TMPDIR_COMMUNITY="$(mktemp -d)"
 curl -sS -c "$TMPDIR_COMMUNITY/cookies.txt" "$ADMIN_LOGIN_URL" >/dev/null
 curl -sS -b "$TMPDIR_COMMUNITY/cookies.txt" -c "$TMPDIR_COMMUNITY/cookies.txt" -X POST "$ADMIN_LOGIN_URL" \
   -H 'Content-Type: application/x-www-form-urlencoded' \
-  --data 'email=admin@macommune.local&password=Admin@MaCommune2026!' >/dev/null
+  --data 'email=admin@macommune.local&password=admin@test.fr' >/dev/null
 
 COMMUNITY_CITIZEN="$(curl -sS -X POST "${BASE_URL}/register" \
   -H 'Content-Type: application/json' \

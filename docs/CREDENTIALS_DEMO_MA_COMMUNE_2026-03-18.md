@@ -13,14 +13,14 @@ Ils ne valent pas encore livraison finale sur appareil tant que la phase tablett
 ### Administration
 
 - email : `admin@macommune.local`
-- mot de passe : `Admin@MaCommune2026!`
+- mot de passe : `admin@test.fr`
 - role : `admin`
 - identite visible attendue : `Administrateur Ma Commune`
 
 ### Terrain
 
 - email : `agent@macommune.local`
-- mot de passe : `Agent@MaCommune2026!`
+- mot de passe : `agent@test.fr`
 - role : `agent`
 - identite visible attendue : `Agent Terrain Ma Commune`
 

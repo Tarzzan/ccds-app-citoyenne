@@ -157,9 +157,9 @@ INSERT INTO `categories` (`name`, `slug`, `icon`, `color`, `description`, `sort_
 ('Signalisation',        'signalisation',  'triangle-alert','#E07A22', 'Panneaux manquants, marquages au sol effacés, feux défaillants.', 7),
 ('Bâtiments Communaux',  'batiments',      'building-2',    '#5A6F7F', 'Dégradations sur les bâtiments et équipements municipaux.',      8);
 
--- Compte administrateur par défaut (mot de passe : Admin@MaCommune2026! — à changer impérativement)
--- Hash bcrypt généré pour 'Admin@MaCommune2026!'
+-- Compte administrateur par défaut (mot de passe : admin@test.fr — à changer impérativement)
+-- Hash bcrypt généré pour 'admin@test.fr'
 INSERT INTO `users` (`email`, `password_hash`, `full_name`, `role`) VALUES
-('admin@macommune.local', '$2y$12$sVf4jg9gi7iI4T1C13fNt.pwxlifGxzijAzQb4AdK5YgaVV8RxjbW', 'Administrateur Ma Commune', 'admin');
+('admin@macommune.local', '$2y$12$cSU1MFVZM/eIVG4ytzwwjOnGBFKI9WuCQV9wakNvxafE8S30zJ8mG', 'Administrateur Ma Commune', 'admin');
 
 SET FOREIGN_KEY_CHECKS = 1;

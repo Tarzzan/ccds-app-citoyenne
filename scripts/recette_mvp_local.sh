@@ -33,7 +33,7 @@ REFERENCE="$(printf '%s' "${INCIDENT}" | extract_json_field reference)"
 
 AGENT_LOGIN="$(curl -sS -X POST "${BASE_URL}/login" \
   -H 'Content-Type: application/json' \
-  -d '{"email":"agent@macommune.local","password":"Agent@MaCommune2026!"}')"
+  -d '{"email":"agent@macommune.local","password":"agent@test.fr"}')"
 AGENT_TOKEN="$(printf '%s' "${AGENT_LOGIN}" | extract_json_field token)"
 
 UPDATE="$(curl -sS -X PUT "${BASE_URL}/incidents/${INCIDENT_ID}" \
@@ -43,7 +43,7 @@ UPDATE="$(curl -sS -X PUT "${BASE_URL}/incidents/${INCIDENT_ID}" \
 
 ADMIN_LOGIN="$(curl -sS -X POST "${BASE_URL}/login" \
   -H 'Content-Type: application/json' \
-  -d '{"email":"admin@macommune.local","password":"Admin@MaCommune2026!"}')"
+  -d '{"email":"admin@macommune.local","password":"admin@test.fr"}')"
 ADMIN_TOKEN="$(printf '%s' "${ADMIN_LOGIN}" | extract_json_field token)"
 
 DETAIL="$(curl -sS "${BASE_URL}/incidents/${INCIDENT_ID}" \

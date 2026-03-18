@@ -19,9 +19,9 @@ LOCAL_ADMIN_URL="${LOCAL_ADMIN_URL:-http://192.168.1.55:8080/admin/?page=login}"
 LOCAL_SSH="${LOCAL_SSH:-ssh tarzzan@192.168.1.55}"
 
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@macommune.local}"
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-Admin@MaCommune2026!}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin@test.fr}"
 AGENT_EMAIL="${AGENT_EMAIL:-agent@macommune.local}"
-AGENT_PASSWORD="${AGENT_PASSWORD:-Agent@MaCommune2026!}"
+AGENT_PASSWORD="${AGENT_PASSWORD:-agent@test.fr}"
 CITIZEN_PASSWORD="${CITIZEN_PASSWORD:-Citoyen@MaCommune2026!}"
 
 OUTPUT_FILE="${OUTPUT_FILE:-$BUREAU_DIR/macommune.txt}"
