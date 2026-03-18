@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../services/AuthContext';
+import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { Button, Input, COLORS } from '../components/ui';
 import { AuthStackParamList } from '../navigation/RootNavigator';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
@@ -69,11 +70,24 @@ export default function LoginScreen({ navigation }: Props) {
           </View>
         </View>
 
+        <View style={styles.companionWrap}>
+          <CivicCompanionCard
+            compact
+            tone="guide"
+            title={`${BRAND.companion.name} vous oriente vers la bonne suite`}
+            body="Connectez-vous pour signaler, suivre un dossier ou relire une mise a jour utile sans perdre le fil de la prise en charge."
+            bullets={[
+              'un point d entree simple',
+              'un suivi clair dossier par dossier',
+            ]}
+          />
+        </View>
+
         {/* Formulaire */}
         <View style={styles.form}>
           <Text style={styles.title}>Connexion</Text>
           <Text style={styles.formIntro}>
-            Accédez à votre espace citoyen pour déclarer un problème, suivre son traitement et contribuer à l'entretien du commun.
+            Accedez a votre espace citoyen pour declarer un probleme utile, suivre sa prise en charge et garder une preuve claire de l action communale.
           </Text>
 
           <Input
@@ -217,6 +231,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ECE4D5',
     ...BRAND_SHADOW,
+  },
+  companionWrap: {
+    marginBottom: 18,
   },
   title: {
     fontSize: 22,
