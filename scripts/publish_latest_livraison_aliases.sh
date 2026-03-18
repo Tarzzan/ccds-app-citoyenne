@@ -46,6 +46,8 @@ ACCESS_BRIEF_LOG="$BUNDLE_DIR/artifacts/ma-commune-access-brief-consistency.log"
 CHECKSUMS_FILE="$BUNDLE_DIR/checksums/SHA256SUMS.txt"
 TABLET_APK="$(latest_file "$BUNDLE_DIR"/apk/*.apk)"
 INDEX_MD="/tmp/ma-commune-latest-livraison-index.md"
+LATEST_HEAD="$(jq -r '.project.git.head_commit_short // "inconnu"' "$MANIFEST_JSON")"
+LATEST_HEAD_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST_JSON")"
 
 link_latest "$BUNDLE_ZIP" /tmp/ma-commune-latest-livraison-bundle.zip
 link_latest "$BUNDLE_ZIP_SHA" /tmp/ma-commune-latest-livraison-bundle.zip.sha256
@@ -66,6 +68,9 @@ cat > "$INDEX_MD" <<EOF
 # Latest Livraison Locale - Ma Commune
 
 Date de publication : $(date '+%d/%m/%Y %H:%M:%S')
+
+- commit bundle latest : \`${LATEST_HEAD}\`
+- message bundle latest : ${LATEST_HEAD_SUBJECT}
 
 - bundle zip : \`/tmp/ma-commune-latest-livraison-bundle.zip\`
 - checksum bundle zip : \`/tmp/ma-commune-latest-livraison-bundle.zip.sha256\`

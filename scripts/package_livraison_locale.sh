@@ -34,6 +34,8 @@ SEED_JSON="$(sed -n 's/^- seed demonstration : `\(.*\)`/\1/p' "$AUDIT_MD")"
 BRANDING_LOG="$(sed -n 's/^- branding log : `\(.*\)`/\1/p' "$AUDIT_MD")"
 CATEGORY_VISUALS_LOG="$(sed -n 's/^- category visuals log : `\(.*\)`/\1/p' "$AUDIT_MD")"
 TABLET_APK="$(sed -n 's/^- APK cible tablette [^:]* : `\(.*\)` (.*/\1/p' "$AUDIT_MD")"
+MANIFEST_GIT_HEAD="$(jq -r '.project.git.head_commit_short // "inconnu"' "$MANIFEST_JSON")"
+MANIFEST_GIT_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST_JSON")"
 
 for required_file in "$MANIFEST_JSON" "$GATE_MD" "$PREP_MD" "$SEED_JSON" "$BRANDING_LOG" "$CATEGORY_VISUALS_LOG" "$TABLET_APK"; do
   [[ -n "${required_file:-}" && -f "$required_file" ]] || {
@@ -109,6 +111,8 @@ Date de generation : $(date '+%d/%m/%Y %H:%M:%S')
 - bundle local : PRET
 - validation tablette : NON REALISEE
 - livraison finale appareil : NON AUTORISEE A CE STADE
+- commit embarque : ${MANIFEST_GIT_HEAD}
+- message embarque : ${MANIFEST_GIT_SUBJECT}
 EOF
 
 (

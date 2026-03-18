@@ -63,8 +63,27 @@ done
   exit 1
 }
 
+MANIFEST_PATH="$(find "$BUNDLE_DIR/artifacts" -maxdepth 1 -type f -name 'ma-commune-manifest-livraison-locale-*.json' | head -n1)"
+[[ -n "${MANIFEST_PATH:-}" && -f "$MANIFEST_PATH" ]] || {
+  printf 'ECHEC: manifeste livraison locale absent du bundle\n' >&2
+  exit 1
+}
+
 grep -q '\[access-brief\] OK' "$BUNDLE_DIR/artifacts/ma-commune-access-brief-consistency.log" || {
   printf 'ECHEC: controle du brief acces embarque sans statut OK\n' >&2
+  exit 1
+}
+
+BUNDLE_HEAD="$(jq -r '.project.git.head_commit_short // ""' "$MANIFEST_PATH")"
+BUNDLE_SUBJECT="$(jq -r '.project.git.head_subject // ""' "$MANIFEST_PATH")"
+
+[[ -n "$BUNDLE_HEAD" && -n "$BUNDLE_SUBJECT" ]] || {
+  printf 'ECHEC: identite git absente du manifeste embarque\n' >&2
+  exit 1
+}
+
+grep -q "commit embarque : ${BUNDLE_HEAD}" "$BUNDLE_DIR/README_BUNDLE.md" || {
+  printf 'ECHEC: README_BUNDLE ne rappelle pas le commit embarque\n' >&2
   exit 1
 }
 
