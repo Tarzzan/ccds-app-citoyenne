@@ -190,6 +190,19 @@ grep -q '^sha256: ' "$ACCESS_BRIEF_LOG_REAL" || {
   exit 1
 }
 
+ACCESS_BRIEF_SHA="$(sed -n 's/^sha256: //p' "$ACCESS_BRIEF_LOG_REAL")"
+HANDOFF_BRIEF_SHA="$(sed -n 's/^- empreinte brief acces : `\\(.*\\)`/\\1/p' "$HANDOFF_REAL")"
+
+[[ -n "$ACCESS_BRIEF_SHA" && -n "$HANDOFF_BRIEF_SHA" ]] || {
+  printf 'ECHEC: empreinte du brief acces absente du handoff ou du log latest\n' >&2
+  exit 1
+}
+
+[[ "$ACCESS_BRIEF_SHA" = "$HANDOFF_BRIEF_SHA" ]] || {
+  printf 'ECHEC: empreinte du brief acces incoherente entre handoff et log latest\n' >&2
+  exit 1
+}
+
 grep -q 'gate local avant tablette : PASS' "$HANDOFF_REAL" || {
   printf 'ECHEC: handoff latest ne rappelle pas le PASS local\n' >&2
   exit 1

@@ -3,6 +3,7 @@ set -euo pipefail
 
 MANIFEST="${1:-/tmp/ma-commune-latest-manifest-livraison-locale.json}"
 OUTPUT_MD="${2:-/tmp/ma-commune-latest-handoff.md}"
+ACCESS_BRIEF_CHECK_LOG="${3:-/tmp/ma-commune-latest-access-brief-check.log}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 require_cmd() {
@@ -37,7 +38,6 @@ LATEST_HEAD_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST
 LATEST_UPSTREAM_REF="$(jq -r '.project.git.upstream_ref // ""' "$MANIFEST")"
 LATEST_UPSTREAM_COMMIT="$(jq -r '.project.git.upstream_commit_short // ""' "$MANIFEST")"
 LATEST_WORKTREE_CLEAN="$(jq -r '.project.git.worktree_clean' "$MANIFEST")"
-ACCESS_BRIEF_CHECK_LOG="/tmp/ma-commune-latest-access-brief-check.log"
 ACCESS_BRIEF_SHA=""
 if [[ -f "$ACCESS_BRIEF_CHECK_LOG" ]]; then
   ACCESS_BRIEF_SHA="$(sed -n 's/^sha256: //p' "$ACCESS_BRIEF_CHECK_LOG")"

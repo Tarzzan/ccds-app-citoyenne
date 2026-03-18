@@ -63,11 +63,6 @@ cp "$BRANDING_LOG" "$BUNDLE_DIR/artifacts/"
 cp "$CATEGORY_VISUALS_LOG" "$BUNDLE_DIR/artifacts/"
 cp "$TABLET_APK" "$BUNDLE_DIR/apk/"
 
-bash "$ROOT_DIR/scripts/publish_latest_handoff.sh" \
-  "$MANIFEST_JSON" \
-  "$BUNDLE_DIR/artifacts/ma-commune-handoff-livraison.md" \
-  >/tmp/ma-commune-bundle-handoff.log
-
 MANIFEST_PATH="$MANIFEST_JSON" \
 OUTPUT_FILE="$BUNDLE_DIR/artifacts/macommune.txt" \
 SECONDARY_OUTPUT_FILE="$BUNDLE_DIR/artifacts/macommune.txt" \
@@ -83,6 +78,12 @@ bash "$ROOT_DIR/scripts/verify_access_brief_consistency.sh" \
   "/home/tarzzan/Desktop/macommune.txt" \
   "$BUNDLE_DIR/artifacts/macommune.txt" \
   > "$BUNDLE_DIR/artifacts/ma-commune-access-brief-consistency.log"
+
+bash "$ROOT_DIR/scripts/publish_latest_handoff.sh" \
+  "$MANIFEST_JSON" \
+  "$BUNDLE_DIR/artifacts/ma-commune-handoff-livraison.md" \
+  "$BUNDLE_DIR/artifacts/ma-commune-access-brief-consistency.log" \
+  >/tmp/ma-commune-bundle-handoff.log
 
 cp "$ROOT_DIR/README.md" "$BUNDLE_DIR/docs/"
 cp "$ROOT_DIR/docs/DOSSIER_LIVRAISON_LOCALE_MA_COMMUNE_2026-03-18.md" "$BUNDLE_DIR/docs/"
