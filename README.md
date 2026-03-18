@@ -24,6 +24,7 @@ Voir les documents de cadrage actifs :
 - `docs/MATRICE_READINESS_MA_COMMUNE_2026-03-18.md`
 - `docs/CREDENTIALS_DEMO_MA_COMMUNE_2026-03-18.md`
 - `docs/MODE_OPERATOIRE_DEMO_MA_COMMUNE_2026-03-18.md`
+- `docs/CATEGORIES_VISUELLES_MA_COMMUNE_2026-03-18.md`
 
 ## Documentation Active Vs Archive
 
@@ -38,6 +39,7 @@ Documents actifs a privilegier pour comprendre l'etat reel du produit :
 - `docs/MODE_OPERATOIRE_DEMO_MA_COMMUNE_2026-03-18.md`
 - `docs/RECETTE_MVP_CITOYEN_AGENT_ADMIN_2026-03-18.md`
 - `docs/GUIDE_TESTS_MOBILES.md`
+- `docs/CATEGORIES_VISUELLES_MA_COMMUNE_2026-03-18.md`
 
 Documents historiques a lire comme archives ou matiere de reprise :
 
@@ -127,6 +129,9 @@ Le bon positionnement est :
 - `scripts/show_tablette_validation_brief.sh` : affiche le brief operateur complet de la future phase tablette depuis le manifeste latest
 - `scripts/publish_latest_handoff.sh` : publie un handoff Markdown stable `/tmp/ma-commune-latest-handoff.md` pour la future phase tablette
 - `scripts/show_local_network_access.sh` : affiche l IP LAN reelle de la machine, les URLs reseau du projet et la commande SSH a utiliser
+- `scripts/check_eas_builds.sh` : affiche l etat des builds EAS Android/iOS de reference a partir des IDs courants
+- `scripts/generate_category_icons.py` : regenere la collection d icones categories Guyane pour mobile et admin
+- `assets/category-visuals/index.html` : apercu HTML de la collection visuelle des categories
 
 ## Commandes Utiles
 
@@ -151,6 +156,17 @@ bash scripts/recette_mvp_local.sh
 bash scripts/audit_local_predeploy.sh
 bash scripts/seed_demo_local.sh
 ```
+
+### Branding categories
+
+```bash
+python3 scripts/generate_category_icons.py
+```
+
+Voir aussi :
+
+- `assets/category-visuals/index.html`
+- `docs/CATEGORIES_VISUELLES_MA_COMMUNE_2026-03-18.md`
 
 ### Admin
 

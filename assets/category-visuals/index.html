@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ma Commune · Collection categories Guyane</title>
+  <style>
+    :root {
+      --ink: #173229;
+      --mist: #f4f1e7;
+      --line: #d8d0c2;
+      --card: rgba(255,253,248,.94);
+      --canopy: #174b3a;
+      --awara: #d2a13a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Manrope", system-ui, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top right, rgba(210,161,58,.14), transparent 26%),
+        linear-gradient(180deg, #f7f3ea 0%, var(--mist) 100%);
+    }
+    .wrap {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 40px 24px 56px;
+    }
+    .hero {
+      background: linear-gradient(135deg, #0e3127 0%, #174b3a 54%, #2d6f86 100%);
+      color: #fff;
+      border-radius: 30px;
+      padding: 32px;
+      box-shadow: 0 24px 54px rgba(14,49,39,.18);
+      margin-bottom: 28px;
+    }
+    .hero-kicker {
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: #f2d58c;
+      margin-bottom: 10px;
+    }
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: 40px;
+      line-height: 1.05;
+      font-family: "Merriweather", serif;
+    }
+    .hero p {
+      margin: 0;
+      max-width: 760px;
+      color: rgba(255,255,255,.84);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+    .hero-code {
+      margin-top: 16px;
+      display: inline-block;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.1);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 12px 28px rgba(14,49,39,.08);
+    }
+    .visual {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px 24px 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,0));
+    }
+    .visual img {
+      width: 176px;
+      height: 176px;
+      object-fit: contain;
+      border-radius: 28px;
+      box-shadow: 0 18px 34px rgba(14,49,39,.12);
+    }
+    .content {
+      padding: 0 18px 20px;
+    }
+    .accent {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .title {
+      font-size: 18px;
+      font-weight: 800;
+      margin: 0 0 8px;
+      color: var(--ink);
+    }
+    .text {
+      margin: 0;
+      color: #51605a;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+    .footer {
+      margin-top: 30px;
+      color: #5e6c67;
+      font-size: 13px;
+    }
+    .footer a {
+      color: var(--canopy);
+      font-weight: 700;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="hero-kicker">Collection premium</div>
+      <h1>Catégories terrain inspirées de la Guyane</h1>
+      <p>
+        Cette collection remplace les anciens emojis par une famille cohérente de repères visuels
+        pensée pour le terrain communal: voirie lateritique, éclairage tropical, végétation dense,
+        réseaux d’eau, signalisation et équipements publics.
+      </p>
+      <div class="hero-code">python3 scripts/generate_category_icons.py</div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <div class="visual"><img src="./generated/road.png" alt="Voirie & Chaussée"></div>
+        <div class="content">
+          <h2 class="title"><span class="accent" style="background:#D96B2B"></span>Voirie & Chaussée</h2>
+          <p class="text">Chaussées lateritiques, nids-de-poule, accotements dégradés et affaissements sur les axes du quotidien.</p>
+        </div>
+      </article>
+      <article class="card">
+        <div class="visual"><img src="./generated/lightbulb.png" alt="Éclairage Public"></div>
+        <div class="content">
+          <h2 class="title"><span class="accent" style="background:#D9A22E"></span>Éclairage Public</h2>
+          <p class="text">Lampadaires, lignes, armoires et points lumineux pour sécuriser les abords en soirée.</p>
+        </div>
+      </article>
+      <article class="card">
+        <div class="visual"><img src="./generated/tree.png" alt="Espaces Verts"></div>
+        <div class="content">
+          <h2 class="title"><span class="accent" style="background:#2E8B57"></span>Espaces Verts</h2>
+          <p class="text">Débroussaillage, végétation dense, branches menaçantes et entretien des abords communaux.</p>
+        </div>
+      </article>
+      <article class="card">
+        <div class="visual"><img src="./generated/trash.png" alt="Propreté & Déchets"></div>
+        <div class="content">
+          <h2 class="title"><span class="accent" style="background:#7C4FD9"></span>Propreté & Déchets</h2>
+          <p class="text">Poubelles débordantes, dépôts sauvages, encombrants et hygiène du domaine public.</p>
+        </div>
+      </article>
+      <article class="card">
+        <div class="visual"><img src="./generated/bench.png" alt="Mobilier Urbain"></div>
+        <div class="content">
+          <h2 class="title"><span class="accent" style="background:#287C96"></span>Mobilier Urbain</h2>
+          <p class="text">Bancs, abribus, barrières, assises et équipements visibles du quotidien communal.</p>
+        </div>
+      </article>
+      <article class="card">
+        <div class="visual"><img src="./generated/droplets.png" alt="Réseaux & Inondations"></div>
+        <div class="content">
+          <h2 class="title"><span class="accent" style="background:#2676D2"></span>Réseaux & Inondations</h2>
+          <p class="text">Caniveaux, grilles, ruissellement, stagnations d’eau et dysfonctionnements hydrauliques.</p>
+        </div>
+      </article>
+      <article class="card">
+        <div class="visual"><img src="./generated/triangle-alert.png" alt="Signalisation"></div>
+        <div class="content">
+          <h2 class="title"><span class="accent" style="background:#E07A22"></span>Signalisation</h2>
+          <p class="text">Panneaux, marquages, alertes de circulation et sécurité des déplacements.</p>
+        </div>
+      </article>
+      <article class="card">
+        <div class="visual"><img src="./generated/building-2.png" alt="Bâtiments Communaux"></div>
+        <div class="content">
+          <h2 class="title"><span class="accent" style="background:#5A6F7F"></span>Bâtiments Communaux</h2>
+          <p class="text">Mairie, écoles, équipements publics et sites communaux nécessitant une intervention.</p>
+        </div>
+      </article>
+    </section>
+
+    <p class="footer">
+      Aperçu source dans <a href="./generated/category-visuals-preview.png">category-visuals-preview.png</a>.
+    </p>
+  </div>
+</body>
+</html>
