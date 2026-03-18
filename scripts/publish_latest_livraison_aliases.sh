@@ -45,12 +45,7 @@ BRANDING_LOG="$BUNDLE_DIR/artifacts/ma-commune-prepare-branding.log"
 ACCESS_BRIEF_LOG="$BUNDLE_DIR/artifacts/ma-commune-access-brief-consistency.log"
 CHECKSUMS_FILE="$BUNDLE_DIR/checksums/SHA256SUMS.txt"
 TABLET_APK="$(latest_file "$BUNDLE_DIR"/apk/*.apk)"
-INDEX_MD="/tmp/ma-commune-latest-livraison-index.md"
-LATEST_HEAD="$(jq -r '.project.git.head_commit_short // "inconnu"' "$MANIFEST_JSON")"
-LATEST_HEAD_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST_JSON")"
-LATEST_UPSTREAM_REF="$(jq -r '.project.git.upstream_ref // ""' "$MANIFEST_JSON")"
-LATEST_UPSTREAM_COMMIT="$(jq -r '.project.git.upstream_commit_short // ""' "$MANIFEST_JSON")"
-LATEST_WORKTREE_CLEAN="$(jq -r '.project.git.worktree_clean' "$MANIFEST_JSON")"
+INDEX_MD="$BUNDLE_DIR/artifacts/ma-commune-livraison-index.md"
 
 link_latest "$BUNDLE_ZIP" /tmp/ma-commune-latest-livraison-bundle.zip
 link_latest "$BUNDLE_ZIP_SHA" /tmp/ma-commune-latest-livraison-bundle.zip.sha256
@@ -66,35 +61,6 @@ link_latest "$BRANDING_LOG" /tmp/ma-commune-latest-branding.log
 link_latest "$ACCESS_BRIEF_LOG" /tmp/ma-commune-latest-access-brief-check.log
 link_latest "$CHECKSUMS_FILE" /tmp/ma-commune-latest-checksums.txt
 link_latest "$TABLET_APK" /tmp/ma-commune-latest-app-release-tablette.apk
+link_latest "$INDEX_MD" /tmp/ma-commune-latest-livraison-index.md
 
-cat > "$INDEX_MD" <<EOF
-# Latest Livraison Locale - Ma Commune
-
-Date de publication : $(date '+%d/%m/%Y %H:%M:%S')
-
-- commit bundle latest : \`${LATEST_HEAD}\`
-- message bundle latest : ${LATEST_HEAD_SUBJECT}
-$(if [[ -n "$LATEST_UPSTREAM_REF" ]]; then
-  printf '%s\n' "- upstream bundle latest : \`${LATEST_UPSTREAM_REF}\` (\`${LATEST_UPSTREAM_COMMIT:-inconnu}\`)"
-fi)
-- worktree propre au moment du bundle : \`${LATEST_WORKTREE_CLEAN}\`
-
-- bundle zip : \`/tmp/ma-commune-latest-livraison-bundle.zip\`
-- checksum bundle zip : \`/tmp/ma-commune-latest-livraison-bundle.zip.sha256\`
-- bundle dir : \`/tmp/ma-commune-latest-livraison-bundle\`
-- audit final local : \`/tmp/ma-commune-latest-audit-final-local.md\`
-- manifeste : \`/tmp/ma-commune-latest-manifest-livraison-locale.json\`
-- gate : \`/tmp/ma-commune-latest-gate-avant-tablette.md\`
-- preparation : \`/tmp/ma-commune-latest-preparation-livraison.md\`
-- seed demo : \`/tmp/ma-commune-latest-demo-seed.json\`
-- handoff latest : \`/tmp/ma-commune-latest-handoff.md\`
-- brief acces latest : \`/tmp/ma-commune-latest-access-brief.txt\`
-- branding log : \`/tmp/ma-commune-latest-branding.log\`
-- controle brief acces : \`/tmp/ma-commune-latest-access-brief-check.log\`
-- checksums : \`/tmp/ma-commune-latest-checksums.txt\`
-- APK tablette : \`/tmp/ma-commune-latest-app-release-tablette.apk\`
-
-Ces alias pointent vers le dernier bundle local verifie et pret pour la future phase tablette.
-EOF
-
-printf 'INDEX=%s\n' "$INDEX_MD"
+printf 'INDEX=%s\n' "/tmp/ma-commune-latest-livraison-index.md"

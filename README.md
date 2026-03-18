@@ -124,7 +124,7 @@ Le bon positionnement est :
 - `scripts/verify_livraison_bundle.sh` : verifie l'integrite, la structure et les checksums d'un bundle zip de livraison locale
   Le `README_BUNDLE.md` embarque aussi l'identite Git du lot, l'upstream local et l'etat du worktree, puis le tout est reverifie a l'extraction
 - `scripts/publish_latest_livraison_aliases.sh` : publie des alias stables `/tmp/ma-commune-latest-*` vers les derniers artefacts verifies
-  L'index latest rappelle aussi le commit embarque par le bundle courant, son upstream local et l'etat du worktree
+  L'index latest est maintenant lui-meme embarque dans le bundle, puis publie via alias stable `/tmp`
 - `scripts/verify_latest_livraison_aliases.sh` : controle que les alias `/tmp/ma-commune-latest-*` pointent vers un bundle coherent et encore valide
   Le checksum du zip publie est expose via `/tmp/ma-commune-latest-livraison-bundle.zip.sha256`
 - `scripts/show_latest_livraison_status.sh` : affiche en une commande le statut, les alias stables, les credentials et l alignement `HEAD local vs bundle latest`

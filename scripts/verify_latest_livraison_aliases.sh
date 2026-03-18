@@ -115,6 +115,14 @@ case "$ACCESS_BRIEF_LOG_REAL" in
     ;;
 esac
 
+case "$INDEX_REAL" in
+  "$BUNDLE_DIR_REAL"/*) ;;
+  *)
+    printf 'ECHEC: l index latest ne pointe pas vers le bundle latest\n' >&2
+    exit 1
+    ;;
+esac
+
 [[ -f "$ACCESS_BRIEF_LOG_REAL" ]] || {
   printf 'ECHEC: le log de controle du brief acces latest est introuvable\n' >&2
   exit 1

@@ -53,6 +53,11 @@ done
   exit 1
 }
 
+[[ -f "$BUNDLE_DIR/artifacts/ma-commune-livraison-index.md" ]] || {
+  printf 'ECHEC: index operateur absent du bundle\n' >&2
+  exit 1
+}
+
 [[ -f "$BUNDLE_DIR/artifacts/macommune.txt" ]] || {
   printf 'ECHEC: brief acces macommune absent du bundle\n' >&2
   exit 1
@@ -84,6 +89,11 @@ BUNDLE_SUBJECT="$(jq -r '.project.git.head_subject // ""' "$MANIFEST_PATH")"
 
 grep -q "commit embarque : ${BUNDLE_HEAD}" "$BUNDLE_DIR/README_BUNDLE.md" || {
   printf 'ECHEC: README_BUNDLE ne rappelle pas le commit embarque\n' >&2
+  exit 1
+}
+
+grep -q "commit embarque : \`${BUNDLE_HEAD}\`" "$BUNDLE_DIR/artifacts/ma-commune-livraison-index.md" || {
+  printf 'ECHEC: index operateur embarque ne rappelle pas le commit embarque\n' >&2
   exit 1
 }
 

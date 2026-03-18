@@ -39,6 +39,7 @@ MANIFEST_GIT_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFES
 MANIFEST_GIT_UPSTREAM_REF="$(jq -r '.project.git.upstream_ref // ""' "$MANIFEST_JSON")"
 MANIFEST_GIT_UPSTREAM_SHORT="$(jq -r '.project.git.upstream_commit_short // ""' "$MANIFEST_JSON")"
 MANIFEST_GIT_WORKTREE_CLEAN="$(jq -r '.project.git.worktree_clean' "$MANIFEST_JSON")"
+ACCESS_BRIEF_SHA=""
 
 for required_file in "$MANIFEST_JSON" "$GATE_MD" "$PREP_MD" "$SEED_JSON" "$BRANDING_LOG" "$CATEGORY_VISUALS_LOG" "$TABLET_APK"; do
   [[ -n "${required_file:-}" && -f "$required_file" ]] || {
@@ -79,11 +80,54 @@ bash "$ROOT_DIR/scripts/verify_access_brief_consistency.sh" \
   "$BUNDLE_DIR/artifacts/macommune.txt" \
   > "$BUNDLE_DIR/artifacts/ma-commune-access-brief-consistency.log"
 
+ACCESS_BRIEF_SHA="$(sed -n 's/^sha256: //p' "$BUNDLE_DIR/artifacts/ma-commune-access-brief-consistency.log")"
+
 bash "$ROOT_DIR/scripts/publish_latest_handoff.sh" \
   "$MANIFEST_JSON" \
   "$BUNDLE_DIR/artifacts/ma-commune-handoff-livraison.md" \
   "$BUNDLE_DIR/artifacts/ma-commune-access-brief-consistency.log" \
   >/tmp/ma-commune-bundle-handoff.log
+
+cat > "$BUNDLE_DIR/artifacts/ma-commune-livraison-index.md" <<EOF
+# Livraison Locale - Ma Commune
+
+Date de generation : $(date '+%d/%m/%Y %H:%M:%S')
+
+- commit embarque : \`${MANIFEST_GIT_HEAD}\`
+- message embarque : ${MANIFEST_GIT_SUBJECT}
+$(if [[ -n "$MANIFEST_GIT_UPSTREAM_REF" ]]; then
+  printf '%s\n' "- upstream embarque : \`${MANIFEST_GIT_UPSTREAM_REF}\` (\`${MANIFEST_GIT_UPSTREAM_SHORT:-inconnu}\`)"
+fi)
+- worktree propre au moment du bundle : \`${MANIFEST_GIT_WORKTREE_CLEAN}\`
+
+## Artefacts embarques
+
+- audit final local : \`artifacts/$(basename "$AUDIT_MD")\`
+- manifeste : \`artifacts/$(basename "$MANIFEST_JSON")\`
+- gate : \`artifacts/$(basename "$GATE_MD")\`
+- preparation : \`artifacts/$(basename "$PREP_MD")\`
+- seed demo : \`artifacts/$(basename "$SEED_JSON")\`
+- handoff operateur : \`artifacts/ma-commune-handoff-livraison.md\`
+- brief acces : \`artifacts/macommune.txt\`
+- controle brief acces : \`artifacts/ma-commune-access-brief-consistency.log\`
+$(if [[ -n "${ACCESS_BRIEF_SHA:-}" ]]; then
+  printf '%s\n' "- empreinte brief acces : \`${ACCESS_BRIEF_SHA}\`"
+fi)
+- branding log : \`artifacts/$(basename "$BRANDING_LOG")\`
+- category visuals log : \`artifacts/$(basename "$CATEGORY_VISUALS_LOG")\`
+- APK tablette : \`apk/$(basename "$TABLET_APK")\`
+- checksums : \`checksums/SHA256SUMS.txt\`
+
+## Alias latest publies hors bundle
+
+- bundle zip : \`/tmp/ma-commune-latest-livraison-bundle.zip\`
+- checksum bundle zip : \`/tmp/ma-commune-latest-livraison-bundle.zip.sha256\`
+- index latest : \`/tmp/ma-commune-latest-livraison-index.md\`
+- handoff latest : \`/tmp/ma-commune-latest-handoff.md\`
+- brief acces latest : \`/tmp/ma-commune-latest-access-brief.txt\`
+- controle brief acces latest : \`/tmp/ma-commune-latest-access-brief-check.log\`
+- APK tablette latest : \`/tmp/ma-commune-latest-app-release-tablette.apk\`
+EOF
 
 cp "$ROOT_DIR/README.md" "$BUNDLE_DIR/docs/"
 cp "$ROOT_DIR/docs/DOSSIER_LIVRAISON_LOCALE_MA_COMMUNE_2026-03-18.md" "$BUNDLE_DIR/docs/"
