@@ -4,6 +4,10 @@
  */
 $admin = require_admin_auth();
 $db = Database::getInstance();
+$eventHasEventDate = admin_db_has_column($db, 'events', 'event_date');
+$eventHasStartsAt = admin_db_has_column($db, 'events', 'starts_at');
+$eventHasEndsAt = admin_db_has_column($db, 'events', 'ends_at');
+$eventHasPublished = admin_db_has_column($db, 'events', 'is_published');
 
 function normalize_admin_datetime(?string $value): ?string
 {
@@ -49,17 +53,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $db->beginTransaction();
-            $stmt = $db->prepare("
-                INSERT INTO events (title, description, location, event_date, created_by, created_at)
-                VALUES (?, ?, ?, ?, ?, NOW())
-            ");
-            $stmt->execute([
+            $columns = ['title', 'description', 'location'];
+            $values = ['?', '?', '?'];
+            $params = [
                 Security::sanitizeString($title),
                 Security::sanitizeString($description),
                 Security::sanitizeString($location),
-                $eventDate,
-                (int)($admin['id'] ?? 0),
-            ]);
+            ];
+
+            if ($eventHasEventDate) {
+                $columns[] = 'event_date';
+                $values[] = '?';
+                $params[] = $eventDate;
+            } elseif ($eventHasStartsAt) {
+                $columns[] = 'starts_at';
+                $values[] = '?';
+                $params[] = $eventDate;
+            }
+
+            if ($eventHasEndsAt) {
+                $columns[] = 'ends_at';
+                $values[] = '?';
+                $params[] = null;
+            }
+
+            if ($eventHasPublished) {
+                $columns[] = 'is_published';
+                $values[] = '1';
+            }
+
+            $columns[] = 'created_by';
+            $values[] = '?';
+            $params[] = (int)($admin['id'] ?? 0);
+
+            $columns[] = 'created_at';
+            $values[] = 'NOW()';
+
+            $stmt = $db->prepare(sprintf(
+                'INSERT INTO events (%s) VALUES (%s)',
+                implode(', ', $columns),
+                implode(', ', $values)
+            ));
+            $stmt->execute($params);
 
             notify_event_users($db, $title);
             $db->commit();
@@ -83,13 +118,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
+$eventDateSelect = $eventHasEventDate
+    ? 'e.event_date'
+    : 'e.starts_at AS event_date';
+
 $events = $db->query("
-    SELECT e.*, u.full_name AS created_by_name,
+    SELECT e.*, {$eventDateSelect}, u.full_name AS created_by_name,
            (SELECT COUNT(*) FROM event_rsvps WHERE event_id = e.id AND status = 'attending') AS attendees_count,
            (SELECT COUNT(*) FROM event_rsvps WHERE event_id = e.id AND status = 'interested') AS interested_count
     FROM events e
     JOIN users u ON u.id = e.created_by
-    ORDER BY (e.event_date >= NOW()) DESC, e.event_date ASC
+    ORDER BY (event_date >= NOW()) DESC, event_date ASC
 ")->fetchAll();
 
 $upcomingCount = 0;

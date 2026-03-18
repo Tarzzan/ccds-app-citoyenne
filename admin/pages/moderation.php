@@ -123,9 +123,13 @@ try {
 } catch (Throwable $e) {
 }
 
+$commentEditedSelect = admin_db_has_column($db, 'comments', 'is_edited')
+    ? 'c.is_edited'
+    : '0 AS is_edited';
+
 $stmt = $db->query("
     SELECT cr.id AS report_id, cr.reason, cr.description, cr.status, cr.created_at,
-           c.id AS comment_id, c.comment, c.is_edited,
+           c.id AS comment_id, c.comment, {$commentEditedSelect},
            author.id AS author_id, author.full_name AS author_name, author.email AS author_email, author.role AS author_role,
            reporter.full_name AS reporter_name,
            i.id AS incident_id, i.reference AS incident_ref, i.title AS incident_title

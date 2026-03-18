@@ -125,3 +125,25 @@ function role_label(string $r): string
 {
     return ['citizen' => 'Citoyen', 'agent' => 'Agent', 'admin' => 'Administrateur'][$r] ?? $r;
 }
+
+function admin_db_has_column(PDO $db, string $table, string $column): bool
+{
+    static $cache = [];
+
+    $key = $table . '.' . $column;
+    if (array_key_exists($key, $cache)) {
+        return $cache[$key];
+    }
+
+    try {
+        $stmt = $db->prepare(
+            'SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
+        );
+        $stmt->execute([$table, $column]);
+        $cache[$key] = ((int)$stmt->fetchColumn()) > 0;
+    } catch (Throwable $e) {
+        $cache[$key] = false;
+    }
+
+    return $cache[$key];
+}

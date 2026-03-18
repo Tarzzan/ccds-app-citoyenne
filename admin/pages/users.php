@@ -8,6 +8,7 @@ $admin      = require_admin_auth();
 $page_title = 'Utilisateurs';
 $active_nav = 'users';
 $db         = Database::getInstance();
+$usersPasswordColumn = admin_db_has_column($db, 'users', 'password_hash') ? 'password_hash' : 'password';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -30,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['flash_error'] = 'Cet email est déjà utilisé.';
             } else {
                 $db->prepare("
-                    INSERT INTO users (full_name, email, password_hash, role, is_active, created_at)
+                    INSERT INTO users (full_name, email, {$usersPasswordColumn}, role, is_active, created_at)
                     VALUES (?, ?, ?, ?, 1, NOW())
                 ")->execute([$fullName, $email, password_hash($password, PASSWORD_DEFAULT), $role]);
                 $_SESSION['flash_success'] = "Compte de {$fullName} créé avec succès.";

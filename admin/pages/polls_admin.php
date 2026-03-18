@@ -5,6 +5,9 @@
 $admin = require_admin_auth();
 $db = Database::getInstance();
 $isAdmin = ($admin['role'] ?? '') === 'admin';
+$pollHasType = admin_db_has_column($db, 'polls', 'type');
+$pollHasStatus = admin_db_has_column($db, 'polls', 'status');
+$pollHasIsActive = admin_db_has_column($db, 'polls', 'is_active');
 
 function normalize_poll_options(array $rawOptions): array
 {
@@ -54,17 +57,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $normalizedEndsAt = $endsAt !== '' ? str_replace('T', ' ', $endsAt) . ':00' : null;
 
             $db->beginTransaction();
-            $stmt = $db->prepare("
-                INSERT INTO polls (title, description, type, status, created_by, ends_at, created_at)
-                VALUES (?, ?, ?, 'active', ?, ?, NOW())
-            ");
-            $stmt->execute([
+            $columns = ['title', 'description'];
+            $values = ['?', '?'];
+            $params = [
                 Security::sanitizeString($title),
                 Security::sanitizeString($description),
-                'single',
-                (int)($admin['id'] ?? 0),
-                $normalizedEndsAt,
-            ]);
+            ];
+
+            if ($pollHasType) {
+                $columns[] = 'type';
+                $values[] = '?';
+                $params[] = 'single';
+            }
+
+            if ($pollHasStatus) {
+                $columns[] = 'status';
+                $values[] = "'active'";
+            }
+
+            if ($pollHasIsActive) {
+                $columns[] = 'is_active';
+                $values[] = '1';
+            }
+
+            $columns[] = 'created_by';
+            $values[] = '?';
+            $params[] = (int)($admin['id'] ?? 0);
+
+            $columns[] = 'ends_at';
+            $values[] = '?';
+            $params[] = $normalizedEndsAt;
+
+            $columns[] = 'created_at';
+            $values[] = 'NOW()';
+
+            $stmt = $db->prepare(sprintf(
+                'INSERT INTO polls (%s) VALUES (%s)',
+                implode(', ', $columns),
+                implode(', ', $values)
+            ));
+            $stmt->execute($params);
 
             $pollId = (int) $db->lastInsertId();
             $optStmt = $db->prepare("INSERT INTO poll_options (poll_id, label, sort_order) VALUES (?, ?, ?)");
@@ -74,8 +106,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->commit();
             $_SESSION['flash_success'] = 'Consultation créée avec succès.';
         } elseif ($action === 'close' && !empty($_POST['poll_id'])) {
-            $stmt = $db->prepare("UPDATE polls SET status = 'closed' WHERE id = ?");
-            $stmt->execute([(int)$_POST['poll_id']]);
+            $updates = [];
+            if ($pollHasStatus) {
+                $updates[] = "status = 'closed'";
+            }
+            if ($pollHasIsActive) {
+                $updates[] = 'is_active = 0';
+            }
+
+            if ($updates) {
+                $stmt = $db->prepare('UPDATE polls SET ' . implode(', ', $updates) . ' WHERE id = ?');
+                $stmt->execute([(int)$_POST['poll_id']]);
+            }
             $_SESSION['flash_success'] = 'Consultation clôturée.';
         } elseif ($action === 'delete' && !empty($_POST['poll_id'])) {
             $pollId = (int) $_POST['poll_id'];
@@ -97,23 +139,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
+$pollStatusSelect = $pollHasStatus
+    ? 'p.status'
+    : "CASE WHEN COALESCE(p.is_active, 0) = 1 THEN 'active' ELSE 'closed' END";
+
 $polls = $db->query("
-    SELECT p.*, u.full_name AS created_by_name,
+    SELECT p.*, {$pollStatusSelect} AS effective_status, u.full_name AS created_by_name,
            (SELECT COUNT(*) FROM poll_votes pv WHERE pv.poll_id = p.id) AS total_votes,
            (SELECT COUNT(*) FROM poll_options WHERE poll_id = p.id) AS options_count
     FROM polls p
     JOIN users u ON u.id = p.created_by
-    ORDER BY (p.status = 'active') DESC, COALESCE(p.ends_at, '9999-12-31 23:59:59') ASC, p.created_at DESC
+    ORDER BY (effective_status = 'active') DESC, COALESCE(p.ends_at, '9999-12-31 23:59:59') ASC, p.created_at DESC
 ")->fetchAll();
 
 $activePolls = 0;
 $totalVotes = 0;
-foreach ($polls as $poll) {
+foreach ($polls as &$poll) {
+    $poll['status'] = $poll['status'] ?? $poll['effective_status'] ?? 'closed';
     if (($poll['status'] ?? '') === 'active') {
         $activePolls++;
     }
     $totalVotes += (int)($poll['total_votes'] ?? 0);
 }
+unset($poll);
 
 $page_title = 'Sondages';
 $active_nav = 'polls';
