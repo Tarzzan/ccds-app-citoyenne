@@ -130,6 +130,11 @@ grep -q 'commit bundle latest :' "$INDEX_REAL" || {
   exit 1
 }
 
+grep -q 'worktree propre au moment du bundle :' "$INDEX_REAL" || {
+  printf 'ECHEC: index latest ne rappelle pas l etat du worktree\n' >&2
+  exit 1
+}
+
 grep -q '/tmp/ma-commune-latest-livraison-bundle.zip.sha256' "$INDEX_REAL" || {
   printf 'ECHEC: index latest incomplet sur le checksum du bundle\n' >&2
   exit 1

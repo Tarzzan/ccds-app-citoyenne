@@ -28,6 +28,9 @@ ACCESS_BRIEF_CHECK_STATUS="$(sed -n '1p' "$ACCESS_BRIEF_CHECK_LOG")"
 CURRENT_HEAD="$(git -C "$SCRIPT_DIR/.." rev-parse --short HEAD)"
 LATEST_HEAD="$(jq -r '.project.git.head_commit_short // "inconnu"' "$MANIFEST")"
 LATEST_HEAD_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST")"
+LATEST_UPSTREAM_REF="$(jq -r '.project.git.upstream_ref // ""' "$MANIFEST")"
+LATEST_UPSTREAM_COMMIT="$(jq -r '.project.git.upstream_commit_short // ""' "$MANIFEST")"
+LATEST_WORKTREE_CLEAN="$(jq -r '.project.git.worktree_clean' "$MANIFEST")"
 if [[ "$CURRENT_HEAD" == "$LATEST_HEAD" ]]; then
   HEAD_ALIGNMENT="ALIGNE"
 else
@@ -52,6 +55,10 @@ printf -- '- commit bundle latest: %s\n' "$LATEST_HEAD"
 printf -- '- message bundle latest: %s\n' "$LATEST_HEAD_SUBJECT"
 printf -- '- HEAD local courant: %s\n' "$CURRENT_HEAD"
 printf -- '- alignement HEAD local vs latest: %s\n' "$HEAD_ALIGNMENT"
+if [[ -n "$LATEST_UPSTREAM_REF" ]]; then
+  printf -- '- upstream bundle latest: %s (%s)\n' "$LATEST_UPSTREAM_REF" "${LATEST_UPSTREAM_COMMIT:-inconnu}"
+fi
+printf -- '- worktree propre au moment du bundle: %s\n' "$LATEST_WORKTREE_CLEAN"
 printf '\n'
 printf 'URLs:\n'
 printf -- '- API mobile: %s\n' "$(jq -r '.urls.api' "$MANIFEST")"

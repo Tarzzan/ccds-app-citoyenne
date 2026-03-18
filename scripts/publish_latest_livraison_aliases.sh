@@ -48,6 +48,9 @@ TABLET_APK="$(latest_file "$BUNDLE_DIR"/apk/*.apk)"
 INDEX_MD="/tmp/ma-commune-latest-livraison-index.md"
 LATEST_HEAD="$(jq -r '.project.git.head_commit_short // "inconnu"' "$MANIFEST_JSON")"
 LATEST_HEAD_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST_JSON")"
+LATEST_UPSTREAM_REF="$(jq -r '.project.git.upstream_ref // ""' "$MANIFEST_JSON")"
+LATEST_UPSTREAM_COMMIT="$(jq -r '.project.git.upstream_commit_short // ""' "$MANIFEST_JSON")"
+LATEST_WORKTREE_CLEAN="$(jq -r '.project.git.worktree_clean' "$MANIFEST_JSON")"
 
 link_latest "$BUNDLE_ZIP" /tmp/ma-commune-latest-livraison-bundle.zip
 link_latest "$BUNDLE_ZIP_SHA" /tmp/ma-commune-latest-livraison-bundle.zip.sha256
@@ -71,6 +74,10 @@ Date de publication : $(date '+%d/%m/%Y %H:%M:%S')
 
 - commit bundle latest : \`${LATEST_HEAD}\`
 - message bundle latest : ${LATEST_HEAD_SUBJECT}
+$(if [[ -n "$LATEST_UPSTREAM_REF" ]]; then
+  printf '%s\n' "- upstream bundle latest : \`${LATEST_UPSTREAM_REF}\` (\`${LATEST_UPSTREAM_COMMIT:-inconnu}\`)"
+fi)
+- worktree propre au moment du bundle : \`${LATEST_WORKTREE_CLEAN}\`
 
 - bundle zip : \`/tmp/ma-commune-latest-livraison-bundle.zip\`
 - checksum bundle zip : \`/tmp/ma-commune-latest-livraison-bundle.zip.sha256\`

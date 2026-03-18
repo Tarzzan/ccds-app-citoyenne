@@ -36,6 +36,9 @@ CATEGORY_VISUALS_LOG="$(sed -n 's/^- category visuals log : `\(.*\)`/\1/p' "$AUD
 TABLET_APK="$(sed -n 's/^- APK cible tablette [^:]* : `\(.*\)` (.*/\1/p' "$AUDIT_MD")"
 MANIFEST_GIT_HEAD="$(jq -r '.project.git.head_commit_short // "inconnu"' "$MANIFEST_JSON")"
 MANIFEST_GIT_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST_JSON")"
+MANIFEST_GIT_UPSTREAM_REF="$(jq -r '.project.git.upstream_ref // ""' "$MANIFEST_JSON")"
+MANIFEST_GIT_UPSTREAM_SHORT="$(jq -r '.project.git.upstream_commit_short // ""' "$MANIFEST_JSON")"
+MANIFEST_GIT_WORKTREE_CLEAN="$(jq -r '.project.git.worktree_clean' "$MANIFEST_JSON")"
 
 for required_file in "$MANIFEST_JSON" "$GATE_MD" "$PREP_MD" "$SEED_JSON" "$BRANDING_LOG" "$CATEGORY_VISUALS_LOG" "$TABLET_APK"; do
   [[ -n "${required_file:-}" && -f "$required_file" ]] || {
@@ -113,6 +116,10 @@ Date de generation : $(date '+%d/%m/%Y %H:%M:%S')
 - livraison finale appareil : NON AUTORISEE A CE STADE
 - commit embarque : ${MANIFEST_GIT_HEAD}
 - message embarque : ${MANIFEST_GIT_SUBJECT}
+$(if [[ -n "$MANIFEST_GIT_UPSTREAM_REF" ]]; then
+  printf '%s\n' "- upstream embarque : ${MANIFEST_GIT_UPSTREAM_REF} (${MANIFEST_GIT_UPSTREAM_SHORT:-inconnu})"
+fi)
+- worktree propre au moment du bundle : ${MANIFEST_GIT_WORKTREE_CLEAN}
 EOF
 
 (

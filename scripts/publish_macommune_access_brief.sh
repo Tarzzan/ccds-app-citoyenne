@@ -121,6 +121,9 @@ latest_device_status="inconnu"
 latest_tablet_abi="inconnue"
 latest_bundle_commit="inconnu"
 latest_bundle_message="inconnu"
+latest_bundle_upstream_ref=""
+latest_bundle_upstream_commit="inconnu"
+latest_bundle_worktree_clean="inconnu"
 latest_citizen_examples=$'demo.citoyen.a.1773821871@macommune.local\ndemo.citoyen.b.1773821871@macommune.local\ndemo.citoyen.c.1773821871@macommune.local'
 
 if [[ -f "$MANIFEST_PATH" ]]; then
@@ -131,7 +134,15 @@ if [[ -f "$MANIFEST_PATH" ]]; then
   latest_tablet_abi="$(jq -r '.artifacts.apk_tablette.abi' "$MANIFEST_PATH")"
   latest_bundle_commit="$(jq -r '.project.git.head_commit_short // "inconnu"' "$MANIFEST_PATH")"
   latest_bundle_message="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST_PATH")"
+  latest_bundle_upstream_ref="$(jq -r '.project.git.upstream_ref // ""' "$MANIFEST_PATH")"
+  latest_bundle_upstream_commit="$(jq -r '.project.git.upstream_commit_short // "inconnu"' "$MANIFEST_PATH")"
+  latest_bundle_worktree_clean="$(jq -r '.project.git.worktree_clean' "$MANIFEST_PATH")"
   latest_citizen_examples="$(jq -r '.credentials.citizens[].email' "$MANIFEST_PATH")"
+fi
+
+latest_bundle_upstream_display="aucun"
+if [[ -n "${latest_bundle_upstream_ref:-}" ]]; then
+  latest_bundle_upstream_display="${latest_bundle_upstream_ref} (${latest_bundle_upstream_commit})"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")" "$(dirname "$SECONDARY_OUTPUT_FILE")"
@@ -186,6 +197,8 @@ Livraison locale latest
 - livraison finale appareil: ${latest_device_status}
 - commit bundle latest: ${latest_bundle_commit}
 - message bundle latest: ${latest_bundle_message}
+- upstream bundle latest: ${latest_bundle_upstream_display}
+- worktree propre au moment du bundle: ${latest_bundle_worktree_clean}
 - ABI tablette latest: ${latest_tablet_abi}
 - bundle latest: ${LATEST_BUNDLE}
 - checksum bundle latest: ${LATEST_BUNDLE_SHA}

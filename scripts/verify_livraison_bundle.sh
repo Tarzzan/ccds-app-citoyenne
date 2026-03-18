@@ -87,6 +87,11 @@ grep -q "commit embarque : ${BUNDLE_HEAD}" "$BUNDLE_DIR/README_BUNDLE.md" || {
   exit 1
 }
 
+grep -q 'worktree propre au moment du bundle :' "$BUNDLE_DIR/README_BUNDLE.md" || {
+  printf 'ECHEC: README_BUNDLE ne rappelle pas l etat du worktree\n' >&2
+  exit 1
+}
+
 (
   cd "$BUNDLE_DIR"
   sha256sum -c checksums/SHA256SUMS.txt >/tmp/ma-commune-verify-bundle.log

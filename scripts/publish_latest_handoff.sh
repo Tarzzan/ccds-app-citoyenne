@@ -34,6 +34,9 @@ APK_TABLETTE="$(jq -r '.artifacts.apk_tablette.path' "$MANIFEST")"
 APK_TABLETTE_ABI="$(jq -r '.artifacts.apk_tablette.abi' "$MANIFEST")"
 LATEST_HEAD="$(jq -r '.project.git.head_commit_short // "inconnu"' "$MANIFEST")"
 LATEST_HEAD_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST")"
+LATEST_UPSTREAM_REF="$(jq -r '.project.git.upstream_ref // ""' "$MANIFEST")"
+LATEST_UPSTREAM_COMMIT="$(jq -r '.project.git.upstream_commit_short // ""' "$MANIFEST")"
+LATEST_WORKTREE_CLEAN="$(jq -r '.project.git.worktree_clean' "$MANIFEST")"
 LAN_IP="$("$SCRIPT_DIR/detect_primary_lan_ip.sh" 2>/dev/null || true)"
 SSH_USER="$(getent passwd 1000 2>/dev/null | cut -d: -f1 || true)"
 
@@ -54,6 +57,10 @@ Date de generation : $(date '+%d/%m/%Y %H:%M:%S')
 - livraison finale appareil : $(jq -r '.decision.livraison_finale_appareil' "$MANIFEST")
 - commit bundle latest : \`${LATEST_HEAD}\`
 - message bundle latest : ${LATEST_HEAD_SUBJECT}
+$(if [[ -n "$LATEST_UPSTREAM_REF" ]]; then
+  printf '%s\n' "- upstream bundle latest : \`${LATEST_UPSTREAM_REF}\` (\`${LATEST_UPSTREAM_COMMIT:-inconnu}\`)"
+fi)
+- worktree propre au moment du bundle : \`${LATEST_WORKTREE_CLEAN}\`
 
 ## URLs
 
