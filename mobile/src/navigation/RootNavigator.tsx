@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer }         from '@react-navigation/native';
 import { createNativeStackNavigator }  from '@react-navigation/native-stack';
 import { createBottomTabNavigator }    from '@react-navigation/bottom-tabs';
-import { ActivityIndicator, View, Text, Image } from 'react-native';
+import { ActivityIndicator, View, Text, Image, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BRAND } from '../theme/brand';
 
@@ -78,7 +78,7 @@ function AppTabs() {
         tabBarActiveTintColor:   BRAND.colors.canopy,
         tabBarInactiveTintColor: '#70817A',
         tabBarStyle: {
-          height: 68 + bottomInset,
+          height: 74 + bottomInset,
           paddingTop: 10,
           paddingBottom: bottomInset,
           backgroundColor: '#FFFDF8',
@@ -92,6 +92,8 @@ function AppTabs() {
         },
         tabBarItemStyle: {
           paddingVertical: 4,
+          borderRadius: 18,
+          marginHorizontal: 2,
         },
         headerShown: false,
       }}
@@ -99,25 +101,25 @@ function AppTabs() {
       <Tab.Screen
         name="Map"
         component={MapScreen}
-        options={{ title: 'Carte', tabBarIcon: ({ color }) => <TabIcon label="🗺️" color={color} /> }}
+        options={{ title: 'Carte', tabBarIcon: ({ color, focused }) => <TabIcon label="🗺️" color={color} focused={focused} /> }}
       />
       <Tab.Screen
         name="MyIncidents"
         component={MyIncidentsScreen}
         options={{
-          title: isStaff ? 'À traiter' : 'Mes signalements',
-          tabBarIcon: ({ color }) => <TabIcon label="📋" color={color} />,
+          title: isStaff ? 'Terrain' : 'Suivi',
+          tabBarIcon: ({ color, focused }) => <TabIcon label="📋" color={color} focused={focused} />,
         }}
       />
       <Tab.Screen
         name="Notifications"
         component={NotificationsScreen}
-        options={{ title: 'Notifications', tabBarIcon: ({ color }) => <TabIcon label="🔔" color={color} /> }}
+        options={{ title: 'Alertes', tabBarIcon: ({ color, focused }) => <TabIcon label="🔔" color={color} focused={focused} /> }}
       />
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}
-        options={{ title: 'Mon bilan', tabBarIcon: ({ color }) => <TabIcon label="📊" color={color} /> }}
+        options={{ title: 'Bilan', tabBarIcon: ({ color, focused }) => <TabIcon label="📊" color={color} focused={focused} /> }}
       />
     </Tab.Navigator>
   );
@@ -131,6 +133,8 @@ function AppNavigator() {
     headerTintColor:  '#ffffff' as const,
     headerTitleStyle: { fontWeight: '700' as const },
     headerBackTitle:  'Retour',
+    headerShadowVisible: false,
+    headerBackTitleVisible: false,
   };
 
   return (
@@ -146,41 +150,41 @@ function AppNavigator() {
       <AppStack.Screen
         name="IncidentDetail"
         component={IncidentDetailScreen}
-        options={{ headerShown: true, title: 'Détail du signalement', ...headerOpts }}
+        options={{ headerShown: true, headerTitle: () => <BrandHeaderTitle title="Dossier citoyen" detail="Suivi detaille" />, ...headerOpts }}
       />
 
       {/* v1.2 — Édition d'un signalement */}
       <AppStack.Screen
         name="EditIncident"
         component={EditIncidentScreen}
-        options={{ headerShown: true, title: 'Modifier le signalement', ...headerOpts }}
+        options={{ headerShown: true, headerTitle: () => <BrandHeaderTitle title="Ajuster un dossier" detail="Mise a jour" />, ...headerOpts }}
       />
 
       {/* v1.2 — Profil utilisateur */}
       <AppStack.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ headerShown: true, title: 'Mon profil', ...headerOpts }}
+        options={{ headerShown: true, headerTitle: () => <BrandHeaderTitle title="Mon espace" detail="Profil et preferences" />, ...headerOpts }}
       />
 
       <AppStack.Screen
         name="Impact"
         component={ImpactScreen}
-        options={{ headerShown: true, title: 'Mon bilan citoyen', ...headerOpts }}
+        options={{ headerShown: true, headerTitle: () => <BrandHeaderTitle title="Mon bilan citoyen" detail="Impact visible" />, ...headerOpts }}
       />
       <AppStack.Screen
         name="Events"
         component={EventsScreen}
-        options={{ headerShown: true, title: 'Agenda communal', ...headerOpts }}
+        options={{ headerShown: true, headerTitle: () => <BrandHeaderTitle title="Agenda communal" detail="Rendez-vous utiles" />, ...headerOpts }}
       />
       <AppStack.Screen
         name="Polls"
         component={PollsScreen}
-        options={{ headerShown: true, title: 'Consultations', ...headerOpts }}
+        options={{ headerShown: true, headerTitle: () => <BrandHeaderTitle title="Consultations" detail="Concertation locale" />, ...headerOpts }}
       />
       <AppStack.Screen
         name="ServerConfig"
-        options={{ headerShown: true, title: 'Configuration serveur', ...headerOpts, presentation: 'modal' }}
+        options={{ headerShown: true, headerTitle: () => <BrandHeaderTitle title="Connexion territoire" detail="Configuration serveur" />, ...headerOpts, presentation: 'modal' }}
       >
         {(props) => (
           <ServerConfigScreen
@@ -264,6 +268,58 @@ export default function RootNavigator() {
   );
 }
 
-function TabIcon({ label, color }: { label: string; color: string }) {
-  return <Text style={{ fontSize: 20, color }}>{label}</Text>;
+function BrandHeaderTitle({ title, detail }: { title: string; detail: string }) {
+  return (
+    <View style={styles.headerTitleWrap}>
+      <Text style={styles.headerTitleEyebrow}>{BRAND.name}</Text>
+      <Text style={styles.headerTitleMain}>{title}</Text>
+      <Text style={styles.headerTitleDetail}>{detail}</Text>
+    </View>
+  );
 }
+
+function TabIcon({ label, color, focused }: { label: string; color: string; focused: boolean }) {
+  return (
+    <View style={[styles.tabIconWrap, focused && styles.tabIconWrapFocused]}>
+      <Text style={{ fontSize: 20, color }}>{label}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  headerTitleWrap: {
+    minWidth: 150,
+  },
+  headerTitleEyebrow: {
+    color: '#D2A13A',
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.9,
+    marginBottom: 1,
+  },
+  headerTitleMain: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    lineHeight: 21,
+    fontWeight: '800',
+    fontFamily: BRAND.displayFont,
+  },
+  headerTitleDetail: {
+    color: '#D7E7DF',
+    fontSize: 11,
+    lineHeight: 14,
+    marginTop: 1,
+  },
+  tabIconWrap: {
+    minWidth: 38,
+    height: 32,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIconWrapFocused: {
+    backgroundColor: '#E7F0EA',
+  },
+});
