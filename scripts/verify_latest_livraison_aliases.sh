@@ -23,6 +23,7 @@ LATEST_SEED="/tmp/ma-commune-latest-demo-seed.json"
 LATEST_APK="/tmp/ma-commune-latest-app-release-tablette.apk"
 LATEST_INDEX="/tmp/ma-commune-latest-livraison-index.md"
 LATEST_HANDOFF="/tmp/ma-commune-latest-handoff.md"
+LATEST_ACCESS_BRIEF="/tmp/ma-commune-latest-access-brief.txt"
 
 for required_link in \
   "$LATEST_BUNDLE_ZIP" \
@@ -35,7 +36,8 @@ for required_link in \
   "$LATEST_SEED" \
   "$LATEST_APK" \
   "$LATEST_INDEX" \
-  "$LATEST_HANDOFF"; do
+  "$LATEST_HANDOFF" \
+  "$LATEST_ACCESS_BRIEF"; do
   [[ -e "$required_link" ]] || {
     printf 'ECHEC: alias latest absent: %s\n' "$required_link" >&2
     exit 1
@@ -49,6 +51,7 @@ MANIFEST_REAL="$(readlink -f "$LATEST_MANIFEST")"
 AUDIT_REAL="$(readlink -f "$LATEST_AUDIT")"
 APK_REAL="$(readlink -f "$LATEST_APK")"
 HANDOFF_REAL="$(readlink -f "$LATEST_HANDOFF")"
+ACCESS_BRIEF_REAL="$(readlink -f "$LATEST_ACCESS_BRIEF")"
 INDEX_REAL="$(readlink -f "$LATEST_INDEX")"
 
 [[ -f "$BUNDLE_ZIP_REAL" && -d "$BUNDLE_DIR_REAL" ]] || {
@@ -93,6 +96,14 @@ case "$HANDOFF_REAL" in
     ;;
 esac
 
+case "$ACCESS_BRIEF_REAL" in
+  "$BUNDLE_DIR_REAL"/*) ;;
+  *)
+    printf 'ECHEC: le brief acces latest ne pointe pas vers le bundle latest\n' >&2
+    exit 1
+    ;;
+esac
+
 grep -q '/tmp/ma-commune-latest-livraison-bundle.zip' "$INDEX_REAL" || {
   printf 'ECHEC: index latest incomplet sur le bundle zip\n' >&2
   exit 1
@@ -108,6 +119,11 @@ grep -q '/tmp/ma-commune-latest-handoff.md' "$INDEX_REAL" || {
   exit 1
 }
 
+grep -q '/tmp/ma-commune-latest-access-brief.txt' "$INDEX_REAL" || {
+  printf 'ECHEC: index latest incomplet sur le brief acces\n' >&2
+  exit 1
+}
+
 grep -q '/tmp/ma-commune-latest-livraison-bundle.zip' "$HANDOFF_REAL" || {
   printf 'ECHEC: handoff latest incomplet sur le bundle zip\n' >&2
   exit 1
@@ -120,6 +136,11 @@ grep -q '/tmp/ma-commune-latest-livraison-bundle.zip.sha256' "$HANDOFF_REAL" || 
 
 grep -q '/tmp/ma-commune-latest-app-release-tablette.apk' "$HANDOFF_REAL" || {
   printf 'ECHEC: handoff latest ne reference pas l alias APK latest\n' >&2
+  exit 1
+}
+
+grep -q 'Dernier commit local:' "$ACCESS_BRIEF_REAL" || {
+  printf 'ECHEC: brief acces latest incomplet sur le commit local\n' >&2
   exit 1
 }
 

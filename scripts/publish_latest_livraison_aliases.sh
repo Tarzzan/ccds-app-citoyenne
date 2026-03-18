@@ -40,6 +40,7 @@ GATE_MD="$(latest_file "$BUNDLE_DIR"/artifacts/ma-commune-gate-avant-tablette-*.
 PREP_MD="$(latest_file "$BUNDLE_DIR"/artifacts/ma-commune-livraison-locale-*.md)"
 SEED_JSON="$(latest_file "$BUNDLE_DIR"/artifacts/ma-commune-demo-seed-*.json)"
 HANDOFF_MD="$BUNDLE_DIR/artifacts/ma-commune-handoff-livraison.md"
+ACCESS_BRIEF="$BUNDLE_DIR/artifacts/macommune.txt"
 BRANDING_LOG="$BUNDLE_DIR/artifacts/ma-commune-prepare-branding.log"
 CHECKSUMS_FILE="$BUNDLE_DIR/checksums/SHA256SUMS.txt"
 TABLET_APK="$(latest_file "$BUNDLE_DIR"/apk/*.apk)"
@@ -54,6 +55,7 @@ link_latest "$GATE_MD" /tmp/ma-commune-latest-gate-avant-tablette.md
 link_latest "$PREP_MD" /tmp/ma-commune-latest-preparation-livraison.md
 link_latest "$SEED_JSON" /tmp/ma-commune-latest-demo-seed.json
 link_latest "$HANDOFF_MD" /tmp/ma-commune-latest-handoff.md
+link_latest "$ACCESS_BRIEF" /tmp/ma-commune-latest-access-brief.txt
 link_latest "$BRANDING_LOG" /tmp/ma-commune-latest-branding.log
 link_latest "$CHECKSUMS_FILE" /tmp/ma-commune-latest-checksums.txt
 link_latest "$TABLET_APK" /tmp/ma-commune-latest-app-release-tablette.apk
@@ -72,6 +74,7 @@ Date de publication : $(date '+%d/%m/%Y %H:%M:%S')
 - preparation : \`/tmp/ma-commune-latest-preparation-livraison.md\`
 - seed demo : \`/tmp/ma-commune-latest-demo-seed.json\`
 - handoff latest : \`/tmp/ma-commune-latest-handoff.md\`
+- brief acces latest : \`/tmp/ma-commune-latest-access-brief.txt\`
 - branding log : \`/tmp/ma-commune-latest-branding.log\`
 - checksums : \`/tmp/ma-commune-latest-checksums.txt\`
 - APK tablette : \`/tmp/ma-commune-latest-app-release-tablette.apk\`

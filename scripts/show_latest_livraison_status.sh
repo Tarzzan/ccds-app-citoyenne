@@ -54,6 +54,7 @@ printf -- '- checksum bundle zip: /tmp/ma-commune-latest-livraison-bundle.zip.sh
 printf -- '- audit final local: /tmp/ma-commune-latest-audit-final-local.md\n'
 printf -- '- manifeste: %s\n' "$MANIFEST"
 printf -- '- handoff latest: /tmp/ma-commune-latest-handoff.md\n'
+printf -- '- brief acces latest: /tmp/ma-commune-latest-access-brief.txt\n'
 printf -- '- APK tablette: /tmp/ma-commune-latest-app-release-tablette.apk\n'
 printf -- '- ABI tablette: %s\n' "$(jq -r '.artifacts.apk_tablette.abi' "$MANIFEST")"
 printf '\n'
