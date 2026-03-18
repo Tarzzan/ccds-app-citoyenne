@@ -26,6 +26,11 @@ CITIZEN_PASSWORD="${CITIZEN_PASSWORD:-Citoyen@MaCommune2026!}"
 
 OUTPUT_FILE="${OUTPUT_FILE:-$BUREAU_DIR/macommune.txt}"
 SECONDARY_OUTPUT_FILE="${SECONDARY_OUTPUT_FILE:-$DESKTOP_DIR/macommune.txt}"
+LATEST_MANIFEST="/tmp/ma-commune-latest-manifest-livraison-locale.json"
+LATEST_BUNDLE="/tmp/ma-commune-latest-livraison-bundle.zip"
+LATEST_BUNDLE_SHA="/tmp/ma-commune-latest-livraison-bundle.zip.sha256"
+LATEST_HANDOFF="/tmp/ma-commune-latest-handoff.md"
+LATEST_APK="/tmp/ma-commune-latest-app-release-tablette.apk"
 
 build_view_json() {
   local build_id="$1"
@@ -107,6 +112,22 @@ if [[ -n "${upstream_ref:-}" ]]; then
   fi
 fi
 
+latest_gate_status="inconnu"
+latest_branding_status="inconnu"
+latest_category_visuals_status="inconnu"
+latest_device_status="inconnu"
+latest_tablet_abi="inconnue"
+latest_citizen_examples=$'demo.citoyen.a.1773821871@macommune.local\ndemo.citoyen.b.1773821871@macommune.local\ndemo.citoyen.c.1773821871@macommune.local'
+
+if [[ -f "$LATEST_MANIFEST" ]]; then
+  latest_gate_status="$(jq -r '.decision.gate_local_avant_tablette' "$LATEST_MANIFEST")"
+  latest_branding_status="$(jq -r '.decision.coherence_marque_couche_active' "$LATEST_MANIFEST")"
+  latest_category_visuals_status="$(jq -r '.decision.coherence_systeme_visuel_categories' "$LATEST_MANIFEST")"
+  latest_device_status="$(jq -r '.decision.livraison_finale_appareil' "$LATEST_MANIFEST")"
+  latest_tablet_abi="$(jq -r '.artifacts.apk_tablette.abi' "$LATEST_MANIFEST")"
+  latest_citizen_examples="$(jq -r '.credentials.citizens[].email' "$LATEST_MANIFEST")"
+fi
+
 mkdir -p "$(dirname "$OUTPUT_FILE")" "$(dirname "$SECONDARY_OUTPUT_FILE")"
 
 cat > "$OUTPUT_FILE" <<EOF
@@ -149,9 +170,19 @@ Identifiants de demonstration
 - Citoyens de demo
   mot de passe commun: ${CITIZEN_PASSWORD}
   exemples seed recents:
-  demo.citoyen.a.1773821871@macommune.local
-  demo.citoyen.b.1773821871@macommune.local
-  demo.citoyen.c.1773821871@macommune.local
+$(printf '%s\n' "$latest_citizen_examples" | sed 's/^/  /')
+
+Livraison locale latest
+-----------------------
+- gate local avant tablette: ${latest_gate_status}
+- coherence marque couche active: ${latest_branding_status}
+- coherence systeme visuel categories: ${latest_category_visuals_status}
+- livraison finale appareil: ${latest_device_status}
+- ABI tablette latest: ${latest_tablet_abi}
+- bundle latest: ${LATEST_BUNDLE}
+- checksum bundle latest: ${LATEST_BUNDLE_SHA}
+- handoff latest: ${LATEST_HANDOFF}
+- APK tablette latest: ${LATEST_APK}
 
 Builds EAS de reference
 -----------------------
