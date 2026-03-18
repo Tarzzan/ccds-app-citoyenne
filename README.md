@@ -132,6 +132,7 @@ Le bon positionnement est :
 - `scripts/check_eas_builds.sh` : affiche l etat des builds EAS Android/iOS de reference a partir des IDs courants
 - `scripts/publish_macommune_access_brief.sh` : regenere le fichier `macommune.txt` sur le Bureau et le Desktop avec les acces, credentials et builds EAS courants
 - `scripts/generate_category_icons.py` : regenere la collection d icones categories Guyane pour mobile et admin
+- `scripts/check_category_visuals.sh` : controle que le catalogue categories, les PNG generes et le mapping mobile restent alignes
 - `assets/category-visuals/index.html` : apercu HTML de la collection visuelle des categories
 
 ## Commandes Utiles
@@ -162,6 +163,7 @@ bash scripts/seed_demo_local.sh
 
 ```bash
 python3 scripts/generate_category_icons.py
+bash scripts/check_category_visuals.sh
 ```
 
 Voir aussi :

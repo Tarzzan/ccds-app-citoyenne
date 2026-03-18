@@ -186,6 +186,8 @@ Documentation collection categories
   ${ROOT_DIR}/assets/category-visuals/generated/category-visuals-preview.png
 - Regeneration:
   python3 ${ROOT_DIR}/scripts/generate_category_icons.py
+- Controle:
+  bash ${ROOT_DIR}/scripts/check_category_visuals.sh
 
 Adresse a saisir dans l application
 -----------------------------------

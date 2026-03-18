@@ -49,6 +49,22 @@ Cette commande alimente automatiquement:
 - [mobile/assets/category-icons](/home/tarzzan/codex/ccds-app-citoyenne/mobile/assets/category-icons)
 - [admin/assets/img/category-icons](/home/tarzzan/codex/ccds-app-citoyenne/admin/assets/img/category-icons)
 
+## Contrôle
+
+Commande:
+
+```bash
+bash scripts/check_category_visuals.sh
+```
+
+Ce contrôle échoue si:
+
+- une entrée du catalogue JSON est incomplète
+- une icône PNG manque côté master, mobile ou admin
+- la copie du catalogue généré n'est plus synchronisée
+- le mapping mobile ne couvre plus exactement les catégories du catalogue
+- les aperçus de collection ont disparu
+
 ## Intégration
 
 ### Mobile
