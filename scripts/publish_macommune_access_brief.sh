@@ -30,6 +30,8 @@ MANIFEST_PATH="${MANIFEST_PATH:-/tmp/ma-commune-latest-manifest-livraison-locale
 LATEST_BUNDLE="/tmp/ma-commune-latest-livraison-bundle.zip"
 LATEST_BUNDLE_SHA="/tmp/ma-commune-latest-livraison-bundle.zip.sha256"
 LATEST_HANDOFF="/tmp/ma-commune-latest-handoff.md"
+LATEST_ACCESS_BRIEF="/tmp/ma-commune-latest-access-brief.txt"
+LATEST_ACCESS_BRIEF_CHECK="/tmp/ma-commune-latest-access-brief-check.log"
 LATEST_APK="/tmp/ma-commune-latest-app-release-tablette.apk"
 
 build_view_json() {
@@ -182,6 +184,8 @@ Livraison locale latest
 - bundle latest: ${LATEST_BUNDLE}
 - checksum bundle latest: ${LATEST_BUNDLE_SHA}
 - handoff latest: ${LATEST_HANDOFF}
+- brief acces latest: ${LATEST_ACCESS_BRIEF}
+- controle brief acces latest: ${LATEST_ACCESS_BRIEF_CHECK}
 - APK tablette latest: ${LATEST_APK}
 
 Builds EAS de reference
