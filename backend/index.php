@@ -25,7 +25,31 @@ require_once __DIR__ . '/core/BaseController.php';
 
 // --- En-têtes globaux ---
 header('Content-Type: application/json; charset=UTF-8');
-header('Access-Control-Allow-Origin: '  . CORS_ORIGINS);
+
+$corsOriginsRaw = defined('CORS_ORIGINS') ? CORS_ORIGINS : '*';
+$corsOriginHeader = '*';
+
+if ($corsOriginsRaw !== '*') {
+    $allowedOrigins = array_values(array_filter(array_map('trim', explode(',', $corsOriginsRaw))));
+    $requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+    if ($requestOrigin !== '' && in_array($requestOrigin, $allowedOrigins, true)) {
+        $corsOriginHeader = $requestOrigin;
+        header('Vary: Origin');
+    } elseif (count($allowedOrigins) === 1) {
+        $corsOriginHeader = $allowedOrigins[0];
+    } else {
+        $corsOriginHeader = $allowedOrigins[0] ?? '';
+        if ($corsOriginHeader !== '') {
+            header('Vary: Origin');
+        }
+    }
+}
+
+if ($corsOriginHeader !== '') {
+    header('Access-Control-Allow-Origin: ' . $corsOriginHeader);
+}
+
 header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Key');
 
