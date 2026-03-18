@@ -90,6 +90,7 @@ if [[ -n "${ACCESS_BRIEF_SHA:-}" ]]; then
 fi
 printf -- '- APK tablette: /tmp/ma-commune-latest-app-release-tablette.apk\n'
 printf -- '- ABI tablette: %s\n' "$(jq -r '.artifacts.apk_tablette.abi' "$MANIFEST")"
+printf -- '- SHA-256 APK tablette: %s\n' "$(jq -r '.artifacts.apk_tablette.sha256 // "inconnu"' "$MANIFEST")"
 printf '\n'
 printf 'References:\n'
 printf -- '- index latest: %s\n' "$INDEX"

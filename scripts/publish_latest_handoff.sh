@@ -33,6 +33,7 @@ API_URL="$(jq -r '.urls.api' "$MANIFEST")"
 ADMIN_URL="$(jq -r '.urls.admin' "$MANIFEST")"
 APK_TABLETTE="$(jq -r '.artifacts.apk_tablette.path' "$MANIFEST")"
 APK_TABLETTE_ABI="$(jq -r '.artifacts.apk_tablette.abi' "$MANIFEST")"
+APK_TABLETTE_SHA256="$(jq -r '.artifacts.apk_tablette.sha256 // "inconnu"' "$MANIFEST")"
 LATEST_HEAD="$(jq -r '.project.git.head_commit_short // "inconnu"' "$MANIFEST")"
 LATEST_HEAD_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST")"
 LATEST_UPSTREAM_REF="$(jq -r '.project.git.upstream_ref // ""' "$MANIFEST")"
@@ -106,6 +107,7 @@ $(if [[ -n "${ACCESS_BRIEF_SHA:-}" ]]; then
 fi)
 - APK tablette : \`/tmp/ma-commune-latest-app-release-tablette.apk\`
 - ABI tablette : \`${APK_TABLETTE_ABI}\`
+- SHA-256 APK tablette : \`${APK_TABLETTE_SHA256}\`
 - APK tablette source : \`${APK_TABLETTE}\`
 
 ## Quand La Phase Tablette Sera Autorisee

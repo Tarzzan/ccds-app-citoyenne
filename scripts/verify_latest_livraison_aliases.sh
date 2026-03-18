@@ -222,6 +222,7 @@ BRANDING_STATUS="$(jq -r '.decision.coherence_marque_couche_active' "$MANIFEST_R
 CATEGORY_VISUALS_STATUS="$(jq -r '.decision.coherence_systeme_visuel_categories' "$MANIFEST_REAL")"
 LATEST_HEAD="$(jq -r '.project.git.head_commit_short // ""' "$MANIFEST_REAL")"
 LATEST_HEAD_SUBJECT="$(jq -r '.project.git.head_subject // ""' "$MANIFEST_REAL")"
+LATEST_APK_SHA="$(jq -r '.artifacts.apk_tablette.sha256 // ""' "$MANIFEST_REAL")"
 
 [[ "$GATE_STATUS" = "PASS" ]] || {
   printf 'ECHEC: gate latest non PASS\n' >&2
@@ -245,6 +246,18 @@ LATEST_HEAD_SUBJECT="$(jq -r '.project.git.head_subject // ""' "$MANIFEST_REAL")
 
 [[ -n "$LATEST_HEAD" && -n "$LATEST_HEAD_SUBJECT" ]] || {
   printf 'ECHEC: identite git du bundle latest absente du manifeste\n' >&2
+  exit 1
+}
+
+[[ -n "$LATEST_APK_SHA" ]] || {
+  printf 'ECHEC: empreinte SHA-256 APK tablette absente du manifeste latest\n' >&2
+  exit 1
+}
+
+ACTUAL_APK_SHA="$(sha256sum "$APK_REAL" | awk '{print $1}')"
+
+[[ "$LATEST_APK_SHA" = "$ACTUAL_APK_SHA" ]] || {
+  printf 'ECHEC: empreinte SHA-256 APK tablette incoherente entre manifeste et artefact\n' >&2
   exit 1
 }
 

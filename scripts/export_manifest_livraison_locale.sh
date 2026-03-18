@@ -53,6 +53,9 @@ CATEGORY_VISUALS_LOG="$(sed -n 's/^- category visuals log : `\(.*\)`/\1/p' "$PRE
   exit 1
 }
 
+RELEASE_SHA256="$(sha256sum "$RELEASE_APK" | awk '{print $1}')"
+TABLET_SHA256="$(sha256sum "$TABLET_APK" | awk '{print $1}')"
+
 STACK_JSON="$(docker compose ps --format json 2>/dev/null | jq -s '.' )"
 GIT_HEAD_SHORT="$(git -C "$ROOT_DIR" rev-parse --short HEAD)"
 GIT_HEAD_FULL="$(git -C "$ROOT_DIR" rev-parse HEAD)"
@@ -92,9 +95,11 @@ jq -n \
   --arg seed_json "$SEED_JSON" \
   --arg release_apk "$RELEASE_APK" \
   --arg release_size "${RELEASE_SIZE:-0}" \
+  --arg release_sha256 "$RELEASE_SHA256" \
   --arg tablet_apk "$TABLET_APK" \
   --arg tablet_abi "$TABLET_ABI" \
   --arg tablet_size "${TABLET_SIZE:-0}" \
+  --arg tablet_sha256 "$TABLET_SHA256" \
   --arg branding_log "$BRANDING_LOG" \
   --arg category_visuals_log "$CATEGORY_VISUALS_LOG" \
   --arg api_url "http://127.0.0.1:8080/api" \
@@ -151,12 +156,14 @@ jq -n \
       category_visuals_log: $category_visuals_log,
       apk_universal: {
         path: $release_apk,
-        size_bytes: ($release_size | tonumber)
+        size_bytes: ($release_size | tonumber),
+        sha256: $release_sha256
       },
       apk_tablette: {
         path: $tablet_apk,
         abi: $tablet_abi,
-        size_bytes: ($tablet_size | tonumber)
+        size_bytes: ($tablet_size | tonumber),
+        sha256: $tablet_sha256
       }
     },
     credentials: {

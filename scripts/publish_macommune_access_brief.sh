@@ -119,6 +119,7 @@ latest_branding_status="inconnu"
 latest_category_visuals_status="inconnu"
 latest_device_status="inconnu"
 latest_tablet_abi="inconnue"
+latest_tablet_sha256="inconnu"
 latest_bundle_commit="inconnu"
 latest_bundle_message="inconnu"
 latest_bundle_upstream_ref=""
@@ -132,6 +133,7 @@ if [[ -f "$MANIFEST_PATH" ]]; then
   latest_category_visuals_status="$(jq -r '.decision.coherence_systeme_visuel_categories' "$MANIFEST_PATH")"
   latest_device_status="$(jq -r '.decision.livraison_finale_appareil' "$MANIFEST_PATH")"
   latest_tablet_abi="$(jq -r '.artifacts.apk_tablette.abi' "$MANIFEST_PATH")"
+  latest_tablet_sha256="$(jq -r '.artifacts.apk_tablette.sha256 // "inconnu"' "$MANIFEST_PATH")"
   latest_bundle_commit="$(jq -r '.project.git.head_commit_short // "inconnu"' "$MANIFEST_PATH")"
   latest_bundle_message="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST_PATH")"
   latest_bundle_upstream_ref="$(jq -r '.project.git.upstream_ref // ""' "$MANIFEST_PATH")"
@@ -200,6 +202,7 @@ Livraison locale latest
 - upstream bundle latest: ${latest_bundle_upstream_display}
 - worktree propre au moment du bundle: ${latest_bundle_worktree_clean}
 - ABI tablette latest: ${latest_tablet_abi}
+- SHA-256 APK tablette latest: ${latest_tablet_sha256}
 - bundle latest: ${LATEST_BUNDLE}
 - checksum bundle latest: ${LATEST_BUNDLE_SHA}
 - handoff latest: ${LATEST_HANDOFF}

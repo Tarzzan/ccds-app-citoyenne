@@ -39,6 +39,7 @@ MANIFEST_GIT_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFES
 MANIFEST_GIT_UPSTREAM_REF="$(jq -r '.project.git.upstream_ref // ""' "$MANIFEST_JSON")"
 MANIFEST_GIT_UPSTREAM_SHORT="$(jq -r '.project.git.upstream_commit_short // ""' "$MANIFEST_JSON")"
 MANIFEST_GIT_WORKTREE_CLEAN="$(jq -r '.project.git.worktree_clean' "$MANIFEST_JSON")"
+MANIFEST_TABLET_SHA256="$(jq -r '.artifacts.apk_tablette.sha256 // "inconnu"' "$MANIFEST_JSON")"
 ACCESS_BRIEF_SHA=""
 
 for required_file in "$MANIFEST_JSON" "$GATE_MD" "$PREP_MD" "$SEED_JSON" "$BRANDING_LOG" "$CATEGORY_VISUALS_LOG" "$TABLET_APK"; do
@@ -116,6 +117,7 @@ fi)
 - branding log : \`artifacts/$(basename "$BRANDING_LOG")\`
 - category visuals log : \`artifacts/$(basename "$CATEGORY_VISUALS_LOG")\`
 - APK tablette : \`apk/$(basename "$TABLET_APK")\`
+- SHA-256 APK tablette : \`${MANIFEST_TABLET_SHA256}\`
 - checksums : \`checksums/SHA256SUMS.txt\`
 
 ## Alias latest publies hors bundle

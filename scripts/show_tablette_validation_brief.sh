@@ -90,6 +90,7 @@ printf '\n'
 printf 'Artefacts a utiliser:\n'
 printf -- '- APK tablette: %s\n' "$(jq -r '.artifacts.apk_tablette.path' "$MANIFEST")"
 printf -- '- ABI tablette: %s\n' "$(jq -r '.artifacts.apk_tablette.abi' "$MANIFEST")"
+printf -- '- SHA-256 APK tablette: %s\n' "$(jq -r '.artifacts.apk_tablette.sha256 // "inconnu"' "$MANIFEST")"
 printf -- '- bundle latest: /tmp/ma-commune-latest-livraison-bundle.zip\n'
 printf -- '- checksum bundle: /tmp/ma-commune-latest-livraison-bundle.zip.sha256\n'
 printf -- '- audit final local: /tmp/ma-commune-latest-audit-final-local.md\n'
