@@ -60,6 +60,28 @@ interface ApiResponse<T = unknown> {
   errors?: Record<string, string[]>;
 }
 
+async function parseApiBody<T>(response: Response, endpoint: string): Promise<ApiResponse<T>> {
+  const raw = await response.text();
+
+  if (!raw.trim()) {
+    return {
+      success: false,
+      message: `Reponse vide recue depuis ${endpoint}.`,
+    };
+  }
+
+  try {
+    return JSON.parse(raw) as ApiResponse<T>;
+  } catch {
+    throw {
+      status: response.status,
+      success: false,
+      message: `La reponse du serveur pour ${endpoint} n etait pas un JSON valide.`,
+      raw,
+    };
+  }
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -77,7 +99,7 @@ async function request<T>(
 
   const baseUrl  = await getBaseUrl();
   const response = await fetch(`${baseUrl}/${endpoint}`, { ...options, headers });
-  const json     = await response.json();
+  const json     = await parseApiBody<T>(response, endpoint);
 
   if (!response.ok) throw { status: response.status, ...json };
   return json;
@@ -324,7 +346,7 @@ export const incidentsApi = {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
     });
-    const json = await response.json();
+    const json = await parseApiBody<Incident>(response, 'incidents');
     if (!response.ok) throw { status: response.status, ...json };
     return json;
   },
@@ -462,7 +484,7 @@ export const photosApi = {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
     });
-    const json = await response.json();
+    const json = await parseApiBody<Photo>(response, `incidents/${incidentId}/photos`);
     if (!response.ok) throw { status: response.status, ...json };
     return json;
   },
