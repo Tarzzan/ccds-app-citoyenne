@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, RefreshControl, ActivityIndicator, Alert,
+  StyleSheet, RefreshControl, Alert,
 } from 'react-native';
 import { notificationsApi, Notification } from '../services/api';
 import { useNavigation } from '@react-navigation/native';
 import { clearBadge } from '../services/NotificationService';
 import { CivicCompanionCard } from '../components/CivicCompanionCard';
+import { ScreenFeedbackState, ScreenLoadingState } from '../components/ScreenStatePanel';
 import { COLORS } from '../components/ui';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
@@ -159,9 +160,10 @@ export const NotificationsScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      <ScreenLoadingState
+        title="Vos alertes se remettent en ordre"
+        body="Awa trie d abord les mises a jour utiles pour vous laisser relire ce qui compte vraiment."
+      />
     );
   }
 
@@ -211,13 +213,11 @@ export const NotificationsScreen: React.FC = () => {
           />
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>🔔</Text>
-            <Text style={styles.emptyText}>Aucune notification pour l'instant</Text>
-            <Text style={styles.emptySubtext}>
-              Vous serez prévenu des mises à jour, commentaires et étapes de traitement de vos signalements.
-            </Text>
-          </View>
+          <ScreenFeedbackState
+            icon="🔔"
+            title="Aucune notification pour l instant"
+            body="Vous retrouverez ici les mises a jour, commentaires utiles et etapes de traitement de vos signalements."
+          />
         }
       />
     </View>
@@ -227,7 +227,6 @@ export const NotificationsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container:    { flex: 1, backgroundColor: BRAND.colors.mist },
   listContent:  { paddingHorizontal: 16, paddingBottom: 120 },
-  center:       { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header:       {
     paddingHorizontal: 16,
     paddingTop: 28,
@@ -308,10 +307,6 @@ const styles = StyleSheet.create({
     width: 10, height: 10, borderRadius: 5,
     backgroundColor: COLORS.primary, marginTop: 6,
   },
-  empty:        { alignItems: 'center', paddingTop: 80, paddingHorizontal: 40 },
-  emptyIcon:    { fontSize: 48, marginBottom: 16 },
-  emptyText:    { fontSize: 16, fontWeight: '600', color: COLORS.dark, textAlign: 'center' },
-  emptySubtext: { fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', marginTop: 8 },
 });
 
 export default NotificationsScreen;

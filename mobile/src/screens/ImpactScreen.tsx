@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -13,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { authApi, Incident, UserStats } from '../services/api';
 import { CategoryMark } from '../components/CategoryMark';
 import { CivicCompanionCard } from '../components/CivicCompanionCard';
+import { ScreenFeedbackState, ScreenLoadingState } from '../components/ScreenStatePanel';
 import { useTheme } from '../theme/ThemeContext';
 import { BRAND } from '../theme/brand';
 import { AppStackParamList } from '../navigation/RootNavigator';
@@ -167,22 +167,23 @@ export default function ImpactScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Chargement du bilan citoyen…</Text>
-      </View>
+      <ScreenLoadingState
+        title="Votre bilan citoyen se construit"
+        body="Awa relit vos dossiers, vos statuts et vos reperes d engagement pour rendre votre impact plus concret."
+      />
     );
   }
 
   if (error || !stats) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <Text style={[styles.errorIcon, { color: theme.danger }]}>⚠️</Text>
-        <Text style={[styles.errorText, { color: theme.danger }]}>{error || 'Impossible de charger votre bilan citoyen.'}</Text>
-        <TouchableOpacity style={[styles.retryBtn, { backgroundColor: theme.primary }]} onPress={() => loadStats()}>
-          <Text style={styles.retryBtnText}>Reessayer</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenFeedbackState
+        icon="⚠️"
+        tone="warning"
+        title="Le bilan citoyen n a pas encore pu se charger"
+        body={error || 'Impossible de charger votre bilan citoyen.'}
+        actionLabel="Relancer le bilan"
+        onPress={() => loadStats()}
+      />
     );
   }
 
@@ -261,12 +262,11 @@ export default function ImpactScreen() {
 
       <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Derniers dossiers</Text>
       {stats.recent_incidents.length === 0 ? (
-        <View style={[styles.emptyCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Aucun dossier pour le moment</Text>
-          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-            Vos prochains signalements apparaitront ici avec leur statut et leur reference.
-          </Text>
-        </View>
+        <ScreenFeedbackState
+          icon="🗂️"
+          title="Aucun dossier pour le moment"
+          body="Vos prochains signalements apparaitront ici avec leur statut, leur reference et une lecture plus concrete du suivi."
+        />
       ) : (
         <View style={styles.incidentList}>
           {stats.recent_incidents.map((incident) => {
@@ -338,33 +338,6 @@ export default function ImpactScreen() {
 const styles = StyleSheet.create({
   container: {
     paddingBottom: 32,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    gap: 16,
-  },
-  loadingText: {
-    fontSize: 14,
-  },
-  errorIcon: {
-    fontSize: 28,
-  },
-  errorText: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 21,
-  },
-  retryBtn: {
-    paddingHorizontal: 22,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  retryBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
   },
   hero: {
     paddingHorizontal: 20,
@@ -470,21 +443,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 19,
     marginTop: 8,
-  },
-  emptyCard: {
-    borderWidth: 1,
-    borderRadius: 18,
-    marginHorizontal: 16,
-    padding: 18,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  emptyText: {
-    fontSize: 14,
-    lineHeight: 21,
   },
   incidentList: {
     gap: 10,
