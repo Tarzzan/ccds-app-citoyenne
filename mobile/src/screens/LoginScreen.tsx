@@ -130,6 +130,16 @@ export default function LoginScreen({ navigation }: Props) {
               <Text style={styles.link}>Créer un compte</Text>
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryLinkRow}
+            onPress={() => navigation.navigate('ServerConfig')}
+          >
+            <Text style={styles.secondaryLinkText}>
+              Adresse du serveur incorrecte ?{' '}
+              <Text style={styles.link}>Configurer le serveur</Text>
+            </Text>
+          </TouchableOpacity>
         </View>
 
       </ScrollView>
@@ -254,9 +264,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 20,
   },
+  secondaryLinkRow: {
+    alignItems: 'center',
+    marginTop: 12,
+  },
   linkText: {
     fontSize: 14,
     color: COLORS.gray,
+  },
+  secondaryLinkText: {
+    fontSize: 13,
+    color: BRAND.colors.slate,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   link: {
     color: COLORS.primary,

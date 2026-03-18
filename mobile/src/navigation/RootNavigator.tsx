@@ -38,6 +38,7 @@ import { flushPendingNavigation, navigationRef } from './navigationRef';
 export type AuthStackParamList = {
   Login:    undefined;
   Register: undefined;
+  ServerConfig: undefined;
 };
 
 export type AppTabParamList = {
@@ -204,6 +205,15 @@ function AuthNavigator() {
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Login"    component={LoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
+      <AuthStack.Screen name="ServerConfig">
+        {(props) => (
+          <ServerConfigScreen
+            {...props}
+            isFirstLaunch={false}
+            onConfigured={() => props.navigation.goBack()}
+          />
+        )}
+      </AuthStack.Screen>
     </AuthStack.Navigator>
   );
 }
