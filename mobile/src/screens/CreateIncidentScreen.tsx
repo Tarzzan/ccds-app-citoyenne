@@ -21,6 +21,33 @@ import { OfflineQueue }                           from '../services/OfflineQueue
 import { BRAND, BRAND_SHADOW }                    from '../theme/brand';
 import { resolveCategoryVisual }                  from '../theme/categoryVisuals';
 
+function StepSection({
+  step,
+  title,
+  hint,
+  children,
+}: {
+  step: string;
+  title: string;
+  hint: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.stepSection}>
+      <View style={styles.stepHeader}>
+        <View style={styles.stepBadge}>
+          <Text style={styles.stepBadgeText}>{step}</Text>
+        </View>
+        <View style={styles.stepHeaderCopy}>
+          <Text style={styles.stepTitle}>{title}</Text>
+          <Text style={styles.stepHint}>{hint}</Text>
+        </View>
+      </View>
+      {children}
+    </View>
+  );
+}
+
 export default function CreateIncidentScreen() {
   const navigation = useNavigation();
 
@@ -39,6 +66,7 @@ export default function CreateIncidentScreen() {
   const [errors,       setErrors]       = useState<Record<string, string>>({});
   const [isConnected,  setIsConnected]  = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
+  const readinessCount = [Boolean(photo), Boolean(categoryId), Boolean(description.trim()), Boolean(coords)].filter(Boolean).length;
 
   // Charger les catégories et surveiller la connectivité
   useEffect(() => {
@@ -294,114 +322,128 @@ export default function CreateIncidentScreen() {
           </View>
         )}
 
-        {/* Photo */}
-        <Text style={styles.sectionTitle}>Photo du problème</Text>
-        <TouchableOpacity
-          style={[styles.photoBox, photo ? styles.photoBoxFilled : {}]}
-          onPress={showPhotoPicker}
-        >
-          {photo
-            ? <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
-            : (
-              <View style={styles.photoPlaceholder}>
-                <Text style={styles.photoIcon}>📷</Text>
-                <Text style={styles.photoHint}>Appuyer pour photographier</Text>
-                <Text style={styles.photoSubHint}>ou choisir dans la galerie</Text>
-              </View>
-            )
-          }
-        </TouchableOpacity>
-        {photo && (
-          <TouchableOpacity onPress={() => setPhoto(null)} style={styles.removePhoto}>
-            <Text style={styles.removePhotoText}>Supprimer la photo</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Catégorie */}
-        <Text style={styles.sectionTitle}>
-          Catégorie <Text style={styles.required}>*</Text>
-        </Text>
-        {errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
-        <View style={styles.categoriesGrid}>
-          {categories.map(cat => {
-            const visual = resolveCategoryVisual(cat.icon, cat.name);
-            const isSelected = categoryId === cat.id;
-
-            return (
-              <TouchableOpacity
-                key={cat.id}
-                style={[
-                  styles.categoryCard,
-                  isSelected && { borderColor: visual.accent, backgroundColor: `${visual.accent}14` },
-                ]}
-                onPress={() => setCategoryId(cat.id)}
-                activeOpacity={0.88}
-              >
-                <View style={styles.categoryCardTop}>
-                  <CategoryMark icon={cat.icon} name={cat.name} color={visual.accent} size={62} />
-                  <View style={[styles.categoryPulse, { backgroundColor: `${visual.accent}1F` }]} />
-                </View>
-                <Text style={[styles.categoryCardTitle, isSelected && { color: BRAND.colors.canopyDeep }]}>
-                  {cat.name}
-                </Text>
-                <Text style={styles.categoryCardDescription}>
-                  {visual.description}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+        <View style={styles.readinessCard}>
+          <Text style={styles.readinessEyebrow}>Avant envoi</Text>
+          <Text style={styles.readinessTitle}>{readinessCount}/4 reperes utiles deja prets</Text>
+          <Text style={styles.readinessText}>
+            Une photo claire, une categorie juste, une description concrete et une position fiable rendent le traitement beaucoup plus rapide.
+          </Text>
+          <View style={styles.readinessRow}>
+            <View style={[styles.readinessPill, photo && styles.readinessPillDone]}><Text style={styles.readinessPillText}>Photo</Text></View>
+            <View style={[styles.readinessPill, Boolean(categoryId) && styles.readinessPillDone]}><Text style={styles.readinessPillText}>Categorie</Text></View>
+            <View style={[styles.readinessPill, Boolean(description.trim()) && styles.readinessPillDone]}><Text style={styles.readinessPillText}>Description</Text></View>
+            <View style={[styles.readinessPill, Boolean(coords) && styles.readinessPillDone]}><Text style={styles.readinessPillText}>Position</Text></View>
+          </View>
         </View>
 
-        {/* Description */}
-        <Input
-          label={<>Description <Text style={styles.required}>*</Text></> as any}
-          placeholder="Décrivez précisément le problème observé…"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          numberOfLines={4}
-          style={{ minHeight: 100, textAlignVertical: 'top' }}
-          error={errors.description}
-        />
-
-        {/* Titre optionnel */}
-        <Input
-          label="Titre (optionnel)"
-          placeholder="Ex: Nid-de-poule dangereux rue de la Paix"
-          value={title}
-          onChangeText={setTitle}
-        />
-
-        {/* Localisation */}
-        <Text style={styles.sectionTitle}>
-          Localisation <Text style={styles.required}>*</Text>
-        </Text>
-        {errors.location && <Text style={styles.errorText}>{errors.location}</Text>}
-        <View style={styles.locationBox}>
-          {locLoading
-            ? <ActivityIndicator color={COLORS.primary} />
-            : coords
-              ? (
-                <View style={styles.locationInfo}>
-                  <Text style={styles.locationIcon}>📍</Text>
-                  <View style={{ flex: 1 }}>
-                    {address ? <Text style={styles.locationAddress}>{address}</Text> : null}
-                    <Text style={styles.locationCoords}>
-                      {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
-                    </Text>
-                  </View>
-                  <TouchableOpacity onPress={getLocation}>
-                    <Text style={styles.refreshLocation}>🔄</Text>
-                  </TouchableOpacity>
-                </View>
-              )
+        <StepSection step="1" title="Montrer le probleme" hint="Une image lisible aide les agents a comprendre plus vite.">
+          <TouchableOpacity
+            style={[styles.photoBox, photo ? styles.photoBoxFilled : {}]}
+            onPress={showPhotoPicker}
+          >
+            {photo
+              ? <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
               : (
-                <TouchableOpacity style={styles.locationBtn} onPress={getLocation}>
-                  <Text style={styles.locationBtnText}>📍 Obtenir ma position</Text>
-                </TouchableOpacity>
+                <View style={styles.photoPlaceholder}>
+                  <Text style={styles.photoIcon}>📷</Text>
+                  <Text style={styles.photoHint}>Appuyer pour photographier</Text>
+                  <Text style={styles.photoSubHint}>ou choisir dans la galerie</Text>
+                </View>
               )
-          }
-        </View>
+            }
+          </TouchableOpacity>
+          {photo && (
+            <TouchableOpacity onPress={() => setPhoto(null)} style={styles.removePhoto}>
+              <Text style={styles.removePhotoText}>Supprimer la photo</Text>
+            </TouchableOpacity>
+          )}
+        </StepSection>
+
+        <StepSection step="2" title="Qualifier la situation" hint="Choisissez la famille qui aidera le mieux la commune a orienter le dossier.">
+          <Text style={styles.sectionTitle}>
+            Catégorie <Text style={styles.required}>*</Text>
+          </Text>
+          {errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
+          <View style={styles.categoriesGrid}>
+            {categories.map(cat => {
+              const visual = resolveCategoryVisual(cat.icon, cat.name);
+              const isSelected = categoryId === cat.id;
+
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[
+                    styles.categoryCard,
+                    isSelected && { borderColor: visual.accent, backgroundColor: `${visual.accent}14` },
+                  ]}
+                  onPress={() => setCategoryId(cat.id)}
+                  activeOpacity={0.88}
+                >
+                  <View style={styles.categoryCardTop}>
+                    <CategoryMark icon={cat.icon} name={cat.name} color={visual.accent} size={62} />
+                    <View style={[styles.categoryPulse, { backgroundColor: `${visual.accent}1F` }]} />
+                  </View>
+                  <Text style={[styles.categoryCardTitle, isSelected && { color: BRAND.colors.canopyDeep }]}>
+                    {cat.name}
+                  </Text>
+                  <Text style={styles.categoryCardDescription}>
+                    {visual.description}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Input
+            label={<>Description <Text style={styles.required}>*</Text></> as any}
+            placeholder="Décrivez précisément le problème observé…"
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            numberOfLines={4}
+            style={{ minHeight: 100, textAlignVertical: 'top' }}
+            error={errors.description}
+          />
+
+          <Input
+            label="Titre (optionnel)"
+            placeholder="Ex: Nid-de-poule dangereux rue de la Paix"
+            value={title}
+            onChangeText={setTitle}
+          />
+        </StepSection>
+
+        <StepSection step="3" title="Confirmer le lieu" hint="Une localisation fiable augmente la qualite de prise en charge.">
+          <Text style={styles.sectionTitle}>
+            Localisation <Text style={styles.required}>*</Text>
+          </Text>
+          {errors.location && <Text style={styles.errorText}>{errors.location}</Text>}
+          <View style={styles.locationBox}>
+            {locLoading
+              ? <ActivityIndicator color={COLORS.primary} />
+              : coords
+                ? (
+                  <View style={styles.locationInfo}>
+                    <Text style={styles.locationIcon}>📍</Text>
+                    <View style={{ flex: 1 }}>
+                      {address ? <Text style={styles.locationAddress}>{address}</Text> : null}
+                      <Text style={styles.locationCoords}>
+                        {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={getLocation}>
+                      <Text style={styles.refreshLocation}>🔄</Text>
+                    </TouchableOpacity>
+                  </View>
+                )
+                : (
+                  <TouchableOpacity style={styles.locationBtn} onPress={getLocation}>
+                    <Text style={styles.locationBtnText}>📍 Obtenir ma position</Text>
+                  </TouchableOpacity>
+                )
+            }
+          </View>
+        </StepSection>
 
         {/* Bouton de soumission */}
         <Button
@@ -465,6 +507,97 @@ const styles = StyleSheet.create({
   },
   companionCardWrap: {
     marginBottom: 16,
+  },
+  readinessCard: {
+    backgroundColor: '#FFF7E8',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E7D0A2',
+    ...BRAND_SHADOW,
+  },
+  readinessEyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: BRAND.colors.awara,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  readinessTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: BRAND.colors.canopyDeep,
+    marginTop: 6,
+    fontFamily: BRAND.displayFont,
+  },
+  readinessText: {
+    fontSize: 13,
+    color: BRAND.colors.slate,
+    lineHeight: 19,
+    marginTop: 8,
+  },
+  readinessRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 14,
+  },
+  readinessPill: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    backgroundColor: '#F2E7CF',
+  },
+  readinessPillDone: {
+    backgroundColor: '#DCEBDD',
+  },
+  readinessPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: BRAND.colors.canopyDeep,
+  },
+  stepSection: {
+    backgroundColor: '#FFFDF8',
+    borderRadius: 22,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#ECE4D5',
+    ...BRAND_SHADOW,
+  },
+  stepHeader: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  stepBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: BRAND.colors.canopyDeep,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepBadgeText: {
+    color: BRAND.colors.white,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  stepHeaderCopy: {
+    flex: 1,
+  },
+  stepTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: BRAND.colors.ink,
+  },
+  stepHint: {
+    fontSize: 12.5,
+    color: BRAND.colors.slate,
+    marginTop: 4,
+    lineHeight: 18,
   },
 
   // Mode hors-ligne

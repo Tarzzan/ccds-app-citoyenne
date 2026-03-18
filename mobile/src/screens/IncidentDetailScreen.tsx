@@ -36,6 +36,7 @@ const PRIORITY_COLORS: Record<'low' | 'medium' | 'high' | 'critical', string> = 
   critical: '#C94B3C',
 };
 const PRIORITIES: Array<'low' | 'medium' | 'high' | 'critical'> = ['low', 'medium', 'high', 'critical'];
+const STATUS_FLOW: Array<Incident['status']> = ['submitted', 'acknowledged', 'in_progress', 'resolved'];
 
 function getRecommendedStaffAction(incident: Incident, isAssignedToMe: boolean) {
   const assignmentText = incident.assigned_to_name
@@ -277,6 +278,7 @@ export default function IncidentDetailScreen() {
   const staffRoleLabel = user?.role === 'admin' ? 'Administrateur' : 'Agent municipal';
   const recommendedAction = getRecommendedStaffAction(incident, Boolean(assignToMe));
   const citizenCompanion = getCitizenStatusCompanion(incident);
+  const statusIndex = STATUS_FLOW.indexOf(incident.status);
 
   const applyRecommendedAction = () => {
     setStaffStatus(recommendedAction.status);
@@ -329,6 +331,40 @@ export default function IncidentDetailScreen() {
             />
           </View>
         )}
+
+        <View style={styles.progressCard}>
+          <Text style={styles.progressEyebrow}>Lecture rapide du dossier</Text>
+          <View style={styles.progressRow}>
+            {STATUS_FLOW.map((status, index) => {
+              const active = incident.status === status;
+              const done = statusIndex >= index && incident.status !== 'rejected';
+              return (
+                <View key={status} style={styles.progressStep}>
+                  <View
+                    style={[
+                      styles.progressDot,
+                      done && styles.progressDotDone,
+                      active && styles.progressDotActive,
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      styles.progressLabel,
+                      done && styles.progressLabelDone,
+                    ]}
+                  >
+                    {STATUS_LABELS[status]}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+          {incident.status === 'rejected' ? (
+            <Text style={styles.progressRejected}>
+              Ce dossier est actuellement classe sans suite. Relisez l historique ou ajoutez une precision utile si la situation a change.
+            </Text>
+          ) : null}
+        </View>
 
         <View style={styles.card}>
           <View style={styles.refRow}>
@@ -638,6 +674,65 @@ const styles = StyleSheet.create({
   companionWrap: {
     marginHorizontal: 16,
     marginTop: 16,
+  },
+  progressCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 0,
+    backgroundColor: '#FFFDF8',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#ECE4D5',
+    ...BRAND_SHADOW,
+  },
+  progressEyebrow: {
+    color: BRAND.colors.canopy,
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  progressRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  progressStep: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 8,
+  },
+  progressDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 999,
+    backgroundColor: '#E2D8C8',
+  },
+  progressDotDone: {
+    backgroundColor: BRAND.colors.leaf,
+  },
+  progressDotActive: {
+    backgroundColor: BRAND.colors.awara,
+    borderWidth: 2,
+    borderColor: BRAND.colors.canopyDeep,
+  },
+  progressLabel: {
+    fontSize: 11,
+    color: BRAND.colors.slate,
+    textAlign: 'center',
+    lineHeight: 15,
+  },
+  progressLabelDone: {
+    color: BRAND.colors.canopyDeep,
+    fontWeight: '700',
+  },
+  progressRejected: {
+    marginTop: 12,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: BRAND.colors.slate,
   },
 
   photoSection: { backgroundColor: COLORS.primaryDark, marginTop: 16 },
