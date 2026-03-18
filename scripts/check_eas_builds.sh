@@ -16,7 +16,7 @@ fetch_build_json() {
   local build_id="$1"
   (
     cd "$MOBILE_DIR"
-    eas build:view "$build_id" --json | python3 -c '
+    eas build:view "$build_id" --json 2>/dev/null | python3 -c '
 import sys
 raw = sys.stdin.read()
 start = raw.find("{")
