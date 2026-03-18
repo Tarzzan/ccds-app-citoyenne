@@ -9,6 +9,7 @@ import {
   Dimensions, Animated, StatusBar,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
 const { width, height } = Dimensions.get('window');
@@ -98,6 +99,20 @@ export default function OnboardingScreen({ onComplete }: Props) {
           </View>
           <Text style={styles.slideTitle}>{item.title}</Text>
           <Text style={styles.slideDescription}>{item.description}</Text>
+          {item.id === '4' ? (
+            <View style={styles.companionPreviewWrap}>
+              <CivicCompanionCard
+                compact
+                tone="thanks"
+                title={`${BRAND.companion.name} vous accompagne dans la suite.`}
+                body={BRAND.copy.companionOnboarding}
+                bullets={[
+                  'remercier apres un signalement utile',
+                  'traduire la prochaine etape en langage simple',
+                ]}
+              />
+            </View>
+          ) : null}
           <View style={styles.storyFooter}>
             <View style={[styles.storyPill, { backgroundColor: '#0E3127' }]}>
               <Text style={styles.storyPillText}>Service public</Text>
@@ -238,6 +253,7 @@ const styles = StyleSheet.create({
   storyMarker:     { fontSize: 18, fontWeight: '800', color: BRAND.colors.laterite, fontFamily: 'monospace' },
   slideTitle:      { fontSize: 29, fontWeight: '800', color: BRAND.colors.ink, marginBottom: 14, lineHeight: 36, fontFamily: BRAND.displayFont },
   slideDescription:{ fontSize: 16, color: '#355248', lineHeight: 25 },
+  companionPreviewWrap: { marginTop: 18 },
   storyFooter:     { flexDirection: 'row', gap: 10, marginTop: 20 },
   storyPill:       { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
   storyPillText:   { color: BRAND.colors.white, fontSize: 12, fontWeight: '700' },

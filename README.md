@@ -25,6 +25,7 @@ Voir les documents de cadrage actifs :
 - `docs/CREDENTIALS_DEMO_MA_COMMUNE_2026-03-18.md`
 - `docs/MODE_OPERATOIRE_DEMO_MA_COMMUNE_2026-03-18.md`
 - `docs/CATEGORIES_VISUELLES_MA_COMMUNE_2026-03-18.md`
+- `docs/BRIEF_REFONTE_COMPAGNON_CIVIQUE_MA_COMMUNE_2026-03-18.md`
 
 ## Documentation Active Vs Archive
 
@@ -40,6 +41,7 @@ Documents actifs a privilegier pour comprendre l'etat reel du produit :
 - `docs/RECETTE_MVP_CITOYEN_AGENT_ADMIN_2026-03-18.md`
 - `docs/GUIDE_TESTS_MOBILES.md`
 - `docs/CATEGORIES_VISUELLES_MA_COMMUNE_2026-03-18.md`
+- `docs/BRIEF_REFONTE_COMPAGNON_CIVIQUE_MA_COMMUNE_2026-03-18.md`
 
 Documents historiques a lire comme archives ou matiere de reprise :
 

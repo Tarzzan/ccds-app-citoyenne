@@ -12,7 +12,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { authApi, Incident, UserStats } from '../services/api';
 import { CategoryMark } from '../components/CategoryMark';
+import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { useTheme } from '../theme/ThemeContext';
+import { BRAND } from '../theme/brand';
 import { AppStackParamList } from '../navigation/RootNavigator';
 
 type NavProp = NativeStackNavigationProp<AppStackParamList>;
@@ -186,6 +188,11 @@ export default function ImpactScreen() {
 
   const narrative = getBilanNarrative(stats);
   const monthlySummary = buildMonthlySummary(stats);
+  const companionBody = stats.pending_count > 0
+    ? 'Des dossiers attendent encore une reponse visible. Le bon reflexe maintenant est de relire ce qui reste ouvert et de pousser la boucle de suivi jusqu au bout.'
+    : stats.resolved_count > 0
+      ? 'Votre bilan montre deja une preuve de service rendu. Gardez cette dynamique en surveillant les nouveaux dossiers et en documentant ce qui reste a traiter.'
+      : 'Votre bilan est encore en construction. Des vos premiers signalements, cet espace rendra la reponse locale plus concrete et plus lisible.';
 
   return (
     <ScrollView
@@ -236,6 +243,20 @@ export default function ImpactScreen() {
         <Text style={[styles.proofTitle, { color: theme.textPrimary }]}>Lecture rapide du service rendu</Text>
         <Text style={[styles.proofText, { color: theme.textSecondary }]}>{formatResolutionDelay(stats.avg_resolution_hours)}</Text>
         <Text style={[styles.proofHint, { color: theme.textSecondary }]}>{monthlySummary}</Text>
+      </View>
+
+      <View style={styles.companionWrap}>
+        <CivicCompanionCard
+          tone="status"
+          title={`${BRAND.companion.name} lit votre impact avec vous`}
+          body={companionBody}
+          bullets={[
+            'prioriser les dossiers encore ouverts',
+            'verifier les derniers commentaires et statuts',
+          ]}
+          ctaLabel="Ouvrir mes signalements"
+          onPress={() => navigation.navigate('Tabs')}
+        />
       </View>
 
       <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Derniers dossiers</Text>
@@ -431,6 +452,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 14,
     padding: 16,
+  },
+  companionWrap: {
+    marginHorizontal: 16,
+    marginTop: 14,
   },
   proofTitle: {
     fontSize: 16,

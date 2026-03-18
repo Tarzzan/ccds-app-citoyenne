@@ -16,6 +16,7 @@ import { categoriesApi, incidentsApi, Category } from '../services/api';
 import { Button, Input, COLORS }                 from '../components/ui';
 import { OfflineBanner }                          from '../components/OfflineBanner';
 import { CategoryMark }                           from '../components/CategoryMark';
+import { CivicCompanionCard }                     from '../components/CivicCompanionCard';
 import { OfflineQueue }                           from '../services/OfflineQueue';
 import { BRAND, BRAND_SHADOW }                    from '../theme/brand';
 import { resolveCategoryVisual }                  from '../theme/categoryVisuals';
@@ -185,8 +186,8 @@ export default function CreateIncidentScreen() {
         });
 
         Alert.alert(
-          '📥 Signalement enregistré hors-ligne',
-          'Votre signalement sera envoyé automatiquement dès que vous retrouverez une connexion internet.',
+          'Signalement garde pour envoi ulterieur',
+          `${BRAND.companion.name} a bien conserve votre signalement. Il sera envoye automatiquement des que votre connexion reviendra.`,
           [{ text: 'OK', onPress: () => navigation.goBack() }]
         );
         return;
@@ -210,8 +211,8 @@ export default function CreateIncidentScreen() {
 
       const res = await incidentsApi.create(formData);
       Alert.alert(
-        '✅ Signalement envoyé !',
-        `Votre signalement a bien été enregistré.\nRéférence : ${res.data?.reference ?? ''}`,
+        'Merci, votre signalement est parti.',
+        `${BRAND.companion.name} vous confirme que le dossier a bien ete enregistre.${res.data?.reference ? `\nReference : ${res.data.reference}` : ''}`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (err: any) {
@@ -269,6 +270,19 @@ export default function CreateIncidentScreen() {
           <Text style={styles.introText}>
             Décrivez un problème utile à traiter par la commune. Une bonne fiche aide les agents à intervenir plus vite et plus justement.
           </Text>
+        </View>
+
+        <View style={styles.companionCardWrap}>
+          <CivicCompanionCard
+            tone="guide"
+            title={`${BRAND.companion.name} vous aide a faire un signalement utile`}
+            body="Quelques details simples changent tout: une photo lisible, un lieu exact et une description courte mais concrete."
+            bullets={[
+              'montrer clairement le probleme sur la photo',
+              'verifier la position avant envoi',
+              'decrire ce qui gene le plus le terrain',
+            ]}
+          />
         </View>
 
         {/* Indicateur mode hors-ligne dans le formulaire */}
@@ -448,6 +462,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#355248',
     lineHeight: 21,
+  },
+  companionCardWrap: {
+    marginBottom: 16,
   },
 
   // Mode hors-ligne

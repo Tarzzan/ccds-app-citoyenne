@@ -11,6 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { authApi, incidentsApi, Incident, UserStats } from '../services/api';
 import { CategoryMark } from '../components/CategoryMark';
+import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { useAuth } from '../services/AuthContext';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
@@ -206,6 +207,33 @@ export default function DashboardScreen() {
   const impactButtonLabel = stats.badges.length > 0 || stats.points > 0
     ? 'Voir les repères détaillés →'
     : 'Ouvrir le suivi d’impact →';
+  const companionMessage = isStaff
+    ? {
+      tone: 'status' as const,
+      title: `${BRAND.companion.name} vous aide a garder la file lisible`,
+      body: staffQueue && staffQueue.criticalTotal > 0
+        ? `${staffQueue.criticalTotal} urgence(s) critique(s) demandent une qualification rapide. L enjeu n est pas seulement de traiter, mais de rendre la reponse visible.`
+        : 'Votre synthese mobile doit rester breve, orientee priorites et directement actionnable sur le terrain.',
+      bullets: [
+        'ouvrir d abord les urgences critiques',
+        'documenter chaque etape de prise en charge',
+      ],
+      ctaLabel: 'Ouvrir la file d intervention',
+      onPress: () => navigation.navigate('Tabs', { screen: 'MyIncidents' }),
+    }
+    : {
+      tone: 'thanks' as const,
+      title: `${BRAND.companion.name} vous remercie pour votre veille`,
+      body: stats.incidents_count > 0
+        ? 'Chaque signalement utile renforce la lisibilite du service rendu. Votre tableau de bord doit vous dire ce qui bouge, pas seulement ce qui a ete depose.'
+        : 'Votre espace citoyen est pret. Des votre premier signalement, la commune pourra rendre visible sa prise en charge et vous saurez quoi suivre.',
+      bullets: [
+        'verifier les dossiers encore en attente',
+        'ouvrir le bilan detaille pour lire la preuve de suivi',
+      ],
+      ctaLabel: 'Voir mon bilan citoyen',
+      onPress: () => navigation.navigate('Impact'),
+    };
 
   return (
     <ScrollView
@@ -328,6 +356,17 @@ export default function DashboardScreen() {
             </View>
           </View>
           <Text style={styles.proofHint}>{serviceProofLabel}</Text>
+        </View>
+
+        <View style={styles.companionSection}>
+          <CivicCompanionCard
+            tone={companionMessage.tone}
+            title={companionMessage.title}
+            body={companionMessage.body}
+            bullets={companionMessage.bullets}
+            ctaLabel={companionMessage.ctaLabel}
+            onPress={companionMessage.onPress}
+          />
         </View>
 
         {/* Taux de résolution */}
@@ -541,6 +580,7 @@ const styles = StyleSheet.create({
   proofMetricValue: { color: BRAND.colors.canopyDeep, fontSize: 22, fontWeight: '800' },
   proofMetricLabel: { color: BRAND.colors.slate, fontSize: 11, marginTop: 4 },
   proofHint:      { marginTop: 12, color: BRAND.colors.slate, fontSize: 12, lineHeight: 18 },
+  companionSection: { marginHorizontal: 16, marginBottom: 16 },
   section:        { backgroundColor: '#FFFDF8', margin: 16, marginTop: 0, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: '#ECE4D5', ...BRAND_SHADOW },
   sectionTitle:   { fontSize: 16, fontWeight: '800', color: BRAND.colors.canopyDeep, marginBottom: 14 },
   sectionIntro:   { color: BRAND.colors.slate, fontSize: 13, lineHeight: 20, marginBottom: 14 },
