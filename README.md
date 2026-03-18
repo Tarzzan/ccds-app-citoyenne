@@ -150,6 +150,8 @@ cd android
 bash scripts/build_release_tablette.sh
 ```
 
+Sans tablette `adb` connectee, la detection retombe sur le dernier APK tablette deja construit ou sur `armeabi-v7a`, pour ne pas bloquer la preparation locale hors appareil.
+
 ### Backend / recette
 
 ```bash
@@ -170,6 +172,8 @@ Voir aussi :
 
 - `assets/category-visuals/index.html`
 - `docs/CATEGORIES_VISUELLES_MA_COMMUNE_2026-03-18.md`
+
+La regeneration alimente aussi `mobile/assets/category-visuals/category-visuals.json`, afin que le build Metro release n'importe plus un fichier situe hors du projet mobile.
 
 ### Admin
 

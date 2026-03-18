@@ -27,6 +27,7 @@ GATE_MD="$(jq -r '.artifacts.gate_markdown' "$MANIFEST_JSON")"
 PREP_MD="$(jq -r '.artifacts.preparation_markdown' "$MANIFEST_JSON")"
 SEED_JSON="$(jq -r '.artifacts.seed_json' "$MANIFEST_JSON")"
 BRANDING_LOG="$(jq -r '.artifacts.branding_log' "$MANIFEST_JSON")"
+CATEGORY_VISUALS_LOG="$(jq -r '.artifacts.category_visuals_log' "$MANIFEST_JSON")"
 UNIVERSAL_APK="$(jq -r '.artifacts.apk_universal.path' "$MANIFEST_JSON")"
 UNIVERSAL_SIZE="$(jq -r '.artifacts.apk_universal.size_bytes' "$MANIFEST_JSON")"
 TABLET_APK="$(jq -r '.artifacts.apk_tablette.path' "$MANIFEST_JSON")"
@@ -54,6 +55,7 @@ Date de generation : $(date '+%d/%m/%Y %H:%M:%S')
 
 - audit final local : PASS
 - coherence de marque couche active : PASS
+- coherence systeme visuel categories : PASS
 - demonstration locale : GO
 - phase tablette : AUTORISEE POUR VALIDATION
 - livraison finale appareil : NON AUTORISEE A CE STADE
@@ -90,6 +92,7 @@ ${INCIDENTS}
 - preparation livraison : \`${PREP_MD}\`
 - seed demonstration : \`${SEED_JSON}\`
 - branding log : \`${BRANDING_LOG}\`
+- category visuals log : \`${CATEGORY_VISUALS_LOG}\`
 - APK universel : \`${UNIVERSAL_APK}\` (${UNIVERSAL_SIZE} octets)
 - APK cible tablette ${TABLET_ABI} : \`${TABLET_APK}\` (${TABLET_SIZE} octets)
 

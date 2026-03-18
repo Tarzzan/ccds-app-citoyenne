@@ -32,6 +32,9 @@ log "Execution de l'audit local"
 log "Controle des residus de marque"
 (cd "$ROOT_DIR" && bash scripts/check_branding_residuals.sh >/tmp/ma-commune-prepare-branding.log)
 
+log "Controle du systeme visuel categories"
+(cd "$ROOT_DIR" && bash scripts/check_category_visuals.sh >/tmp/ma-commune-prepare-category-visuals.log)
+
 RELEASE_APK="${RELEASE_OUTPUT_DIR}/app-release.apk"
 RELEASE_APK_SNAPSHOT=""
 RELEASE_APK_SIZE=""
@@ -90,6 +93,7 @@ Date de generation : $(date '+%d/%m/%Y %H:%M:%S')
 
 - audit local : OK
 - coherence de marque couche active : OK
+- coherence systeme visuel categories : OK
 - seed demonstration : OK
 - validation tablette finale : NON REALISEE
 
@@ -113,6 +117,7 @@ ${INCIDENTS}
 - seed json : \`${LATEST_SEED}\`
 - audit log : \`/tmp/ma-commune-prepare-audit.log\`
 - branding log : \`/tmp/ma-commune-prepare-branding.log\`
+- category visuals log : \`/tmp/ma-commune-prepare-category-visuals.log\`
 - seed log : \`/tmp/ma-commune-prepare-seed.log\`
 - build tablette log : \`/tmp/ma-commune-prepare-build-tablette.log\`
 ${RELEASE_APK_LINE}

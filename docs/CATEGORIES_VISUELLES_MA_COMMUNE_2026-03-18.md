@@ -46,6 +46,7 @@ python3 scripts/generate_category_icons.py
 Cette commande alimente automatiquement:
 
 - [assets/category-visuals/generated](/home/tarzzan/codex/ccds-app-citoyenne/assets/category-visuals/generated)
+- [mobile/assets/category-visuals](/home/tarzzan/codex/ccds-app-citoyenne/mobile/assets/category-visuals)
 - [mobile/assets/category-icons](/home/tarzzan/codex/ccds-app-citoyenne/mobile/assets/category-icons)
 - [admin/assets/img/category-icons](/home/tarzzan/codex/ccds-app-citoyenne/admin/assets/img/category-icons)
 

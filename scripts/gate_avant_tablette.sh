@@ -72,6 +72,10 @@ BRANDING_OUTPUT="$(cd "$ROOT_DIR" && bash scripts/check_branding_residuals.sh)"
 [[ -n "$BRANDING_OUTPUT" ]] || fail "controle de residus de marque silencieux"
 pass "coherence de marque verrouillee sur la couche active"
 
+CATEGORY_VISUALS_OUTPUT="$(cd "$ROOT_DIR" && bash scripts/check_category_visuals.sh)"
+[[ -n "$CATEGORY_VISUALS_OUTPUT" ]] || fail "controle categories visuelles silencieux"
+pass "coherence categories visuelles verrouillee"
+
 cat > "$OUTPUT_MD" <<EOF
 # Gate Avant Tablette - Ma Commune
 
@@ -94,6 +98,7 @@ Date de generation : $(date '+%d/%m/%Y %H:%M:%S')
 - dossier livraison : \`${DOSSIER_DOC}\`
 - matrice readiness : \`${MATRIX_DOC}\`
 - controle branding actif : \`bash scripts/check_branding_residuals.sh\`
+- controle categories visuelles actif : \`bash scripts/check_category_visuals.sh\`
 
 ## Decision
 

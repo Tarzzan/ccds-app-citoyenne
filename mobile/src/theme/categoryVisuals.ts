@@ -21,7 +21,7 @@ export interface CategoryVisual {
   source: ImageSourcePropType;
 }
 
-const CATEGORY_VISUAL_DATA = require('../../../assets/category-visuals/category-visuals.json') as CategoryVisualJson[];
+const CATEGORY_VISUAL_DATA = require('../../assets/category-visuals/category-visuals.json') as CategoryVisualJson[];
 
 const CATEGORY_ICON_SOURCES: Record<string, ImageSourcePropType> = {
   road: require('../../assets/category-icons/road.png'),

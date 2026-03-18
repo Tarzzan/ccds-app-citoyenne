@@ -15,9 +15,11 @@ root = Path(sys.argv[1])
 catalog_path = root / "assets" / "category-visuals" / "category-visuals.json"
 generated_dir = root / "assets" / "category-visuals" / "generated"
 mobile_dir = root / "mobile" / "assets" / "category-icons"
+mobile_catalog_dir = root / "mobile" / "assets" / "category-visuals"
 admin_dir = root / "admin" / "assets" / "img" / "category-icons"
 mobile_theme_path = root / "mobile" / "src" / "theme" / "categoryVisuals.ts"
 generated_catalog_copy = generated_dir / "category-visuals.json"
+mobile_catalog_copy = mobile_catalog_dir / "category-visuals.json"
 preview_png = generated_dir / "category-visuals-preview.png"
 preview_html = root / "assets" / "category-visuals" / "index.html"
 
@@ -81,6 +83,11 @@ else:
         errors.append(f"copie du catalogue manquante: {generated_catalog_copy}")
     elif catalog_path.read_bytes() != generated_catalog_copy.read_bytes():
         errors.append("la copie du catalogue dans assets/category-visuals/generated n'est pas synchronisee")
+
+    if not mobile_catalog_copy.is_file():
+        errors.append(f"copie mobile du catalogue manquante: {mobile_catalog_copy}")
+    elif catalog_path.read_bytes() != mobile_catalog_copy.read_bytes():
+        errors.append("la copie du catalogue dans mobile/assets/category-visuals n'est pas synchronisee")
 
     if mobile_theme_path.is_file():
         mobile_theme_source = mobile_theme_path.read_text(encoding="utf-8")

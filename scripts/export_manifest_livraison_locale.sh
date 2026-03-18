@@ -31,6 +31,7 @@ TABLET_APK="$(sed -n 's/^- APK cible tablette : `\(.*\)`/\1/p' "$GATE_MD")"
 TABLET_ABI="$(sed -n 's/^- ABI cible tablette : `\(.*\)`/\1/p' "$GATE_MD")"
 TABLET_SIZE="$(sed -n 's/^- taille APK cible tablette : \([0-9][0-9]*\) octets/\1/p' "$GATE_MD")"
 BRANDING_LOG="$(sed -n 's/^- branding log : `\(.*\)`/\1/p' "$PREP_MD")"
+CATEGORY_VISUALS_LOG="$(sed -n 's/^- category visuals log : `\(.*\)`/\1/p' "$PREP_MD")"
 
 [[ -n "${PREP_MD:-}" && -f "${PREP_MD:-}" ]] || {
   printf 'ECHEC: preparation livraison introuvable\n' >&2
@@ -44,6 +45,11 @@ BRANDING_LOG="$(sed -n 's/^- branding log : `\(.*\)`/\1/p' "$PREP_MD")"
 
 [[ -n "${BRANDING_LOG:-}" && -f "${BRANDING_LOG:-}" ]] || {
   printf 'ECHEC: branding log introuvable\n' >&2
+  exit 1
+}
+
+[[ -n "${CATEGORY_VISUALS_LOG:-}" && -f "${CATEGORY_VISUALS_LOG:-}" ]] || {
+  printf 'ECHEC: category visuals log introuvable\n' >&2
   exit 1
 }
 
@@ -71,6 +77,7 @@ jq -n \
   --arg tablet_abi "$TABLET_ABI" \
   --arg tablet_size "${TABLET_SIZE:-0}" \
   --arg branding_log "$BRANDING_LOG" \
+  --arg category_visuals_log "$CATEGORY_VISUALS_LOG" \
   --arg api_url "http://127.0.0.1:8080/api" \
   --arg admin_url "http://127.0.0.1:8080/admin/?page=login" \
   --arg db_name "ma_commune_db" \
@@ -98,7 +105,8 @@ jq -n \
     decision: {
       gate_local_avant_tablette: "PASS",
       livraison_finale_appareil: "NON_AUTORISEE_A_CE_STADE",
-      coherence_marque_couche_active: "PASS"
+      coherence_marque_couche_active: "PASS",
+      coherence_systeme_visuel_categories: "PASS"
     },
     urls: {
       api: $api_url,
@@ -113,6 +121,7 @@ jq -n \
       preparation_markdown: $preparation_markdown,
       seed_json: $seed_json,
       branding_log: $branding_log,
+      category_visuals_log: $category_visuals_log,
       apk_universal: {
         path: $release_apk,
         size_bytes: ($release_size | tonumber)

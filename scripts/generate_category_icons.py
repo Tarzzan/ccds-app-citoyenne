@@ -22,6 +22,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG_PATH = ROOT / "assets" / "category-visuals" / "category-visuals.json"
 MASTER_DIR = ROOT / "assets" / "category-visuals" / "generated"
+MOBILE_CATALOG_DIR = ROOT / "mobile" / "assets" / "category-visuals"
 MOBILE_DIR = ROOT / "mobile" / "assets" / "category-icons"
 ADMIN_DIR = ROOT / "admin" / "assets" / "img" / "category-icons"
 SIZE = 512
@@ -270,6 +271,8 @@ def main() -> None:
 
     # Keep a copy of the catalog next to generated assets for inspection.
     shutil.copy2(CATALOG_PATH, MASTER_DIR / "category-visuals.json")
+    MOBILE_CATALOG_DIR.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(CATALOG_PATH, MOBILE_CATALOG_DIR / "category-visuals.json")
 
 
 if __name__ == "__main__":
