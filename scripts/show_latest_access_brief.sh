@@ -33,7 +33,7 @@ cat "$LATEST_ACCESS_BRIEF"
 printf '\n'
 printf 'Controle latest du brief acces\n'
 printf '%s\n' '-------------------------------'
-sed -n '1p' "$ACCESS_BRIEF_CHECK_LOG"
+sed -n '1,4p' "$ACCESS_BRIEF_CHECK_LOG"
 printf '\n'
 printf 'Alignement HEAD local vs bundle latest\n'
 printf '%s\n' '--------------------------------------'

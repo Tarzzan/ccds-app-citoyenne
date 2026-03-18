@@ -137,6 +137,7 @@ Le bon positionnement est :
 - `scripts/publish_macommune_access_brief.sh` : regenere le fichier `macommune.txt` sur le Bureau et le Desktop avec les acces, credentials et builds EAS courants
   Ce brief est aussi republie automatiquement a la fin de `scripts/package_livraison_locale.sh`
 - `scripts/verify_access_brief_consistency.sh` : controle que le brief Bureau, la copie Desktop et le brief latest publie dans `/tmp` sont strictement alignes
+  Le log de controle rappelle aussi les trois chemins compares et l'empreinte SHA-256 commune
 - `scripts/generate_category_icons.py` : regenere la collection d icones categories Guyane pour mobile et admin
 - `scripts/check_category_visuals.sh` : controle que le catalogue categories, les PNG generes et le mapping mobile restent alignes
 - `assets/category-visuals/index.html` : apercu HTML de la collection visuelle des categories
