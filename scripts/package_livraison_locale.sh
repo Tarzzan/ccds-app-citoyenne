@@ -69,6 +69,16 @@ SECONDARY_OUTPUT_FILE="$BUNDLE_DIR/artifacts/macommune.txt" \
 bash "$ROOT_DIR/scripts/publish_macommune_access_brief.sh" \
   >/tmp/ma-commune-bundle-brief.log
 
+MANIFEST_PATH="$MANIFEST_JSON" \
+bash "$ROOT_DIR/scripts/publish_macommune_access_brief.sh" \
+  >/tmp/ma-commune-publish-brief.log
+
+bash "$ROOT_DIR/scripts/verify_access_brief_consistency.sh" \
+  "/home/tarzzan/Bureau/macommune.txt" \
+  "/home/tarzzan/Desktop/macommune.txt" \
+  "$BUNDLE_DIR/artifacts/macommune.txt" \
+  > "$BUNDLE_DIR/artifacts/ma-commune-access-brief-consistency.log"
+
 cp "$ROOT_DIR/README.md" "$BUNDLE_DIR/docs/"
 cp "$ROOT_DIR/docs/DOSSIER_LIVRAISON_LOCALE_MA_COMMUNE_2026-03-18.md" "$BUNDLE_DIR/docs/"
 cp "$ROOT_DIR/docs/MATRICE_READINESS_MA_COMMUNE_2026-03-18.md" "$BUNDLE_DIR/docs/"
@@ -88,7 +98,7 @@ Date de generation : $(date '+%d/%m/%Y %H:%M:%S')
 
 ## Contenu
 
-- \`artifacts/\` : audit final local, manifeste, gate, preparation, seed, branding log, category visuals log, handoff operateur et brief acces
+- \`artifacts/\` : audit final local, manifeste, gate, preparation, seed, branding log, category visuals log, handoff operateur, brief acces et controle de coherence du brief
 - \`apk/\` : APK cible tablette courant
 - \`docs/\` : documents actifs utiles pour la demonstration et la validation
 - \`previews/\` : apercus categories visuelles embarques pour controle rapide
@@ -113,8 +123,6 @@ sha256sum "$OUTPUT_ZIP" > "$OUTPUT_ZIP_SHA"
 bash "$ROOT_DIR/scripts/verify_livraison_bundle.sh" "$OUTPUT_ZIP" >/tmp/ma-commune-verify-bundle.log
 bash "$ROOT_DIR/scripts/publish_latest_livraison_aliases.sh" "$OUTPUT_ZIP" "$BUNDLE_DIR" "$OUTPUT_ZIP_SHA" >/tmp/ma-commune-publish-latest.log
 bash "$ROOT_DIR/scripts/verify_latest_livraison_aliases.sh" >/tmp/ma-commune-verify-latest.log
-bash "$ROOT_DIR/scripts/publish_macommune_access_brief.sh" >/tmp/ma-commune-publish-brief.log
-bash "$ROOT_DIR/scripts/verify_access_brief_consistency.sh" >/tmp/ma-commune-verify-access-brief.log
 
 printf 'OUTPUT=%s\n' "$OUTPUT_ZIP"
 printf 'DIR=%s\n' "$BUNDLE_DIR"

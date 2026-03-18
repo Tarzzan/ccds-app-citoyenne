@@ -58,6 +58,11 @@ done
   exit 1
 }
 
+[[ -f "$BUNDLE_DIR/artifacts/ma-commune-access-brief-consistency.log" ]] || {
+  printf 'ECHEC: controle de coherence du brief acces absent du bundle\n' >&2
+  exit 1
+}
+
 (
   cd "$BUNDLE_DIR"
   sha256sum -c checksums/SHA256SUMS.txt >/tmp/ma-commune-verify-bundle.log
