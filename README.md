@@ -130,6 +130,7 @@ Le bon positionnement est :
 - `scripts/publish_latest_handoff.sh` : publie un handoff Markdown stable `/tmp/ma-commune-latest-handoff.md` pour la future phase tablette
 - `scripts/show_local_network_access.sh` : affiche l IP LAN reelle de la machine, les URLs reseau du projet et la commande SSH a utiliser
 - `scripts/check_eas_builds.sh` : affiche l etat des builds EAS Android/iOS de reference a partir des IDs courants
+- `scripts/publish_macommune_access_brief.sh` : regenere le fichier `macommune.txt` sur le Bureau et le Desktop avec les acces, credentials et builds EAS courants
 - `scripts/generate_category_icons.py` : regenere la collection d icones categories Guyane pour mobile et admin
 - `assets/category-visuals/index.html` : apercu HTML de la collection visuelle des categories
 

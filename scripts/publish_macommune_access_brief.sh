@@ -1,0 +1,205 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MOBILE_DIR="$ROOT_DIR/mobile"
+DESKTOP_DIR="/home/tarzzan/Desktop"
+BUREAU_DIR="/home/tarzzan/Bureau"
+
+ANDROID_BUILD_ID="${ANDROID_BUILD_ID:-46aa616a-0ffe-492e-9037-da4e138e4117}"
+IOS_BUILD_ID="${IOS_BUILD_ID:-9729ea19-6acd-4d7d-a4db-b41a7b37e8fb}"
+MOBILE_REFERENCE_COMMIT="${MOBILE_REFERENCE_COMMIT:-e054767}"
+
+LANDING_URL="${LANDING_URL:-https://netetfix.com}"
+API_URL="${API_URL:-https://api.netetfix.com/api}"
+ADMIN_URL="${ADMIN_URL:-https://admin.netetfix.com/admin/?page=login}"
+PIPL_URL="${PIPL_URL:-https://pipl.netetfix.com}"
+LOCAL_API_URL="${LOCAL_API_URL:-http://192.168.1.55:8080/api}"
+LOCAL_ADMIN_URL="${LOCAL_ADMIN_URL:-http://192.168.1.55:8080/admin/?page=login}"
+LOCAL_SSH="${LOCAL_SSH:-ssh tarzzan@192.168.1.55}"
+
+ADMIN_EMAIL="${ADMIN_EMAIL:-admin@macommune.local}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-Admin@MaCommune2026!}"
+AGENT_EMAIL="${AGENT_EMAIL:-agent@macommune.local}"
+AGENT_PASSWORD="${AGENT_PASSWORD:-Agent@MaCommune2026!}"
+CITIZEN_PASSWORD="${CITIZEN_PASSWORD:-Citoyen@MaCommune2026!}"
+
+OUTPUT_FILE="${OUTPUT_FILE:-$BUREAU_DIR/macommune.txt}"
+SECONDARY_OUTPUT_FILE="${SECONDARY_OUTPUT_FILE:-$DESKTOP_DIR/macommune.txt}"
+
+build_view_json() {
+  local build_id="$1"
+  (
+    cd "$MOBILE_DIR"
+    eas build:view "$build_id" --json 2>/dev/null | python3 -c '
+import sys
+raw = sys.stdin.read()
+start = raw.find("{")
+if start == -1:
+    raise SystemExit(1)
+print(raw[start:].strip())
+'
+  )
+}
+
+read_build_field() {
+  local json="$1"
+  local field="$2"
+  printf '%s\n' "$json" | python3 -c '
+import json, sys
+data = json.load(sys.stdin)
+field = sys.argv[1]
+value = data
+for part in field.split("."):
+    if isinstance(value, dict):
+        value = value.get(part)
+    else:
+        value = None
+        break
+if value is None:
+    print("")
+else:
+    print(value)
+' "$field"
+}
+
+populate_build_info() {
+  local platform_label="$1"
+  local build_id="$2"
+
+  local default_url="https://expo.dev/accounts/william.meri/projects/ma-commune-guyane/builds/${build_id}"
+  local status="UNKNOWN"
+  local commit="$MOBILE_REFERENCE_COMMIT"
+  local artifact=""
+  local url="$default_url"
+
+  if [[ -n "${EXPO_TOKEN:-}" ]]; then
+    if json="$(build_view_json "$build_id" 2>/dev/null)"; then
+      status="$(read_build_field "$json" "status")"
+      commit="$(read_build_field "$json" "gitCommitHash")"
+      artifact="$(read_build_field "$json" "artifacts.buildUrl")"
+    fi
+  fi
+
+  printf '%s_status=%q\n' "$platform_label" "$status"
+  printf '%s_commit=%q\n' "$platform_label" "$commit"
+  printf '%s_url=%q\n' "$platform_label" "$url"
+  printf '%s_artifact=%q\n' "$platform_label" "$artifact"
+}
+
+eval "$(populate_build_info android "$ANDROID_BUILD_ID")"
+eval "$(populate_build_info ios "$IOS_BUILD_ID")"
+
+repo_commit="$(git -C "$ROOT_DIR" rev-parse --short HEAD)"
+repo_commit_message="$(git -C "$ROOT_DIR" log -1 --pretty=%s)"
+
+mkdir -p "$(dirname "$OUTPUT_FILE")" "$(dirname "$SECONDARY_OUTPUT_FILE")"
+
+cat > "$OUTPUT_FILE" <<EOF
+MA COMMUNE
+==========
+
+Etat du depot
+-------------
+- Depot local et GitHub alignes
+- Dernier commit pousse sur main: ${repo_commit}
+- Message: ${repo_commit_message}
+- Commit mobile de reference pour les builds EAS actuels: ${MOBILE_REFERENCE_COMMIT}
+- GitHub: https://github.com/Tarzzan/ccds-app-citoyenne
+
+Acces production
+----------------
+- Landing: ${LANDING_URL}
+- API application: ${API_URL}
+- Admin web: ${ADMIN_URL}
+- PIPL: ${PIPL_URL}
+
+Acces local reseau
+------------------
+- API locale: ${LOCAL_API_URL}
+- Admin local: ${LOCAL_ADMIN_URL}
+- SSH local: ${LOCAL_SSH}
+
+Identifiants de demonstration
+-----------------------------
+- Admin
+  email: ${ADMIN_EMAIL}
+  mot de passe: ${ADMIN_PASSWORD}
+
+- Agent
+  email: ${AGENT_EMAIL}
+  mot de passe: ${AGENT_PASSWORD}
+
+- Citoyens de demo
+  mot de passe commun: ${CITIZEN_PASSWORD}
+  exemples seed recents:
+  demo.citoyen.a.1773821871@macommune.local
+  demo.citoyen.b.1773821871@macommune.local
+  demo.citoyen.c.1773821871@macommune.local
+
+Builds EAS de reference
+-----------------------
+- Android preview
+  id: ${ANDROID_BUILD_ID}
+  statut au moment du memo: ${android_status}
+  commit embarque: ${android_commit:-$MOBILE_REFERENCE_COMMIT}
+  lien: ${android_url}
+EOF
+
+if [[ -n "${android_artifact:-}" ]]; then
+  cat >> "$OUTPUT_FILE" <<EOF
+  artefact: ${android_artifact}
+EOF
+fi
+
+cat >> "$OUTPUT_FILE" <<EOF
+
+- iOS production
+  id: ${IOS_BUILD_ID}
+  statut au moment du memo: ${ios_status}
+  commit embarque: ${ios_commit:-$MOBILE_REFERENCE_COMMIT}
+  lien: ${ios_url}
+EOF
+
+if [[ -n "${ios_artifact:-}" ]]; then
+  cat >> "$OUTPUT_FILE" <<EOF
+  artefact: ${ios_artifact}
+EOF
+fi
+
+cat >> "$OUTPUT_FILE" <<EOF
+
+Suivi EAS
+---------
+- Script local de controle:
+  ${ROOT_DIR}/scripts/check_eas_builds.sh
+- Exemple:
+  EXPO_TOKEN=... bash ${ROOT_DIR}/scripts/check_eas_builds.sh
+
+Documentation collection categories
+-----------------------------------
+- Doc active:
+  ${ROOT_DIR}/docs/CATEGORIES_VISUELLES_MA_COMMUNE_2026-03-18.md
+- Apercu HTML:
+  ${ROOT_DIR}/assets/category-visuals/index.html
+- Apercu PNG:
+  ${ROOT_DIR}/assets/category-visuals/generated/category-visuals-preview.png
+- Regeneration:
+  python3 ${ROOT_DIR}/scripts/generate_category_icons.py
+
+Adresse a saisir dans l application
+-----------------------------------
+- Production: ${API_URL}
+- Local reseau: ${LOCAL_API_URL}
+
+Note securite
+-------------
+- Revoquer maintenant le token GitHub et le token Expo partages dans la conversation.
+EOF
+
+cp "$OUTPUT_FILE" "$SECONDARY_OUTPUT_FILE"
+chown tarzzan:tarzzan "$OUTPUT_FILE" "$SECONDARY_OUTPUT_FILE" 2>/dev/null || true
+
+echo "Brief publie:"
+echo "  $OUTPUT_FILE"
+echo "  $SECONDARY_OUTPUT_FILE"
