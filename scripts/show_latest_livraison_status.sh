@@ -4,6 +4,7 @@ set -euo pipefail
 MANIFEST="/tmp/ma-commune-latest-manifest-livraison-locale.json"
 INDEX="/tmp/ma-commune-latest-livraison-index.md"
 VERIFY_LOG="/tmp/ma-commune-verify-latest.log"
+ACCESS_BRIEF_CHECK_LOG="/tmp/ma-commune-latest-access-brief-check.log"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 require_cmd() {
@@ -19,6 +20,13 @@ require_cmd jq
   printf 'ECHEC: manifeste latest introuvable: %s\n' "$MANIFEST" >&2
   exit 1
 }
+
+[[ -f "$ACCESS_BRIEF_CHECK_LOG" ]] || {
+  printf 'ECHEC: controle latest du brief acces introuvable: %s\n' "$ACCESS_BRIEF_CHECK_LOG" >&2
+  exit 1
+}
+
+ACCESS_BRIEF_CHECK_STATUS="$(sed -n '1p' "$ACCESS_BRIEF_CHECK_LOG")"
 
 LAN_IP="$("$SCRIPT_DIR/detect_primary_lan_ip.sh" 2>/dev/null || true)"
 SSH_USER="$(getent passwd 1000 2>/dev/null | cut -d: -f1 || true)"
@@ -56,6 +64,7 @@ printf -- '- manifeste: %s\n' "$MANIFEST"
 printf -- '- handoff latest: /tmp/ma-commune-latest-handoff.md\n'
 printf -- '- brief acces latest: /tmp/ma-commune-latest-access-brief.txt\n'
 printf -- '- controle brief acces: /tmp/ma-commune-latest-access-brief-check.log\n'
+printf -- '- statut controle brief acces: %s\n' "$ACCESS_BRIEF_CHECK_STATUS"
 printf -- '- APK tablette: /tmp/ma-commune-latest-app-release-tablette.apk\n'
 printf -- '- ABI tablette: %s\n' "$(jq -r '.artifacts.apk_tablette.abi' "$MANIFEST")"
 printf '\n'
