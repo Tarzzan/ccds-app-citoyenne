@@ -54,6 +54,19 @@ CATEGORY_VISUALS_LOG="$(sed -n 's/^- category visuals log : `\(.*\)`/\1/p' "$PRE
 }
 
 STACK_JSON="$(docker compose ps --format json 2>/dev/null | jq -s '.' )"
+GIT_HEAD_SHORT="$(git -C "$ROOT_DIR" rev-parse --short HEAD)"
+GIT_HEAD_FULL="$(git -C "$ROOT_DIR" rev-parse HEAD)"
+GIT_HEAD_SUBJECT="$(git -C "$ROOT_DIR" log -1 --pretty=%s)"
+GIT_UPSTREAM_REF="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null || true)"
+GIT_UPSTREAM_SHORT=""
+if [[ -n "${GIT_UPSTREAM_REF:-}" ]]; then
+  GIT_UPSTREAM_SHORT="$(git -C "$ROOT_DIR" rev-parse --short "$GIT_UPSTREAM_REF" 2>/dev/null || true)"
+fi
+if git -C "$ROOT_DIR" diff --quiet && git -C "$ROOT_DIR" diff --cached --quiet; then
+  GIT_WORKTREE_CLEAN="true"
+else
+  GIT_WORKTREE_CLEAN="false"
+fi
 
 ADMIN_EMAIL="$(jq -r '.credentials.admin.email' "$SEED_JSON")"
 ADMIN_PASSWORD="$(jq -r '.credentials.admin.password' "$SEED_JSON")"
@@ -68,6 +81,12 @@ EVENT_JSON="$(jq -c '.event' "$SEED_JSON")"
 jq -n \
   --arg generated_at "$(date '+%Y-%m-%dT%H:%M:%S%z')" \
   --arg project_root "$ROOT_DIR" \
+  --arg git_head_short "$GIT_HEAD_SHORT" \
+  --arg git_head_full "$GIT_HEAD_FULL" \
+  --arg git_head_subject "$GIT_HEAD_SUBJECT" \
+  --arg git_upstream_ref "$GIT_UPSTREAM_REF" \
+  --arg git_upstream_short "$GIT_UPSTREAM_SHORT" \
+  --arg git_worktree_clean "$GIT_WORKTREE_CLEAN" \
   --arg gate_markdown "$GATE_MD" \
   --arg preparation_markdown "$PREP_MD" \
   --arg seed_json "$SEED_JSON" \
@@ -100,7 +119,15 @@ jq -n \
     generated_at: $generated_at,
     project: {
       name: "Ma Commune",
-      root: $project_root
+      root: $project_root,
+      git: {
+        head_commit_short: $git_head_short,
+        head_commit_full: $git_head_full,
+        head_subject: $git_head_subject,
+        upstream_ref: $git_upstream_ref,
+        upstream_commit_short: $git_upstream_short,
+        worktree_clean: ($git_worktree_clean == "true")
+      }
     },
     decision: {
       gate_local_avant_tablette: "PASS",

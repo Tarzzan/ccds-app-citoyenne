@@ -32,6 +32,8 @@ API_URL="$(jq -r '.urls.api' "$MANIFEST")"
 ADMIN_URL="$(jq -r '.urls.admin' "$MANIFEST")"
 APK_TABLETTE="$(jq -r '.artifacts.apk_tablette.path' "$MANIFEST")"
 APK_TABLETTE_ABI="$(jq -r '.artifacts.apk_tablette.abi' "$MANIFEST")"
+LATEST_HEAD="$(jq -r '.project.git.head_commit_short // "inconnu"' "$MANIFEST")"
+LATEST_HEAD_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST")"
 LAN_IP="$("$SCRIPT_DIR/detect_primary_lan_ip.sh" 2>/dev/null || true)"
 SSH_USER="$(getent passwd 1000 2>/dev/null | cut -d: -f1 || true)"
 
@@ -50,6 +52,8 @@ Date de generation : $(date '+%d/%m/%Y %H:%M:%S')
 - coherence marque couche active : $(jq -r '.decision.coherence_marque_couche_active' "$MANIFEST")
 - coherence systeme visuel categories : $(jq -r '.decision.coherence_systeme_visuel_categories' "$MANIFEST")
 - livraison finale appareil : $(jq -r '.decision.livraison_finale_appareil' "$MANIFEST")
+- commit bundle latest : \`${LATEST_HEAD}\`
+- message bundle latest : ${LATEST_HEAD_SUBJECT}
 
 ## URLs
 

@@ -165,6 +165,11 @@ grep -q 'Dernier commit local:' "$ACCESS_BRIEF_REAL" || {
   exit 1
 }
 
+grep -q 'commit bundle latest :' "$HANDOFF_REAL" || {
+  printf 'ECHEC: handoff latest ne rappelle pas le commit du bundle\n' >&2
+  exit 1
+}
+
 grep -q '\[access-brief\] OK' "$ACCESS_BRIEF_LOG_REAL" || {
   printf 'ECHEC: log latest du brief acces ne contient pas le statut OK\n' >&2
   exit 1
@@ -179,6 +184,8 @@ GATE_STATUS="$(jq -r '.decision.gate_local_avant_tablette' "$MANIFEST_REAL")"
 DEVICE_STATUS="$(jq -r '.decision.livraison_finale_appareil' "$MANIFEST_REAL")"
 BRANDING_STATUS="$(jq -r '.decision.coherence_marque_couche_active' "$MANIFEST_REAL")"
 CATEGORY_VISUALS_STATUS="$(jq -r '.decision.coherence_systeme_visuel_categories' "$MANIFEST_REAL")"
+LATEST_HEAD="$(jq -r '.project.git.head_commit_short // ""' "$MANIFEST_REAL")"
+LATEST_HEAD_SUBJECT="$(jq -r '.project.git.head_subject // ""' "$MANIFEST_REAL")"
 
 [[ "$GATE_STATUS" = "PASS" ]] || {
   printf 'ECHEC: gate latest non PASS\n' >&2
@@ -197,6 +204,11 @@ CATEGORY_VISUALS_STATUS="$(jq -r '.decision.coherence_systeme_visuel_categories'
 
 [[ "$CATEGORY_VISUALS_STATUS" = "PASS" ]] || {
   printf 'ECHEC: coherence categories visuelles latest non PASS\n' >&2
+  exit 1
+}
+
+[[ -n "$LATEST_HEAD" && -n "$LATEST_HEAD_SUBJECT" ]] || {
+  printf 'ECHEC: identite git du bundle latest absente du manifeste\n' >&2
   exit 1
 }
 

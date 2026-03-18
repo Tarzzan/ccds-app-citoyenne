@@ -25,6 +25,14 @@ require_cmd jq
 }
 
 ACCESS_BRIEF_CHECK_STATUS="$(sed -n '1p' "$ACCESS_BRIEF_CHECK_LOG")"
+CURRENT_HEAD="$(git -C "$SCRIPT_DIR/.." rev-parse --short HEAD)"
+LATEST_HEAD="$(jq -r '.project.git.head_commit_short // "inconnu"' "$MANIFEST")"
+LATEST_HEAD_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST")"
+if [[ "$CURRENT_HEAD" == "$LATEST_HEAD" ]]; then
+  HEAD_ALIGNMENT="ALIGNE"
+else
+  HEAD_ALIGNMENT="EN_RETARD"
+fi
 
 LAN_IP="$("$SCRIPT_DIR/detect_primary_lan_ip.sh" 2>/dev/null || true)"
 SSH_USER="$(getent passwd 1000 2>/dev/null | cut -d: -f1 || true)"
@@ -40,6 +48,10 @@ printf -- '- gate local: %s\n' "$(jq -r '.decision.gate_local_avant_tablette' "$
 printf -- '- coherence marque: %s\n' "$(jq -r '.decision.coherence_marque_couche_active' "$MANIFEST")"
 printf -- '- coherence categories visuelles: %s\n' "$(jq -r '.decision.coherence_systeme_visuel_categories' "$MANIFEST")"
 printf -- '- livraison finale appareil: %s\n' "$(jq -r '.decision.livraison_finale_appareil' "$MANIFEST")"
+printf -- '- commit bundle latest: %s\n' "$LATEST_HEAD"
+printf -- '- message bundle latest: %s\n' "$LATEST_HEAD_SUBJECT"
+printf -- '- HEAD local courant: %s\n' "$CURRENT_HEAD"
+printf -- '- alignement HEAD local vs latest: %s\n' "$HEAD_ALIGNMENT"
 printf '\n'
 printf 'URLs:\n'
 printf -- '- API mobile: %s\n' "$(jq -r '.urls.api' "$MANIFEST")"

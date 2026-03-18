@@ -125,8 +125,8 @@ Le bon positionnement est :
 - `scripts/publish_latest_livraison_aliases.sh` : publie des alias stables `/tmp/ma-commune-latest-*` vers les derniers artefacts verifies
 - `scripts/verify_latest_livraison_aliases.sh` : controle que les alias `/tmp/ma-commune-latest-*` pointent vers un bundle coherent et encore valide
   Le checksum du zip publie est expose via `/tmp/ma-commune-latest-livraison-bundle.zip.sha256`
-- `scripts/show_latest_livraison_status.sh` : affiche en une commande le statut, les alias stables et les credentials de demonstration du dernier lot valide
-- `scripts/show_latest_access_brief.sh` : affiche directement le brief d acces stable publie dans `/tmp/ma-commune-latest-access-brief.txt`
+- `scripts/show_latest_livraison_status.sh` : affiche en une commande le statut, les alias stables, les credentials et l alignement `HEAD local vs bundle latest`
+- `scripts/show_latest_access_brief.sh` : affiche directement le brief d acces stable publie dans `/tmp/ma-commune-latest-access-brief.txt` puis rappelle l alignement `HEAD local vs bundle latest`
 - `scripts/show_tablette_validation_brief.sh` : affiche le brief operateur complet de la future phase tablette depuis le manifeste latest
 - `scripts/publish_latest_handoff.sh` : publie un handoff Markdown stable `/tmp/ma-commune-latest-handoff.md` pour la future phase tablette
   Le brief d acces stable est aussi expose via `/tmp/ma-commune-latest-access-brief.txt`

@@ -119,6 +119,8 @@ latest_branding_status="inconnu"
 latest_category_visuals_status="inconnu"
 latest_device_status="inconnu"
 latest_tablet_abi="inconnue"
+latest_bundle_commit="inconnu"
+latest_bundle_message="inconnu"
 latest_citizen_examples=$'demo.citoyen.a.1773821871@macommune.local\ndemo.citoyen.b.1773821871@macommune.local\ndemo.citoyen.c.1773821871@macommune.local'
 
 if [[ -f "$MANIFEST_PATH" ]]; then
@@ -127,6 +129,8 @@ if [[ -f "$MANIFEST_PATH" ]]; then
   latest_category_visuals_status="$(jq -r '.decision.coherence_systeme_visuel_categories' "$MANIFEST_PATH")"
   latest_device_status="$(jq -r '.decision.livraison_finale_appareil' "$MANIFEST_PATH")"
   latest_tablet_abi="$(jq -r '.artifacts.apk_tablette.abi' "$MANIFEST_PATH")"
+  latest_bundle_commit="$(jq -r '.project.git.head_commit_short // "inconnu"' "$MANIFEST_PATH")"
+  latest_bundle_message="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST_PATH")"
   latest_citizen_examples="$(jq -r '.credentials.citizens[].email' "$MANIFEST_PATH")"
 fi
 
@@ -180,6 +184,8 @@ Livraison locale latest
 - coherence marque couche active: ${latest_branding_status}
 - coherence systeme visuel categories: ${latest_category_visuals_status}
 - livraison finale appareil: ${latest_device_status}
+- commit bundle latest: ${latest_bundle_commit}
+- message bundle latest: ${latest_bundle_message}
 - ABI tablette latest: ${latest_tablet_abi}
 - bundle latest: ${LATEST_BUNDLE}
 - checksum bundle latest: ${LATEST_BUNDLE_SHA}
