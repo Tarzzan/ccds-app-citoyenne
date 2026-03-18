@@ -124,6 +124,28 @@ require_once __DIR__ . '/../includes/layout.php';
   </div>
 </div>
 
+<div class="admin-guidance-grid">
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Lecture du jour</div>
+    <h3>Commencer par les dossiers qui attendent un vrai signe de prise en charge.</h3>
+    <p>
+      <?= (int)$kpis['submitted'] ?> dossier(s) sont encore a qualifier et <?= (int)$kpis['in_progress'] ?> sont deja en cours. Le bon rythme consiste a faire baisser l attente visible avant d empiler de nouveaux traitements.
+    </p>
+  </div>
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Actions rapides</div>
+    <h3>Ouvrir, publier, rendre visible.</h3>
+    <p>
+      Le back-office doit servir a trois gestes simples : ouvrir la bonne fiche, publier une information communale utile, puis rendre l execution lisible.
+    </p>
+    <div class="admin-quick-links">
+      <a href="/admin/?page=incidents" class="btn btn-primary btn-sm">Ouvrir la file</a>
+      <a href="/admin/?page=polls" class="btn btn-outline btn-sm">Lancer une consultation</a>
+      <a href="/admin/?page=events" class="btn btn-outline btn-sm">Publier un rendez-vous</a>
+    </div>
+  </div>
+</div>
+
 <!-- KPIs -->
 <div class="stats-grid">
   <div class="stat-card">
