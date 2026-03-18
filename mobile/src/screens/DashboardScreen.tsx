@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { authApi, incidentsApi, Incident, UserStats } from '../services/api';
 import { CategoryMark } from '../components/CategoryMark';
 import { CivicCompanionCard } from '../components/CivicCompanionCard';
+import { ScreenFeedbackState, ScreenLoadingState } from '../components/ScreenStatePanel';
 import { useAuth } from '../services/AuthContext';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
@@ -171,22 +172,23 @@ export default function DashboardScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={BRAND.colors.canopy} />
-        <Text style={styles.loadingText}>Chargement de votre tableau de bord…</Text>
-      </View>
+      <ScreenLoadingState
+        title="Votre tableau de bord prend forme"
+        body="Awa rassemble vos reperes utiles pour afficher un bilan lisible, sans vous noyer dans les chiffres."
+      />
     );
   }
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => loadStats()}>
-          <Text style={styles.retryBtnText}>Réessayer</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenFeedbackState
+        icon="⚠️"
+        tone="warning"
+        title="Le tableau de bord n a pas encore pu se charger"
+        body={error}
+        actionLabel="Relancer le chargement"
+        onPress={() => loadStats()}
+      />
     );
   }
 

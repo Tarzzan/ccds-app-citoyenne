@@ -15,6 +15,7 @@ import { incidentsApi, commentsApi, Incident, Comment } from '../services/api';
 import { StatusBadge, COLORS, STATUS_LABELS, STATUS_COLORS } from '../components/ui';
 import { CategoryMark } from '../components/CategoryMark';
 import { CivicCompanionCard } from '../components/CivicCompanionCard';
+import { ScreenFeedbackState, ScreenLoadingState } from '../components/ScreenStatePanel';
 import { VoteButton } from '../components/VoteButton';
 import { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../services/AuthContext';
@@ -258,17 +259,21 @@ export default function IncidentDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      <ScreenLoadingState
+        title="Le dossier se remet en contexte"
+        body="Awa rassemble l historique, les commentaires et le statut pour vous rendre une lecture utile des l ouverture."
+      />
     );
   }
 
   if (!incident) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorMsg}>Signalement introuvable.</Text>
-      </View>
+      <ScreenFeedbackState
+        icon="🗂️"
+        tone="warning"
+        title="Ce dossier reste introuvable"
+        body="Le signalement n a pas pu etre retrouve. Revenez a la liste puis rouvrez un dossier utile."
+      />
     );
   }
 

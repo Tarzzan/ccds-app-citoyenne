@@ -19,6 +19,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { incidentsApi, Incident } from '../services/api';
 import { CategoryMark } from '../components/CategoryMark';
 import { CivicCompanionStage } from '../components/CivicCompanionStage';
+import { ScreenLoadingState } from '../components/ScreenStatePanel';
 import { AppStackParamList } from '../navigation/RootNavigator';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
@@ -130,10 +131,10 @@ export default function MapScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={BRAND.colors.canopy} />
-        <Text style={styles.loadingText}>Préparation de la carte citoyenne...</Text>
-      </View>
+      <ScreenLoadingState
+        title="La carte citoyenne se prepare"
+        body="Awa rassemble d abord les reperes utiles du territoire pour que la lecture reste simple des l ouverture."
+      />
     );
   }
 

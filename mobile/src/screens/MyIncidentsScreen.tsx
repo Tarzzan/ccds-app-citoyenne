@@ -15,6 +15,7 @@ import { incidentsApi, Incident } from '../services/api';
 import { useAuth } from '../services/AuthContext';
 import { IncidentCard, COLORS, STATUS_LABELS, PRIORITY_LABELS } from '../components/ui';
 import { CivicCompanionCard } from '../components/CivicCompanionCard';
+import { ScreenLoadingState } from '../components/ScreenStatePanel';
 import { AppStackParamList } from '../navigation/RootNavigator';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
@@ -404,9 +405,12 @@ export default function MyIncidentsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      <ScreenLoadingState
+        title={isStaff ? 'La file terrain se met en place' : 'Vos dossiers se remettent en place'}
+        body={isStaff
+          ? 'Awa rassemble les dossiers utiles pour vous laisser commencer par les priorites du terrain.'
+          : 'Awa regroupe vos signalements pour vous rendre la suite plus lisible dossier par dossier.'}
+      />
     );
   }
 
