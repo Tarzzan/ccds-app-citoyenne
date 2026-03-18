@@ -191,7 +191,7 @@ export default function IncidentDetailScreen() {
       if (incRes.data) setIncident(incRes.data);
       if (comRes.data) setComments(comRes.data);
     } catch {
-      Alert.alert('Erreur', 'Impossible de charger le signalement.');
+      Alert.alert('Dossier indisponible', 'Impossible de charger ce signalement pour le moment.');
     } finally {
       setLoading(false);
     }
@@ -222,7 +222,7 @@ export default function IncidentDetailScreen() {
       const res = await commentsApi.list(id);
       if (res.data) setComments(res.data);
     } catch {
-      Alert.alert('Erreur', 'Impossible d\'envoyer le commentaire.');
+      Alert.alert('Message non envoye', `${BRAND.companion.name} n'a pas pu transmettre ce commentaire pour le moment.`);
     } finally {
       setSending(false);
     }
@@ -244,13 +244,13 @@ export default function IncidentDetailScreen() {
       setStaffNote('');
       await load();
       Alert.alert(
-        'Traitement mis à jour',
+        'Traitement mis a jour',
         staffStatus === 'resolved'
-          ? 'L’exécution a été validée et l’historique a été mis à jour.'
-          : 'Le statut du signalement a été mis à jour.'
+          ? `${BRAND.companion.name} confirme que l execution a ete validee et que l historique du dossier est a jour.`
+          : 'Le statut du signalement a bien ete mis a jour.'
       );
     } catch (error: any) {
-      Alert.alert('Erreur', error?.message ?? 'Impossible de mettre à jour le traitement.');
+      Alert.alert('Mise a jour impossible', error?.message ?? 'Impossible de mettre a jour le traitement pour le moment.');
     } finally {
       setUpdatingStatus(false);
     }

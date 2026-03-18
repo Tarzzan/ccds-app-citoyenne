@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { BRAND } from '../theme/brand';
 
 /**
  * PhotoPicker — Sélection et prévisualisation de photos multiples (UX-04)
@@ -55,7 +56,7 @@ export default function PhotoPicker({
   const pickFromGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission refusée', 'L\'accès à la galerie est nécessaire pour ajouter des photos.');
+      Alert.alert('Galerie refusee', 'L acces a la galerie est necessaire pour ajouter des photos utiles au dossier.');
       return;
     }
 
@@ -76,7 +77,7 @@ export default function PhotoPicker({
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission refusée', 'L\'accès à la caméra est nécessaire pour prendre une photo.');
+      Alert.alert('Camera refusee', 'L acces a la camera est necessaire pour prendre une photo sur le terrain.');
       return;
     }
 
@@ -108,7 +109,7 @@ export default function PhotoPicker({
       }
       onPhotosChange([...photos, ...compressed].slice(0, maxPhotos));
     } catch (err) {
-      Alert.alert('Erreur', 'Impossible de traiter la photo. Réessayez.');
+      Alert.alert('Photo non ajoutee', `${BRAND.companion.name} n'a pas pu preparer cette photo. Reessayez.`);
     } finally {
       setCompressing(false);
     }
@@ -117,8 +118,8 @@ export default function PhotoPicker({
   // ── Supprimer une photo ──────────────────────────────────────
   const removePhoto = (index: number) => {
     Alert.alert(
-      'Supprimer la photo',
-      'Voulez-vous retirer cette photo ?',
+      'Retirer cette photo',
+      'Voulez-vous retirer cette photo du dossier ?',
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -135,7 +136,7 @@ export default function PhotoPicker({
 
   // ── Afficher les options ─────────────────────────────────────
   const showOptions = () => {
-    Alert.alert('Ajouter une photo', '', [
+    Alert.alert('Ajouter une photo', 'Choisissez comment illustrer la situation.', [
       { text: '📷 Prendre une photo', onPress: takePhoto },
       { text: '🖼️ Choisir dans la galerie', onPress: pickFromGallery },
       { text: 'Annuler', style: 'cancel' },

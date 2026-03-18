@@ -107,7 +107,7 @@ export default function CreateIncidentScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission refusée', 'La localisation est nécessaire pour situer le signalement.');
+        Alert.alert('Localisation refusee', 'La localisation aide la commune a situer le signalement avec precision.');
         return;
       }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
@@ -122,7 +122,7 @@ export default function CreateIncidentScreen() {
         setAddress(parts.join(', '));
       }
     } catch {
-      Alert.alert('Erreur', 'Impossible d\'obtenir votre position.');
+      Alert.alert('Position indisponible', 'Impossible d obtenir votre position pour le moment.');
     } finally {
       setLocLoading(false);
     }
@@ -136,7 +136,7 @@ export default function CreateIncidentScreen() {
     if (source === 'camera') {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission refusée', 'L\'accès à la caméra est requis.');
+        Alert.alert('Camera refusee', 'L acces a la camera est necessaire pour prendre une photo sur le terrain.');
         return;
       }
       result = await ImagePicker.launchCameraAsync({
@@ -162,7 +162,7 @@ export default function CreateIncidentScreen() {
   };
 
   const showPhotoPicker = () => {
-    Alert.alert('Ajouter une photo', 'Choisissez la source', [
+    Alert.alert('Ajouter une photo', 'Choisissez comment documenter la situation.', [
       { text: '📷 Prendre une photo',      onPress: () => pickPhoto('camera') },
       { text: '🖼️ Choisir dans la galerie', onPress: () => pickPhoto('library') },
       { text: 'Annuler', style: 'cancel' },
@@ -185,7 +185,7 @@ export default function CreateIncidentScreen() {
 
     if (Object.keys(e).length > 0) {
       const firstError = e.category ?? e.description ?? e.location ?? 'Veuillez corriger le formulaire.';
-      Alert.alert('Formulaire incomplet', firstError);
+      Alert.alert('Signalement a completer', firstError);
     }
 
     return Object.keys(e).length === 0;
@@ -246,12 +246,12 @@ export default function CreateIncidentScreen() {
     } catch (err: any) {
       // En cas d'erreur réseau inattendue, proposer la mise en queue
       Alert.alert(
-        'Erreur d\'envoi',
-        'Impossible d\'envoyer le signalement. Voulez-vous le sauvegarder pour envoi ultérieur ?',
+        'Envoi interrompu',
+        `${BRAND.companion.name} n'a pas pu envoyer le signalement maintenant. Voulez-vous le garder pour un envoi des le retour de la connexion ?`,
         [
           { text: 'Annuler', style: 'cancel' },
           {
-            text: 'Sauvegarder',
+            text: 'Garder hors ligne',
             onPress: async () => {
               await OfflineQueue.addToQueue({
                 category_id: categoryId!,

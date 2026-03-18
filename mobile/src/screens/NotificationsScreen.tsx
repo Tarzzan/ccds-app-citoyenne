@@ -127,13 +127,13 @@ export const NotificationsScreen: React.FC = () => {
 
     if (notif.incident_reference) {
       Alert.alert(
-        'Référence disponible',
-        `Cette notification mentionne ${notif.incident_reference}, mais aucun lien direct n'a été transmis.`
+        'Reference disponible',
+        `${BRAND.companion.name} vous transmet la reference ${notif.incident_reference}, mais aucun lien direct n'a encore ete fourni pour ouvrir ce dossier.`
       );
       return;
     }
 
-    Alert.alert('Information', 'Cette notification ne dispose pas encore d’un écran dédié.');
+    Alert.alert('Notification sans ecran dedie', 'Cette notification a bien ete lue, mais elle ne dispose pas encore d un ecran detaille dans l application.');
   };
 
   const renderItem = ({ item }: { item: Notification }) => (
