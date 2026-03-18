@@ -128,6 +128,7 @@ Le bon positionnement est :
 - `scripts/show_latest_livraison_status.sh` : affiche en une commande le statut, les alias stables et les credentials de demonstration du dernier lot valide
 - `scripts/show_tablette_validation_brief.sh` : affiche le brief operateur complet de la future phase tablette depuis le manifeste latest
 - `scripts/publish_latest_handoff.sh` : publie un handoff Markdown stable `/tmp/ma-commune-latest-handoff.md` pour la future phase tablette
+  Le brief d acces stable est aussi expose via `/tmp/ma-commune-latest-access-brief.txt`
 - `scripts/show_local_network_access.sh` : affiche l IP LAN reelle de la machine, les URLs reseau du projet et la commande SSH a utiliser
 - `scripts/check_eas_builds.sh` : affiche l etat des builds EAS Android/iOS de reference a partir des IDs courants
 - `scripts/publish_macommune_access_brief.sh` : regenere le fichier `macommune.txt` sur le Bureau et le Desktop avec les acces, credentials et builds EAS courants

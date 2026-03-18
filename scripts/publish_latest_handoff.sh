@@ -83,6 +83,7 @@ ${INCIDENTS}
 - checksum bundle : \`/tmp/ma-commune-latest-livraison-bundle.zip.sha256\`
 - audit final local : \`/tmp/ma-commune-latest-audit-final-local.md\`
 - manifeste latest : \`/tmp/ma-commune-latest-manifest-livraison-locale.json\`
+- brief acces latest : \`/tmp/ma-commune-latest-access-brief.txt\`
 - APK tablette : \`/tmp/ma-commune-latest-app-release-tablette.apk\`
 - ABI tablette : \`${APK_TABLETTE_ABI}\`
 - APK tablette source : \`${APK_TABLETTE}\`
