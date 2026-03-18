@@ -19,6 +19,7 @@ import {
   Image,
 } from 'react-native';
 import { isPlaceholderServerUrl, ServerConfig } from '../services/ServerConfig';
+import { CivicCompanionStage } from '../components/CivicCompanionStage';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 import { COLORS } from '../components/ui';
 
@@ -120,6 +121,15 @@ export default function ServerConfigScreen({ onConfigured, isFirstLaunch = true 
           <Text style={styles.tipText}>
             Si la tablette est reliée en USB avec `adb reverse`, utilisez `http://127.0.0.1:8080/api`.
           </Text>
+        </View>
+
+        <View style={styles.stageWrap}>
+          <CivicCompanionStage
+            eyebrow="Awa · Connexion territoire"
+            title="Verifier d abord la bonne porte d entree."
+            body="Une URL API juste suffit a rendre l application pleinement utile. L objectif ici est de connecter la commune, pas de perdre du temps dans des reglages techniques."
+            aside="La bonne adresse doit toujours se terminer par /api."
+          />
         </View>
 
         <View style={styles.card}>
@@ -282,6 +292,9 @@ const styles = StyleSheet.create({
     color: '#D7E7DF',
     fontSize: 14,
     lineHeight: 21,
+  },
+  stageWrap: {
+    marginBottom: 16,
   },
   card: {
     backgroundColor: COLORS.white,

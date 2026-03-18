@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../services/AuthContext';
+import { CivicCompanionStage } from '../components/CivicCompanionStage';
 import { Button, Input, COLORS } from '../components/ui';
 import { AuthStackParamList } from '../navigation/RootNavigator';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
@@ -65,6 +66,15 @@ export default function RegisterScreen({ navigation }: Props) {
           <Text style={styles.statement}>
             Rejoignez une application qui aide les habitants à protéger leur cadre de vie et à mieux dialoguer avec la commune.
           </Text>
+        </View>
+
+        <View style={styles.stageWrap}>
+          <CivicCompanionStage
+            eyebrow="Awa · Relais communal"
+            title="Creer un compte pour agir sans perdre le fil."
+            body="Votre compte sert a signaler, suivre, voter et relire les reponses utiles de la commune dans un seul espace."
+            aside="Le but n est pas seulement de declarer un probleme, mais de garder une preuve claire de sa prise en charge."
+          />
         </View>
 
         <View style={styles.form}>
@@ -213,6 +223,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ECE4D5',
     ...BRAND_SHADOW,
+  },
+  stageWrap: {
+    marginBottom: 18,
   },
   title:    { fontSize: 22, fontWeight: '800', color: COLORS.dark, marginBottom: 6 },
   subtitle: { fontSize: 14, color: COLORS.gray, marginBottom: 24, lineHeight: 22 },
