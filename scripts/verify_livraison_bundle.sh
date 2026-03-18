@@ -53,6 +53,11 @@ done
   exit 1
 }
 
+[[ -f "$BUNDLE_DIR/artifacts/macommune.txt" ]] || {
+  printf 'ECHEC: brief acces macommune absent du bundle\n' >&2
+  exit 1
+}
+
 (
   cd "$BUNDLE_DIR"
   sha256sum -c checksums/SHA256SUMS.txt >/tmp/ma-commune-verify-bundle.log

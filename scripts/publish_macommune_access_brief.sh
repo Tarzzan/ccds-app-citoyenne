@@ -26,7 +26,7 @@ CITIZEN_PASSWORD="${CITIZEN_PASSWORD:-Citoyen@MaCommune2026!}"
 
 OUTPUT_FILE="${OUTPUT_FILE:-$BUREAU_DIR/macommune.txt}"
 SECONDARY_OUTPUT_FILE="${SECONDARY_OUTPUT_FILE:-$DESKTOP_DIR/macommune.txt}"
-LATEST_MANIFEST="/tmp/ma-commune-latest-manifest-livraison-locale.json"
+MANIFEST_PATH="${MANIFEST_PATH:-/tmp/ma-commune-latest-manifest-livraison-locale.json}"
 LATEST_BUNDLE="/tmp/ma-commune-latest-livraison-bundle.zip"
 LATEST_BUNDLE_SHA="/tmp/ma-commune-latest-livraison-bundle.zip.sha256"
 LATEST_HANDOFF="/tmp/ma-commune-latest-handoff.md"
@@ -119,13 +119,13 @@ latest_device_status="inconnu"
 latest_tablet_abi="inconnue"
 latest_citizen_examples=$'demo.citoyen.a.1773821871@macommune.local\ndemo.citoyen.b.1773821871@macommune.local\ndemo.citoyen.c.1773821871@macommune.local'
 
-if [[ -f "$LATEST_MANIFEST" ]]; then
-  latest_gate_status="$(jq -r '.decision.gate_local_avant_tablette' "$LATEST_MANIFEST")"
-  latest_branding_status="$(jq -r '.decision.coherence_marque_couche_active' "$LATEST_MANIFEST")"
-  latest_category_visuals_status="$(jq -r '.decision.coherence_systeme_visuel_categories' "$LATEST_MANIFEST")"
-  latest_device_status="$(jq -r '.decision.livraison_finale_appareil' "$LATEST_MANIFEST")"
-  latest_tablet_abi="$(jq -r '.artifacts.apk_tablette.abi' "$LATEST_MANIFEST")"
-  latest_citizen_examples="$(jq -r '.credentials.citizens[].email' "$LATEST_MANIFEST")"
+if [[ -f "$MANIFEST_PATH" ]]; then
+  latest_gate_status="$(jq -r '.decision.gate_local_avant_tablette' "$MANIFEST_PATH")"
+  latest_branding_status="$(jq -r '.decision.coherence_marque_couche_active' "$MANIFEST_PATH")"
+  latest_category_visuals_status="$(jq -r '.decision.coherence_systeme_visuel_categories' "$MANIFEST_PATH")"
+  latest_device_status="$(jq -r '.decision.livraison_finale_appareil' "$MANIFEST_PATH")"
+  latest_tablet_abi="$(jq -r '.artifacts.apk_tablette.abi' "$MANIFEST_PATH")"
+  latest_citizen_examples="$(jq -r '.credentials.citizens[].email' "$MANIFEST_PATH")"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")" "$(dirname "$SECONDARY_OUTPUT_FILE")"
@@ -246,9 +246,17 @@ Note securite
 - Revoquer maintenant le token GitHub et le token Expo partages dans la conversation.
 EOF
 
-cp "$OUTPUT_FILE" "$SECONDARY_OUTPUT_FILE"
-chown tarzzan:tarzzan "$OUTPUT_FILE" "$SECONDARY_OUTPUT_FILE" 2>/dev/null || true
+if [[ "$SECONDARY_OUTPUT_FILE" != "$OUTPUT_FILE" ]]; then
+  cp "$OUTPUT_FILE" "$SECONDARY_OUTPUT_FILE"
+fi
+
+chown tarzzan:tarzzan "$OUTPUT_FILE" 2>/dev/null || true
+if [[ "$SECONDARY_OUTPUT_FILE" != "$OUTPUT_FILE" ]]; then
+  chown tarzzan:tarzzan "$SECONDARY_OUTPUT_FILE" 2>/dev/null || true
+fi
 
 echo "Brief publie:"
 echo "  $OUTPUT_FILE"
-echo "  $SECONDARY_OUTPUT_FILE"
+if [[ "$SECONDARY_OUTPUT_FILE" != "$OUTPUT_FILE" ]]; then
+  echo "  $SECONDARY_OUTPUT_FILE"
+fi
