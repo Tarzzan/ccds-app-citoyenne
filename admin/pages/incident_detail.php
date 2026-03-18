@@ -70,6 +70,18 @@ try {
     // Table votes pas encore créée — ignorer
 }
 
+$status_flow = ['submitted', 'acknowledged', 'in_progress', 'resolved'];
+$status_index = array_search($inc['status'], $status_flow, true);
+$status_index = $status_index === false ? -1 : $status_index;
+$next_step_label = match ($inc['status']) {
+    'submitted' => 'Confirmer la prise en charge',
+    'acknowledged' => 'Passer en intervention terrain',
+    'in_progress' => 'Valider l execution',
+    'resolved' => 'Verifier puis archiver',
+    'rejected' => 'Documenter le motif de classement',
+    default => 'Relire et qualifier',
+};
+
 // --- Traitement des formulaires POST ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -143,6 +155,68 @@ $page_title = 'Signalement ' . e($inc['reference']);
 $active_nav = 'incidents';
 require_once __DIR__ . '/../includes/layout.php';
 ?>
+
+<div class="page-hero">
+  <div class="page-hero-copy">
+    <div class="page-hero-kicker">Dossier terrain</div>
+    <h2 class="page-hero-title"><?= $inc['title'] ? e($inc['title']) : 'Signalement citoyen sans titre' ?></h2>
+    <p class="page-hero-text">
+      Ce dossier doit permettre de comprendre en quelques secondes ou en est le traitement, quelle est la prochaine action utile et ce que verra le citoyen.
+    </p>
+  </div>
+  <div class="page-hero-metrics">
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= e($inc['reference']) ?></span>
+      <span class="hero-chip-label">reference de suivi</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= status_label($inc['status']) ?></span>
+      <span class="hero-chip-label">etat actuel</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= e($next_step_label) ?></span>
+      <span class="hero-chip-label">prochaine action utile</span>
+    </div>
+  </div>
+</div>
+
+<div class="admin-guidance-grid">
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Lecture rapide</div>
+    <h3>Ce que le dossier raconte au premier regard.</h3>
+    <p>
+      Categorie, priorite, progression, citoyen concerne et trace de traitement doivent rester visibles sans devoir relire toute la fiche.
+    </p>
+  </div>
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Action recommande</div>
+    <h3><?= e($next_step_label) ?></h3>
+    <p>
+      Garder la prochaine etape explicite evite les traitements hesitants et rend la reponse plus lisible pour toute la chaine commune-terrain-citoyen.
+    </p>
+  </div>
+</div>
+
+<div class="admin-progress-card">
+  <div class="admin-progress-kicker">Progression dossier</div>
+  <div class="admin-progress-row">
+    <?php foreach ($status_flow as $index => $status): ?>
+      <?php
+        $done = $inc['status'] !== 'rejected' && $status_index >= $index;
+        $active = $inc['status'] === $status;
+      ?>
+      <div class="admin-progress-step">
+        <div class="admin-progress-dot <?= $done ? 'is-done' : '' ?> <?= $active ? 'is-active' : '' ?>"></div>
+        <div class="admin-progress-label"><?= e(status_label($status)) ?></div>
+      </div>
+    <?php endforeach; ?>
+  </div>
+  <?php if ($inc['status'] === 'rejected'): ?>
+    <div class="admin-progress-note">
+      Ce dossier est actuellement classe sans suite. La valeur de cette fiche depend surtout d un motif clair et d une trace de verification.
+    </div>
+  <?php endif; ?>
+</div>
 
 <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;">
 

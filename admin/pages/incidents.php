@@ -117,7 +117,43 @@ function sort_icon(string $field, string $current_sort, string $current_dir): st
     if ($current_sort !== $field) return '<span style="opacity:.3">↕</span>';
     return $current_dir === 'DESC' ? '↓' : '↑';
 }
+
+$active_filters = array_filter([$f_status, $f_cat, $f_search, $f_priority, $f_date_from, $f_date_to]);
+$open_count = 0;
+$resolved_count = 0;
+foreach ($incidents as $inc) {
+    if (in_array($inc['status'], ['submitted', 'acknowledged', 'in_progress'], true)) {
+        $open_count++;
+    }
+    if ($inc['status'] === 'resolved') {
+        $resolved_count++;
+    }
+}
 ?>
+
+<div class="page-hero">
+  <div class="page-hero-copy">
+    <div class="page-hero-kicker">File de traitement</div>
+    <h2 class="page-hero-title">Lire vite la pression terrain et ouvrir les bons dossiers.</h2>
+    <p class="page-hero-text">
+      Cette vue doit aider a filtrer le bruit, faire ressortir les urgences et donner un point d entree direct vers l action utile.
+    </p>
+  </div>
+  <div class="page-hero-metrics">
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$total ?></span>
+      <span class="hero-chip-label">dossiers visibles</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$open_count ?></span>
+      <span class="hero-chip-label">encore ouverts sur cette vue</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)count($active_filters) ?></span>
+      <span class="hero-chip-label">filtre(s) actifs</span>
+    </div>
+  </div>
+</div>
 
 <!-- Filtres avancés v1.2 -->
 <div class="card" style="padding:16px 24px;margin-bottom:16px;">
@@ -163,6 +199,23 @@ function sort_icon(string $field, string $current_sort, string $current_dir): st
   </form>
 </div>
 
+<div class="admin-guidance-grid">
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Lecture rapide</div>
+    <h3>Commencer par ce qui doit bouger aujourd hui.</h3>
+    <p>
+      Priorite haute, statut encore ouvert et citoyen en attente de reponse visible : c est la combinaison la plus utile a ouvrir en premier.
+    </p>
+  </div>
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Bonne pratique</div>
+    <h3>Filtrer moins, ouvrir mieux.</h3>
+    <p>
+      L enjeu n est pas de parcourir toute la table. Le bon geste est de reduire la vue, ouvrir un dossier et documenter l action de facon lisible.
+    </p>
+  </div>
+</div>
+
 <!-- Tableau -->
 <div class="card">
   <div class="card-header">
@@ -171,6 +224,9 @@ function sort_icon(string $field, string $current_sort, string $current_dir): st
       <?php if ($f_status || $f_cat || $f_search || $f_priority || $f_date_from || $f_date_to): ?>
         <span class="badge badge-blue" style="margin-left:8px">Filtré</span>
       <?php endif; ?>
+    </span>
+    <span class="text-muted text-small">
+      <?= $resolved_count ?> resolu<?= $resolved_count > 1 ? 's' : '' ?> · <?= $open_count ?> encore ouvert<?= $open_count > 1 ? 's' : '' ?>
     </span>
   </div>
   <div class="table-wrapper">
