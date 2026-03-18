@@ -4,6 +4,7 @@ import {
   StyleSheet, Alert, ActivityIndicator,
 } from 'react-native';
 import { commentsApi, Comment } from '../services/api';
+import { BRAND } from '../theme/brand';
 
 /**
  * CommentThread — Fil de commentaires avec édition, suppression et réponses (UX-05)
@@ -45,7 +46,10 @@ export default function CommentThread({ incidentId, comments, currentUser, onRef
       setNewComment('');
       onRefresh();
     } catch {
-      Alert.alert('Erreur', 'Impossible d\'envoyer le commentaire.');
+      Alert.alert(
+        'Commentaire non envoye',
+        `${BRAND.companion.name} n'a pas pu transmettre votre message pour le moment.`
+      );
     } finally {
       setSubmitting(false);
     }
@@ -61,7 +65,10 @@ export default function CommentThread({ incidentId, comments, currentUser, onRef
       setReplyingTo(null);
       onRefresh();
     } catch {
-      Alert.alert('Erreur', 'Impossible d\'envoyer la réponse.');
+      Alert.alert(
+        'Reponse non envoyee',
+        `${BRAND.companion.name} n'a pas pu transmettre votre reponse pour le moment.`
+      );
     } finally {
       setReplySubmitting(false);
     }
@@ -81,7 +88,10 @@ export default function CommentThread({ incidentId, comments, currentUser, onRef
       setEditText('');
       onRefresh();
     } catch {
-      Alert.alert('Erreur', 'Impossible de modifier le commentaire.');
+      Alert.alert(
+        'Modification impossible',
+        'Impossible d enregistrer cette mise a jour du commentaire.'
+      );
     }
   };
 
@@ -93,8 +103,8 @@ export default function CommentThread({ incidentId, comments, currentUser, onRef
   // ── Supprimer un commentaire ─────────────────────────────────
   const deleteComment = (commentId: number) => {
     Alert.alert(
-      'Supprimer le commentaire',
-      'Cette action est irréversible.',
+      'Supprimer ce commentaire',
+      'Cette action retire definitivement le message du dossier.',
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -105,7 +115,10 @@ export default function CommentThread({ incidentId, comments, currentUser, onRef
               await commentsApi.delete(incidentId, commentId);
               onRefresh();
             } catch {
-              Alert.alert('Erreur', 'Impossible de supprimer le commentaire.');
+              Alert.alert(
+                'Suppression impossible',
+                'Impossible de supprimer ce commentaire pour le moment.'
+              );
             }
           },
         },

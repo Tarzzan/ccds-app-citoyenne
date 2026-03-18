@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { pollsApi, Poll } from '../services/api';
+import { BRAND } from '../theme/brand';
 
 export default function PollsScreen() {
   const { theme } = useTheme();
@@ -17,7 +18,10 @@ export default function PollsScreen() {
       const res = await pollsApi.list();
       setPolls((res.data as any) ?? []);
     } catch (e) {
-      Alert.alert('Erreur', 'Impossible de charger les sondages.');
+      Alert.alert(
+        'Consultations indisponibles',
+        'Impossible de charger les consultations pour le moment.'
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -30,9 +34,12 @@ export default function PollsScreen() {
     try {
       await pollsApi.vote(pollId, optionId);
       loadPolls();
-      Alert.alert('✅ Vote enregistré', 'Merci pour votre participation !');
+      Alert.alert(
+        'Vote enregistre',
+        `${BRAND.companion.name} a bien note votre choix. Merci pour votre participation.`
+      );
     } catch (e: any) {
-      Alert.alert('Erreur', e.message ?? 'Impossible de voter.');
+      Alert.alert('Vote impossible', e.message ?? 'Impossible d enregistrer votre vote pour le moment.');
     }
   };
 
@@ -90,11 +97,11 @@ export default function PollsScreen() {
                 onPress={() => {
                   if (!hasVoted && !isExpired) {
                     Alert.alert(
-                      'Confirmer votre vote',
-                      `Voter pour "${option.text}" ?`,
+                      'Confirmer ce choix',
+                      `Souhaitez-vous voter pour "${option.text}" ?`,
                       [
                         { text: 'Annuler', style: 'cancel' },
-                        { text: 'Confirmer', onPress: () => handleVote(item.id, option.id) },
+                        { text: 'Valider', onPress: () => handleVote(item.id, option.id) },
                       ]
                     );
                   }

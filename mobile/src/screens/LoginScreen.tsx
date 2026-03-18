@@ -37,7 +37,10 @@ export default function LoginScreen({ navigation }: Props) {
     try {
       await login(email.trim().toLowerCase(), password);
     } catch (err: any) {
-      Alert.alert('Erreur de connexion', err?.message ?? 'Email ou mot de passe incorrect.');
+      Alert.alert(
+        `${BRAND.companion.name} n'a pas pu vous faire entrer`,
+        err?.message ?? 'Vérifiez votre email et votre mot de passe, puis réessayez.'
+      );
     } finally {
       setLoading(false);
     }

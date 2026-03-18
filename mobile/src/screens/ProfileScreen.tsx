@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { authApi } from '../services/api';
 import { useAuth } from '../services/AuthContext';
 import { COLORS } from '../components/ui';
+import { BRAND } from '../theme/brand';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -62,7 +63,10 @@ export default function ProfileScreen() {
         setNotifVoteMilestone(prefs.vote_milestone ?? false);
       }
     } catch {
-      Alert.alert('Erreur', 'Impossible de charger votre profil.');
+      Alert.alert(
+        `${BRAND.companion.name} ne retrouve pas encore votre espace`,
+        'Impossible de charger votre profil pour le moment.'
+      );
     } finally {
       setLoading(false);
     }
@@ -70,7 +74,7 @@ export default function ProfileScreen() {
 
   const handleSaveProfile = async () => {
     if (!fullName.trim() || fullName.trim().length < 2) {
-      Alert.alert('Erreur', 'Le nom doit contenir au moins 2 caractères.');
+      Alert.alert('Nom incomplet', 'Indiquez au moins 2 caracteres pour continuer.');
       return;
     }
     setSaving(true);
@@ -88,9 +92,15 @@ export default function ProfileScreen() {
         full_name: fullName.trim(),
         phone: phone.trim(),
       });
-      Alert.alert('Succès', 'Profil mis à jour.');
+      Alert.alert(
+        'Profil mis a jour',
+        `${BRAND.companion.name} a bien pris en compte vos coordonnees et vos preferences.`
+      );
     } catch (err: any) {
-      Alert.alert('Erreur', err?.response?.data?.message ?? 'Impossible de mettre à jour le profil.');
+      Alert.alert(
+        'Mise a jour impossible',
+        err?.response?.data?.message ?? 'Impossible de mettre a jour votre profil pour le moment.'
+      );
     } finally {
       setSaving(false);
     }
@@ -98,25 +108,28 @@ export default function ProfileScreen() {
 
   const handleChangePassword = async () => {
     if (!currentPwd || !newPwd || !confirmPwd) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs.');
+      Alert.alert('Champs incomplets', 'Renseignez les trois champs du mot de passe.');
       return;
     }
     if (newPwd.length < 8) {
-      Alert.alert('Erreur', 'Le nouveau mot de passe doit contenir au moins 8 caractères.');
+      Alert.alert('Mot de passe trop court', 'Le nouveau mot de passe doit contenir au moins 8 caracteres.');
       return;
     }
     if (newPwd !== confirmPwd) {
-      Alert.alert('Erreur', 'Les mots de passe ne correspondent pas.');
+      Alert.alert('Confirmation differente', 'Les deux nouveaux mots de passe doivent etre identiques.');
       return;
     }
     setSavingPwd(true);
     try {
       await authApi.changePassword({ current_password: currentPwd, new_password: newPwd });
-      Alert.alert('Succès', 'Mot de passe modifié. Veuillez vous reconnecter.', [
+      Alert.alert('Mot de passe mis a jour', 'Par securite, reconnectez-vous pour reprendre la suite.', [
         { text: 'OK', onPress: logout },
       ]);
     } catch (err: any) {
-      Alert.alert('Erreur', err?.response?.data?.message ?? 'Mot de passe actuel incorrect.');
+      Alert.alert(
+        'Modification impossible',
+        err?.response?.data?.message ?? 'Le mot de passe actuel ne correspond pas.'
+      );
     } finally {
       setSavingPwd(false);
       setCurrentPwd('');

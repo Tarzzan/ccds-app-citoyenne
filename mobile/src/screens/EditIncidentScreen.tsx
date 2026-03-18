@@ -16,6 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { incidentsApi } from '../services/api';
 import { COLORS } from '../components/ui';
 import { AppStackParamList } from '../navigation/RootNavigator';
+import { BRAND } from '../theme/brand';
 
 type RouteProps = RouteProp<AppStackParamList, 'EditIncident'>;
 type NavProp    = NativeStackNavigationProp<AppStackParamList>;
@@ -52,14 +53,17 @@ export default function EditIncidentScreen() {
         // Vérifier que le signalement est encore modifiable
         if (inc.status !== 'submitted') {
           Alert.alert(
-            'Modification impossible',
-            `Ce signalement ne peut plus être modifié (statut : ${inc.status}).`,
+            'Dossier deja en traitement',
+            `Ce signalement ne peut plus etre modifie car il est deja passe a l etape "${inc.status}".`,
             [{ text: 'Retour', onPress: () => navigation.goBack() }]
           );
         }
       }
     } catch {
-      Alert.alert('Erreur', 'Impossible de charger le signalement.');
+      Alert.alert(
+        'Dossier indisponible',
+        'Impossible de charger ce signalement pour le moment.'
+      );
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -68,7 +72,7 @@ export default function EditIncidentScreen() {
 
   const handleSave = async () => {
     if (!description.trim() || description.trim().length < 10) {
-      Alert.alert('Erreur', 'La description doit contenir au moins 10 caractères.');
+      Alert.alert('Description trop courte', 'Ajoutez au moins 10 caracteres pour decrire utilement la situation.');
       return;
     }
 
@@ -81,13 +85,13 @@ export default function EditIncidentScreen() {
       });
 
       Alert.alert(
-        'Modifications enregistrées',
-        'Votre signalement a été mis à jour.',
+        'Dossier mis a jour',
+        `${BRAND.companion.name} confirme que votre signalement a bien ete mis a jour.`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Impossible d\'enregistrer les modifications.';
-      Alert.alert('Erreur', msg);
+      const msg = err?.response?.data?.message ?? 'Impossible d enregistrer ces modifications pour le moment.';
+      Alert.alert('Mise a jour impossible', msg);
     } finally {
       setSaving(false);
     }

@@ -47,7 +47,10 @@ export default function ServerConfigScreen({ onConfigured, isFirstLaunch = true 
 
   const handleTest = async () => {
     if (!serverUrl.trim()) {
-      Alert.alert('Champ requis', 'Veuillez saisir l\'URL du serveur.');
+      Alert.alert(
+        'Adresse requise',
+        'Saisissez d abord l adresse complete du serveur communal.'
+      );
       return;
     }
     setTestStatus('testing');
@@ -59,15 +62,18 @@ export default function ServerConfigScreen({ onConfigured, isFirstLaunch = true 
 
   const handleSave = async () => {
     if (!serverUrl.trim()) {
-      Alert.alert('Champ requis', 'Veuillez saisir l\'URL du serveur.');
+      Alert.alert(
+        'Adresse requise',
+        'Saisissez d abord l adresse complete du serveur communal.'
+      );
       return;
     }
     if (testStatus !== 'success') {
       Alert.alert(
-        'Test requis',
-        'Veuillez tester la connexion avant de sauvegarder.',
+        `${BRAND.companion.name} prefere verifier avant d enregistrer`,
+        'Testez d abord la connexion pour confirmer que cette adresse repond bien.',
         [
-          { text: 'Tester maintenant', onPress: handleTest },
+          { text: 'Verifier maintenant', onPress: handleTest },
           { text: 'Annuler', style: 'cancel' },
         ]
       );

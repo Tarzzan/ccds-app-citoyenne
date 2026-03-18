@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { eventsApi, Event } from '../services/api';
+import { BRAND } from '../theme/brand';
 
 export default function EventsScreen() {
   const { theme }                     = useTheme();
@@ -18,7 +19,10 @@ export default function EventsScreen() {
       const res = await eventsApi.list();
       setEvents((res.data as any) ?? []);
     } catch {
-      Alert.alert('Erreur', 'Impossible de charger les événements.');
+      Alert.alert(
+        'Agenda indisponible',
+        'Impossible de charger les rendez-vous communaux pour le moment.'
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -33,12 +37,18 @@ export default function EventsScreen() {
       await eventsApi.rsvp(eventId, status);
       loadEvents();
       const messages: Record<string, string> = {
-        attending:  '✅ Vous participez à cet événement !',
-        interested: '👀 Vous êtes intéressé(e) par cet événement.',
+        attending:  `${BRAND.companion.name} confirme votre participation a ce rendez-vous communal.`,
+        interested: `${BRAND.companion.name} note votre interet et vous laissera retrouver ce rendez-vous plus facilement.`,
       };
-      Alert.alert('Inscription', status ? messages[status] : '❌ Inscription annulée.');
+      Alert.alert(
+        status ? 'Participation mise a jour' : 'Participation retiree',
+        status ? messages[status] : 'Votre participation a bien ete retiree de ce rendez-vous.'
+      );
     } catch (e: any) {
-      Alert.alert('Erreur', e.message ?? 'Impossible de mettre à jour votre inscription.');
+      Alert.alert(
+        'Mise a jour impossible',
+        e.message ?? 'Impossible de mettre a jour votre participation pour le moment.'
+      );
     } finally {
       setRsvpLoading(null);
     }

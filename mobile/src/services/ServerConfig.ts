@@ -106,15 +106,15 @@ export const ServerConfig = {
       clearTimeout(timeout);
 
       if (response.ok || response.status === 200) {
-        return { success: true, message: 'Connexion réussie !' };
+        return { success: true, message: 'Connexion validee. La commune est bien joignable.' };
       } else {
-        return { success: false, message: `Erreur serveur : code ${response.status}` };
+        return { success: false, message: `Le serveur a repondu, mais pas comme attendu (code ${response.status}).` };
       }
     } catch (err: any) {
       if (err?.name === 'AbortError') {
-        return { success: false, message: 'Délai dépassé. Vérifiez l\'URL et votre connexion.' };
+        return { success: false, message: 'Le serveur met trop de temps a repondre. Verifiez l URL et la connexion reseau.' };
       }
-      return { success: false, message: 'Impossible de joindre le serveur. Vérifiez l\'URL.' };
+      return { success: false, message: 'Impossible de joindre ce serveur. Verifiez l adresse saisie et votre acces reseau.' };
     }
   },
 };
