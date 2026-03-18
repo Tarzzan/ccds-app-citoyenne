@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Alert,
+  RefreshControl, Alert,
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { eventsApi, Event } from '../services/api';
 import { BRAND } from '../theme/brand';
 import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { CivicCompanionStage } from '../components/CivicCompanionStage';
+import { ScreenFeedbackState, ScreenLoadingState } from '../components/ScreenStatePanel';
 
 export default function EventsScreen() {
   const { theme }                     = useTheme();
@@ -191,9 +192,10 @@ export default function EventsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
+      <ScreenLoadingState
+        title="L agenda communal se met en place"
+        body="Awa rassemble les rendez-vous utiles pour que vous retrouviez d abord les temps les plus proches et les plus concrets."
+      />
     );
   }
 
@@ -253,15 +255,11 @@ export default function EventsScreen() {
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.center}>
-            <Text style={{ fontSize: 48, marginBottom: 12 }}>📅</Text>
-            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-              Aucun événement à venir
-            </Text>
-            <Text style={[styles.emptyHint, { color: theme.textSecondary }]}>
-              {BRAND.companion.name} vous signalera ici les prochains rendez-vous utiles de la commune.
-            </Text>
-          </View>
+          <ScreenFeedbackState
+            icon="📅"
+            title="Aucun rendez-vous a venir"
+            body={`${BRAND.companion.name} vous signalera ici les prochains rendez-vous utiles de la commune.`}
+          />
         }
       />
     </View>
@@ -270,7 +268,6 @@ export default function EventsScreen() {
 
 const styles = StyleSheet.create({
   container:        { flex: 1 },
-  center:           { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
   list:             { padding: 16 },
   headerWrap:       { marginBottom: 18 },
   headerTitle:      { fontSize: 22, fontWeight: '800', marginBottom: 16 },
@@ -300,6 +297,4 @@ const styles = StyleSheet.create({
   rsvpBtnActive:    {},
   rsvpBtnActiveText:{ color: '#fff', fontWeight: '700', fontSize: 13 },
   rsvpBtnText:      { fontWeight: '600', fontSize: 13 },
-  emptyText:        { fontSize: 15, fontWeight: '600' },
-  emptyHint:        { fontSize: 13, lineHeight: 20, textAlign: 'center', marginTop: 8, maxWidth: 280 },
 });

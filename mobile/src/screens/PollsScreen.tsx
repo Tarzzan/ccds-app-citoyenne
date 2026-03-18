@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Alert,
+  RefreshControl, Alert,
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { pollsApi, Poll } from '../services/api';
 import { BRAND } from '../theme/brand';
 import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { CivicCompanionStage } from '../components/CivicCompanionStage';
+import { ScreenFeedbackState, ScreenLoadingState } from '../components/ScreenStatePanel';
 
 export default function PollsScreen() {
   const { theme } = useTheme();
@@ -155,9 +156,10 @@ export default function PollsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
+      <ScreenLoadingState
+        title="Les consultations se remettent en contexte"
+        body="Awa rassemble les sujets ouverts pour vous laisser lire d abord les choix utiles a la decision locale."
+      />
     );
   }
 
@@ -176,15 +178,11 @@ export default function PollsScreen() {
           />
         }
         ListEmptyComponent={
-          <View style={styles.center}>
-            <Text style={{ fontSize: 48, marginBottom: 12 }}>🗳️</Text>
-            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-              Aucune consultation ouverte pour le moment
-            </Text>
-            <Text style={[styles.emptyHint, { color: theme.textSecondary }]}>
-              {BRAND.companion.name} vous retrouvera ici les prochaines questions ouvertes par la commune.
-            </Text>
-          </View>
+          <ScreenFeedbackState
+            icon="🗳️"
+            title="Aucune consultation ouverte pour le moment"
+            body={`${BRAND.companion.name} vous retrouvera ici les prochaines questions ouvertes par la commune.`}
+          />
         }
         ListHeaderComponent={
           <View style={styles.headerWrap}>
@@ -234,7 +232,6 @@ export default function PollsScreen() {
 
 const styles = StyleSheet.create({
   container:    { flex: 1 },
-  center:       { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
   list:         { padding: 16 },
   headerWrap:   { marginBottom: 18 },
   headerTitle:  { fontSize: 22, fontWeight: '800', marginBottom: 16 },
@@ -259,6 +256,4 @@ const styles = StyleSheet.create({
   progressBar:  { height: 4, borderRadius: 2, marginTop: 8, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 2 },
   votePrompt:   { fontSize: 11, textAlign: 'center', marginTop: 10, fontStyle: 'italic' },
-  emptyText:    { fontSize: 15, fontWeight: '600' },
-  emptyHint:    { fontSize: 13, lineHeight: 20, textAlign: 'center', marginTop: 8, maxWidth: 280 },
 });
