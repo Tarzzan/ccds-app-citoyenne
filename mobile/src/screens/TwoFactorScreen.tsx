@@ -6,10 +6,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator, Image,
+  ScrollView, Alert, Image,
 } from 'react-native';
 import * as ExpoClipboard from 'expo-clipboard';
 import { authApi } from '../services/api';
+import { CivicCompanionStage } from '../components/CivicCompanionStage';
+import { ScreenLoadingState } from '../components/ScreenStatePanel';
+import { BRAND } from '../theme/brand';
 
 type Step = 'status' | 'setup' | 'verify' | 'backup_codes' | 'active';
 
@@ -108,14 +111,15 @@ export default function TwoFactorScreen() {
 
   const copyToClipboard = async (text: string) => {
     await ExpoClipboard.setStringAsync(text);
-    Alert.alert('Copié !', 'Le secret a été copié dans le presse-papiers.');
+    Alert.alert('Secret copie', `${BRAND.companion.name} a copie le secret dans le presse-papiers.`);
   };
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2E7D32" />
-      </View>
+      <ScreenLoadingState
+        title="La securite de votre compte se prepare"
+        body="Awa verifie d abord l etat actuel de la double authentification avant de vous proposer la bonne suite."
+      />
     );
   }
 
@@ -129,6 +133,15 @@ export default function TwoFactorScreen() {
           <Text style={styles.subtitle}>
             Renforcez la sécurité de votre compte en activant la 2FA.
           </Text>
+        </View>
+
+        <View style={styles.stageWrap}>
+          <CivicCompanionStage
+            eyebrow="Awa · Protection du compte"
+            title="La securite doit rester simple a comprendre."
+            body="Activez une verification supplementaire pour proteger vos dossiers, vos echanges et vos informations personnelles sans alourdir le reste de l experience."
+            aside="Vous pourrez revenir ici a tout moment pour verifier ou ajuster ce niveau de protection."
+          />
         </View>
 
         <View style={[styles.statusBadge, enabled ? styles.statusOn : styles.statusOff]}>
@@ -165,6 +178,13 @@ export default function TwoFactorScreen() {
   if (step === 'setup') {
     return (
       <ScrollView style={styles.container}>
+        <View style={styles.stageWrap}>
+          <CivicCompanionStage
+            eyebrow="Awa · Mise en place"
+            title="Associez une application d authentification en quelques etapes."
+            body="Scannez le QR code, saisissez le code temporaire, puis gardez vos codes de secours dans un endroit sur."
+          />
+        </View>
         <Text style={styles.title}>Configurer l'application</Text>
         <Text style={styles.instructions}>
           1. Installez Google Authenticator ou Authy sur votre téléphone.{'\n'}
@@ -257,6 +277,7 @@ const styles = StyleSheet.create({
   container:      { flex: 1, backgroundColor: '#F5F5F5', padding: 20 },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header:         { alignItems: 'center', marginBottom: 24 },
+  stageWrap:      { marginBottom: 18 },
   shield:         { fontSize: 56, marginBottom: 12 },
   title:          { fontSize: 22, fontWeight: '700', color: '#1B5E20', marginBottom: 8 },
   subtitle:       { fontSize: 14, color: '#666', textAlign: 'center', lineHeight: 20 },

@@ -19,6 +19,7 @@ import { useAuth } from '../services/AuthContext';
 import { COLORS } from '../components/ui';
 import { BRAND } from '../theme/brand';
 import { CivicCompanionCard } from '../components/CivicCompanionCard';
+import { ScreenLoadingState } from '../components/ScreenStatePanel';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -162,9 +163,10 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      <ScreenLoadingState
+        title="Votre espace personnel se remet en place"
+        body="Awa rassemble vos coordonnees, vos preferences et vos reperes de securite avant de vous laisser modifier la suite."
+      />
     );
   }
 

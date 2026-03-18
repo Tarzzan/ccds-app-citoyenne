@@ -15,6 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { incidentsApi } from '../services/api';
 import { COLORS } from '../components/ui';
+import { ScreenLoadingState } from '../components/ScreenStatePanel';
 import { AppStackParamList } from '../navigation/RootNavigator';
 import { BRAND } from '../theme/brand';
 
@@ -99,9 +100,10 @@ export default function EditIncidentScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      <ScreenLoadingState
+        title="Le dossier est en cours de relecture"
+        body="Awa rassemble les informations modifiables pour vous laisser corriger le dossier sans perdre le contexte."
+      />
     );
   }
 
