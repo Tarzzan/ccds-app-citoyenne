@@ -92,6 +92,20 @@ eval "$(populate_build_info ios "$IOS_BUILD_ID")"
 
 repo_commit="$(git -C "$ROOT_DIR" rev-parse --short HEAD)"
 repo_commit_message="$(git -C "$ROOT_DIR" log -1 --pretty=%s)"
+upstream_ref="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null || true)"
+repo_sync_status="Depot local sans upstream Git configure"
+last_pushed_commit="inconnu"
+repo_sync_note="Etat distant GitHub non reverifie dans cette passe"
+
+if [[ -n "${upstream_ref:-}" ]]; then
+  upstream_commit="$(git -C "$ROOT_DIR" rev-parse --short "$upstream_ref" 2>/dev/null || true)"
+  last_pushed_commit="${upstream_commit:-inconnu}"
+  if [[ -n "${upstream_commit:-}" && "$upstream_commit" == "$repo_commit" ]]; then
+    repo_sync_status="Depot local et reference locale ${upstream_ref} alignes"
+  else
+    repo_sync_status="Depot local en avance sur la reference locale ${upstream_ref}"
+  fi
+fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")" "$(dirname "$SECONDARY_OUTPUT_FILE")"
 
@@ -101,8 +115,10 @@ MA COMMUNE
 
 Etat du depot
 -------------
-- Depot local et GitHub alignes
-- Dernier commit pousse sur main: ${repo_commit}
+- ${repo_sync_status}
+- ${repo_sync_note}
+- Dernier commit pousse sur main: ${last_pushed_commit}
+- Dernier commit local: ${repo_commit}
 - Message: ${repo_commit_message}
 - Commit mobile de reference pour les builds EAS actuels: ${MOBILE_REFERENCE_COMMIT}
 - GitHub: https://github.com/Tarzzan/ccds-app-citoyenne
