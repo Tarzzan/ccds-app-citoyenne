@@ -128,11 +128,11 @@ Le bon positionnement est :
 - `scripts/verify_latest_livraison_aliases.sh` : controle que les alias `/tmp/ma-commune-latest-*` pointent vers un bundle coherent et encore valide
   Le checksum du zip publie est expose via `/tmp/ma-commune-latest-livraison-bundle.zip.sha256`
 - `scripts/show_latest_livraison_status.sh` : affiche en une commande le statut, les alias stables, les credentials et l alignement `HEAD local vs bundle latest`
-  L'empreinte SHA-256 de l'APK tablette issue du manifeste y est aussi exposee
+  Les empreintes SHA-256 du bundle zip et de l'APK tablette y sont aussi exposees
 - `scripts/show_latest_access_brief.sh` : affiche directement le brief d acces stable publie dans `/tmp/ma-commune-latest-access-brief.txt` puis rappelle l alignement `HEAD local vs bundle latest`
   Le bloc de controle inclut aussi l'empreinte SHA-256 du brief commun
 - `scripts/show_tablette_validation_brief.sh` : affiche le brief operateur complet de la future phase tablette depuis le manifeste latest
-  Il rappelle aussi l'empreinte SHA-256 de l'APK tablette a installer
+  Il rappelle aussi les empreintes SHA-256 du bundle zip et de l'APK tablette a utiliser
 - `scripts/publish_latest_handoff.sh` : publie un handoff Markdown stable `/tmp/ma-commune-latest-handoff.md` pour la future phase tablette
   Le brief d acces stable est aussi expose via `/tmp/ma-commune-latest-access-brief.txt`
 - `scripts/show_local_network_access.sh` : affiche l IP LAN reelle de la machine, les URLs reseau du projet et la commande SSH a utiliser

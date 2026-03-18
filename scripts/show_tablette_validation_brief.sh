@@ -3,6 +3,7 @@ set -euo pipefail
 
 MANIFEST="/tmp/ma-commune-latest-manifest-livraison-locale.json"
 ACCESS_BRIEF_CHECK_LOG="/tmp/ma-commune-latest-access-brief-check.log"
+LATEST_BUNDLE_SHA_FILE="/tmp/ma-commune-latest-livraison-bundle.zip.sha256"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 require_cmd() {
@@ -24,8 +25,14 @@ require_cmd jq
   exit 1
 }
 
+[[ -f "$LATEST_BUNDLE_SHA_FILE" ]] || {
+  printf 'ECHEC: checksum bundle latest introuvable: %s\n' "$LATEST_BUNDLE_SHA_FILE" >&2
+  exit 1
+}
+
 ACCESS_BRIEF_CHECK_STATUS="$(sed -n '1p' "$ACCESS_BRIEF_CHECK_LOG")"
 ACCESS_BRIEF_SHA="$(sed -n 's/^sha256: //p' "$ACCESS_BRIEF_CHECK_LOG")"
+BUNDLE_ZIP_SHA="$(awk '{print $1}' "$LATEST_BUNDLE_SHA_FILE")"
 CURRENT_HEAD="$(git -C "$SCRIPT_DIR/.." rev-parse --short HEAD)"
 LATEST_HEAD="$(jq -r '.project.git.head_commit_short // "inconnu"' "$MANIFEST")"
 LATEST_HEAD_SUBJECT="$(jq -r '.project.git.head_subject // "inconnu"' "$MANIFEST")"
@@ -93,6 +100,7 @@ printf -- '- ABI tablette: %s\n' "$(jq -r '.artifacts.apk_tablette.abi' "$MANIFE
 printf -- '- SHA-256 APK tablette: %s\n' "$(jq -r '.artifacts.apk_tablette.sha256 // "inconnu"' "$MANIFEST")"
 printf -- '- bundle latest: /tmp/ma-commune-latest-livraison-bundle.zip\n'
 printf -- '- checksum bundle: /tmp/ma-commune-latest-livraison-bundle.zip.sha256\n'
+printf -- '- SHA-256 bundle zip: %s\n' "$BUNDLE_ZIP_SHA"
 printf -- '- audit final local: /tmp/ma-commune-latest-audit-final-local.md\n'
 printf -- '- index latest: /tmp/ma-commune-latest-livraison-index.md\n'
 printf -- '- brief acces latest: /tmp/ma-commune-latest-access-brief.txt\n'
