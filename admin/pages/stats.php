@@ -90,7 +90,7 @@ $by_status = $db->query("
 
 // --- Par catégorie (période) ---
 $by_cat = $db->prepare("
-    SELECT c.name, c.color, COUNT(i.id) AS cnt, COALESCE(SUM(i.votes_count),0) AS votes
+    SELECT c.name, c.color, c.icon, COUNT(i.id) AS cnt, COALESCE(SUM(i.votes_count),0) AS votes
     FROM categories c
     LEFT JOIN incidents i ON i.category_id = c.id
         AND i.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
@@ -145,7 +145,7 @@ foreach ($heatmap_raw->fetchAll(PDO::FETCH_ASSOC) as $row) {
 // --- Top 5 signalements les plus votés ---
 $top_voted = $db->prepare("
     SELECT i.reference, i.title, i.description, i.votes_count, i.status,
-           c.name AS cat_name, c.color AS cat_color
+           c.name AS cat_name, c.color AS cat_color, c.icon AS cat_icon
     FROM incidents i
     JOIN categories c ON c.id = i.category_id
     WHERE i.votes_count > 0
@@ -266,6 +266,18 @@ require_once __DIR__ . '/../includes/layout.php';
     <div class="chart-container">
       <canvas id="chartCat"></canvas>
     </div>
+    <div style="display:grid;gap:10px;padding:4px 6px 0;">
+      <?php foreach ($by_cat as $cat): ?>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #f1ece0;">
+          <?= category_visual_html($cat['icon'] ?? 'road', $cat['name'], 'sm', $cat['color'] ?? null) ?>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:#183229;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= e($cat['name']) ?></div>
+            <div class="text-small text-muted"><?= (int)$cat['cnt'] ?> signalement<?= ((int)$cat['cnt']) > 1 ? 's' : '' ?> · 👍 <?= (int)$cat['votes'] ?></div>
+          </div>
+          <span class="badge" style="background:<?= e($cat['color']) ?>22;color:<?= e($cat['color']) ?>"><?= (int)$cat['cnt'] ?></span>
+        </div>
+      <?php endforeach; ?>
+    </div>
   </div>
   <div class="card">
     <div class="card-header">
@@ -330,6 +342,7 @@ require_once __DIR__ . '/../includes/layout.php';
     <?php foreach ($top_voted as $i => $inc): ?>
     <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9">
       <span style="width:24px;height:24px;border-radius:50%;background:#f59e0b;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px"><?= $i+1 ?></span>
+      <?= category_visual_html($inc['cat_icon'] ?? 'road', $inc['cat_name'], 'sm', $inc['cat_color'] ?? null) ?>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
           <?= e($inc['title'] ?: substr($inc['description'], 0, 50)) ?>

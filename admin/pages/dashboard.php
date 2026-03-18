@@ -24,7 +24,7 @@ $kpis = $db->query("
 
 // --- Répartition par catégorie ---
 $by_cat = $db->query("
-    SELECT c.name, c.color, COUNT(i.id) AS cnt
+    SELECT c.name, c.color, c.icon, COUNT(i.id) AS cnt
     FROM categories c
     LEFT JOIN incidents i ON i.category_id = c.id
     GROUP BY c.id ORDER BY cnt DESC
@@ -42,7 +42,7 @@ $evolution = $db->query("
 // --- 10 derniers signalements ---
 $recent = $db->query("
     SELECT i.id, i.reference, i.description, i.status, i.priority,
-           i.created_at, c.name AS cat_name, c.color AS cat_color,
+           i.created_at, c.name AS cat_name, c.color AS cat_color, c.icon AS cat_icon,
            u.full_name AS reporter
     FROM incidents i
     JOIN categories c ON c.id = i.category_id
@@ -222,6 +222,18 @@ require_once __DIR__ . '/../includes/layout.php';
     <div class="chart-container">
       <canvas id="chartCategories"></canvas>
     </div>
+    <div style="display:grid;gap:10px;padding:4px 6px 0;">
+      <?php foreach ($by_cat as $cat): ?>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #f1ece0;">
+          <?= category_visual_html($cat['icon'] ?? 'road', $cat['name'], 'sm', $cat['color'] ?? null) ?>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:#183229;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= e($cat['name']) ?></div>
+            <div class="text-small text-muted"><?= (int)$cat['cnt'] ?> signalement<?= ((int)$cat['cnt']) > 1 ? 's' : '' ?></div>
+          </div>
+          <span class="badge" style="background:<?= e($cat['color']) ?>22;color:<?= e($cat['color']) ?>"><?= (int)$cat['cnt'] ?></span>
+        </div>
+      <?php endforeach; ?>
+    </div>
   </div>
 
 </div>
@@ -307,9 +319,12 @@ require_once __DIR__ . '/../includes/layout.php';
           <td><code style="font-size:11px"><?= e($inc['reference']) ?></code></td>
           <td><span class="truncate"><?= e($inc['description']) ?></span></td>
           <td>
-            <span class="badge" style="background:<?= e($inc['cat_color']) ?>22;color:<?= e($inc['cat_color']) ?>">
-              <?= e($inc['cat_name']) ?>
-            </span>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <?= category_visual_html($inc['cat_icon'] ?? 'road', $inc['cat_name'], 'sm', $inc['cat_color'] ?? null) ?>
+              <span class="badge" style="background:<?= e($inc['cat_color']) ?>22;color:<?= e($inc['cat_color']) ?>">
+                <?= e($inc['cat_name']) ?>
+              </span>
+            </div>
           </td>
           <td><span class="badge <?= status_class($inc['status']) ?>"><?= status_label($inc['status']) ?></span></td>
           <td><span class="badge <?= priority_class($inc['priority'] ?? 'medium') ?>"><?= priority_label($inc['priority'] ?? 'medium') ?></span></td>
