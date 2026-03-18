@@ -14,6 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { incidentsApi, Incident } from '../services/api';
 import { useAuth } from '../services/AuthContext';
 import { IncidentCard, COLORS, STATUS_LABELS, PRIORITY_LABELS } from '../components/ui';
+import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { AppStackParamList } from '../navigation/RootNavigator';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 
@@ -154,6 +155,23 @@ export default function MyIncidentsScreen() {
   const userRoleLabel = isStaff ? 'Pilotage opérationnel' : 'Veille locale en cours';
   const queueLabel = QUEUE_OPTIONS.find((item) => item.key === queue)?.label ?? 'Tous';
   const priorityLabel = PRIORITY_FILTERS.find((item) => item.key === priorityFilter)?.label ?? 'Toutes';
+  const companionMessage = isStaff
+    ? {
+      tone: 'status' as const,
+      title: `${BRAND.companion.name} vous aide a lire la file`,
+      body: scope === 'territory'
+        ? 'Gardez cette vue concentree sur ce qui demande une action terrain immediate. Le bon usage est de filtrer, ouvrir, qualifier puis valider.'
+        : 'Cette vue sert a suivre vos propres interventions sans perdre le fil des priorites ni des assignations.',
+      bullets: scope === 'territory'
+        ? ['ouvrir d abord les urgences visibles', 'resserrer ensuite par file et priorite']
+        : ['revenir sur vos dossiers assignes', 'relire les derniers changements utiles'],
+    }
+    : {
+      tone: 'guide' as const,
+      title: `${BRAND.companion.name} garde votre suivi lisible`,
+      body: 'Cette vue ne sert pas seulement a stocker des dossiers. Elle doit vous aider a voir ce qui attend, ce qui avance et ce qui est deja resolu.',
+      bullets: ['utiliser les filtres pour reduire le bruit', 'ouvrir d abord les dossiers encore actifs'],
+    };
 
   const renderHeader = () => (
     <View>
@@ -173,6 +191,16 @@ export default function MyIncidentsScreen() {
             <Text style={styles.heroMetricLabel}>état suivi</Text>
           </View>
         </View>
+      </View>
+
+      <View style={styles.companionWrap}>
+        <CivicCompanionCard
+          compact
+          tone={companionMessage.tone}
+          title={companionMessage.title}
+          body={companionMessage.body}
+          bullets={companionMessage.bullets}
+        />
       </View>
 
       <View style={styles.userHeader}>
@@ -357,6 +385,17 @@ export default function MyIncidentsScreen() {
               : "Votre historique est encore vide.\nCommencez par documenter un premier besoin sur le territoire."
         }
       </Text>
+      {debouncedQuery ? (
+        <TouchableOpacity style={styles.emptyActionBtn} onPress={() => setSearchQuery('')}>
+          <Text style={styles.emptyActionBtnText}>Effacer la recherche</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.emptyActionBtn} onPress={() => navigation.navigate('CreateIncident')}>
+          <Text style={styles.emptyActionBtnText}>
+            {isStaff ? 'Creer un dossier terrain' : 'Creer mon premier signalement'}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -456,6 +495,9 @@ const styles = StyleSheet.create({
     color: '#D7E7DF',
     fontSize: 11,
     marginTop: 4,
+  },
+  companionWrap: {
+    marginBottom: 16,
   },
   userHeader: {
     flexDirection: 'row',
@@ -595,4 +637,19 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 48, marginBottom: 12 },
   emptyTitle:{ fontSize: 18, fontWeight: '800', color: COLORS.dark, marginBottom: 8, textAlign: 'center' },
   emptyText: { fontSize: 14, color: COLORS.gray, textAlign: 'center', lineHeight: 22 },
+  emptyActionBtn: {
+    marginTop: 18,
+    minHeight: 46,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    backgroundColor: BRAND.colors.awara,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...BRAND_SHADOW,
+  },
+  emptyActionBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: BRAND.colors.canopyDeep,
+  },
 });
