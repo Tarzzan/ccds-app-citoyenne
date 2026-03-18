@@ -6,6 +6,8 @@ import {
 import { useTheme } from '../theme/ThemeContext';
 import { pollsApi, Poll } from '../services/api';
 import { BRAND } from '../theme/brand';
+import { CivicCompanionCard } from '../components/CivicCompanionCard';
+import { CivicCompanionStage } from '../components/CivicCompanionStage';
 
 export default function PollsScreen() {
   const { theme } = useTheme();
@@ -42,6 +44,9 @@ export default function PollsScreen() {
       Alert.alert('Vote impossible', e.message ?? 'Impossible d enregistrer votre vote pour le moment.');
     }
   };
+
+  const activePolls = polls.filter((poll) => !poll.ends_at || new Date(poll.ends_at) >= new Date()).length;
+  const totalVotes = polls.reduce((sum, poll) => sum + (poll.total_votes ?? 0), 0);
 
   const renderPoll = ({ item }: { item: Poll }) => {
     const isExpired  = item.ends_at ? new Date(item.ends_at) < new Date() : false;
@@ -174,14 +179,53 @@ export default function PollsScreen() {
           <View style={styles.center}>
             <Text style={{ fontSize: 48, marginBottom: 12 }}>🗳️</Text>
             <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-              Aucun sondage en cours
+              Aucune consultation ouverte pour le moment
+            </Text>
+            <Text style={[styles.emptyHint, { color: theme.textSecondary }]}>
+              {BRAND.companion.name} vous retrouvera ici les prochaines questions ouvertes par la commune.
             </Text>
           </View>
         }
         ListHeaderComponent={
-          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>
-            Sondages & Consultations
-          </Text>
+          <View style={styles.headerWrap}>
+            <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>
+              Consultations citoyennes
+            </Text>
+            <Text style={[styles.headerIntro, { color: theme.textSecondary }]}>
+              Donnez un avis simple, lisible et utile a la decision locale.
+            </Text>
+
+            <View style={styles.stageWrap}>
+              <CivicCompanionStage
+                eyebrow="Awa · Concertation locale"
+                title="Une consultation doit mener a une decision comprenable."
+                body="Retrouvez ici les sujets ouverts par la commune, votez une fois, puis revenez relire la tendance generale sans perdre le fil."
+                aside="Chaque consultation reste volontairement simple : un choix clair, un resultat lisible."
+              />
+            </View>
+
+            <View style={styles.statsRow}>
+              <View style={[styles.statCard, { backgroundColor: theme.surface }]}>
+                <Text style={[styles.statValue, { color: theme.textPrimary }]}>{activePolls}</Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>ouvertes</Text>
+              </View>
+              <View style={[styles.statCard, { backgroundColor: theme.surface }]}>
+                <Text style={[styles.statValue, { color: theme.textPrimary }]}>{totalVotes}</Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>votes cumules</Text>
+              </View>
+            </View>
+
+            <CivicCompanionCard
+              compact
+              tone="guide"
+              title={`${BRAND.companion.name} vous conseille de voter d abord sur un seul sujet utile`}
+              body="L objectif n est pas de multiplier les clics, mais de rendre visible une preference citoyenne claire."
+              bullets={[
+                'une consultation = un choix unique',
+                'les resultats restent relisibles apres votre vote',
+              ]}
+            />
+          </View>
         }
       />
     </View>
@@ -192,7 +236,14 @@ const styles = StyleSheet.create({
   container:    { flex: 1 },
   center:       { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
   list:         { padding: 16 },
+  headerWrap:   { marginBottom: 18 },
   headerTitle:  { fontSize: 22, fontWeight: '800', marginBottom: 16 },
+  headerIntro:  { fontSize: 14, lineHeight: 21, marginTop: -6, marginBottom: 16 },
+  stageWrap:    { marginBottom: 14 },
+  statsRow:     { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  statCard:     { flex: 1, borderRadius: 14, padding: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  statValue:    { fontSize: 22, fontWeight: '800', marginBottom: 4 },
+  statLabel:    { fontSize: 12, fontWeight: '600' },
   card:         { borderRadius: 14, padding: 16, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
   cardHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
   pollTitle:    { fontSize: 16, fontWeight: '700', flex: 1, marginRight: 8 },
@@ -209,4 +260,5 @@ const styles = StyleSheet.create({
   progressFill: { height: '100%', borderRadius: 2 },
   votePrompt:   { fontSize: 11, textAlign: 'center', marginTop: 10, fontStyle: 'italic' },
   emptyText:    { fontSize: 15, fontWeight: '600' },
+  emptyHint:    { fontSize: 13, lineHeight: 20, textAlign: 'center', marginTop: 8, maxWidth: 280 },
 });

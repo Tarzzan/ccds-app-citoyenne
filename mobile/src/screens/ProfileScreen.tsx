@@ -18,6 +18,7 @@ import { authApi } from '../services/api';
 import { useAuth } from '../services/AuthContext';
 import { COLORS } from '../components/ui';
 import { BRAND } from '../theme/brand';
+import { CivicCompanionCard } from '../components/CivicCompanionCard';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -144,6 +145,21 @@ export default function ProfileScreen() {
     admin:   'Administrateur',
   };
 
+  const tabIntro = activeTab === 'profile'
+    ? {
+        title: `${BRAND.companion.name} garde vos reperes a jour`,
+        body: 'Vos coordonnees et vos preferences aident la commune a vous joindre au bon moment et a rendre le suivi plus clair.',
+      }
+    : activeTab === 'password'
+      ? {
+          title: `${BRAND.companion.name} veille sur l acces a votre espace`,
+          body: 'Un mot de passe solide protege vos dossiers, vos commentaires et vos preferences personnelles.',
+        }
+      : {
+          title: `${BRAND.companion.name} trie ce qui merite votre attention`,
+          body: 'Choisissez les alertes qui vous aident vraiment a suivre un dossier, une reponse ou un rendez-vous utile.',
+        };
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -166,6 +182,19 @@ export default function ProfileScreen() {
           <View style={styles.roleBadge}>
             <Text style={styles.roleText}>{ROLE_LABELS[role] ?? role}</Text>
           </View>
+        </View>
+
+        <View style={styles.companionWrap}>
+          <CivicCompanionCard
+            compact
+            tone="status"
+            title={tabIntro.title}
+            body={tabIntro.body}
+            bullets={[
+              activeTab === 'profile' ? 'coordonnees faciles a tenir a jour' : activeTab === 'password' ? 'acces mieux protege' : 'alertes plus utiles au quotidien',
+              activeTab === 'notifications' ? 'moins de bruit, plus de repere' : 'une relation plus lisible avec la commune',
+            ]}
+          />
         </View>
 
         {/* Onglets */}
@@ -341,9 +370,9 @@ export default function ProfileScreen() {
         {/* Déconnexion */}
         <TouchableOpacity
           style={styles.logoutBtn}
-          onPress={() => Alert.alert('Déconnexion', 'Voulez-vous vous déconnecter ?', [
+          onPress={() => Alert.alert('Se deconnecter', 'Voulez-vous fermer cette session maintenant ?', [
             { text: 'Annuler', style: 'cancel' },
-            { text: 'Déconnecter', style: 'destructive', onPress: logout },
+            { text: 'Se deconnecter', style: 'destructive', onPress: logout },
           ])}
         >
           <Text style={styles.logoutText}>🚪 Se déconnecter</Text>
@@ -360,6 +389,7 @@ const styles = StyleSheet.create({
   centered:  { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   avatarSection: { alignItems: 'center', marginBottom: 24 },
+  companionWrap: { marginBottom: 18 },
   avatar: {
     width: 80, height: 80, borderRadius: 40,
     backgroundColor: COLORS.primary,

@@ -6,6 +6,8 @@ import {
 import { useTheme } from '../theme/ThemeContext';
 import { eventsApi, Event } from '../services/api';
 import { BRAND } from '../theme/brand';
+import { CivicCompanionCard } from '../components/CivicCompanionCard';
+import { CivicCompanionStage } from '../components/CivicCompanionStage';
 
 export default function EventsScreen() {
   const { theme }                     = useTheme();
@@ -72,6 +74,9 @@ export default function EventsScreen() {
     if (diff < 0) return 'Passé';
     return `Dans ${diff} jours`;
   };
+
+  const upcomingEvents = events.filter((event) => new Date(event.starts_at).getTime() >= Date.now()).length;
+  const totalParticipants = events.reduce((sum, event) => sum + (event.attendees_count ?? 0), 0);
 
   const renderEvent = ({ item }: { item: Event }) => {
     const isLoading   = rsvpLoading === item.id;
@@ -207,15 +212,54 @@ export default function EventsScreen() {
           />
         }
         ListHeaderComponent={
-          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>
-            Événements communautaires
-          </Text>
+          <View style={styles.headerWrap}>
+            <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>
+              Rendez-vous communaux
+            </Text>
+            <Text style={[styles.headerIntro, { color: theme.textSecondary }]}>
+              Rejoignez les temps utiles du territoire sans perdre les informations pratiques.
+            </Text>
+
+            <View style={styles.stageWrap}>
+              <CivicCompanionStage
+                eyebrow="Awa · Agenda communal"
+                title="Un rendez-vous doit donner envie de venir, pas seulement afficher une date."
+                body="Retrouvez ici les rencontres utiles du quartier, confirmez votre presence ou gardez un repere simple pour y revenir plus tard."
+                aside="La commune doit rendre ses rendez-vous lisibles, concrets et faciles a rejoindre."
+              />
+            </View>
+
+            <View style={styles.statsRow}>
+              <View style={[styles.statCard, { backgroundColor: theme.surface }]}>
+                <Text style={[styles.statValue, { color: theme.textPrimary }]}>{upcomingEvents}</Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>a venir</Text>
+              </View>
+              <View style={[styles.statCard, { backgroundColor: theme.surface }]}>
+                <Text style={[styles.statValue, { color: theme.textPrimary }]}>{totalParticipants}</Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>participations annoncees</Text>
+              </View>
+            </View>
+
+            <CivicCompanionCard
+              compact
+              tone="thanks"
+              title={`${BRAND.companion.name} vous aide a choisir le bon niveau d engagement`}
+              body="Confirmez votre presence si vous venez, ou gardez simplement un repere si vous souhaitez suivre ce rendez-vous de plus loin."
+              bullets={[
+                'participer quand vous etes sur de venir',
+                'signaler un interet sans surcharger la suite',
+              ]}
+            />
+          </View>
         }
         ListEmptyComponent={
           <View style={styles.center}>
             <Text style={{ fontSize: 48, marginBottom: 12 }}>📅</Text>
             <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
               Aucun événement à venir
+            </Text>
+            <Text style={[styles.emptyHint, { color: theme.textSecondary }]}>
+              {BRAND.companion.name} vous signalera ici les prochains rendez-vous utiles de la commune.
             </Text>
           </View>
         }
@@ -228,7 +272,14 @@ const styles = StyleSheet.create({
   container:        { flex: 1 },
   center:           { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
   list:             { padding: 16 },
+  headerWrap:       { marginBottom: 18 },
   headerTitle:      { fontSize: 22, fontWeight: '800', marginBottom: 16 },
+  headerIntro:      { fontSize: 14, lineHeight: 21, marginTop: -6, marginBottom: 16 },
+  stageWrap:        { marginBottom: 14 },
+  statsRow:         { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  statCard:         { flex: 1, borderRadius: 14, padding: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  statValue:        { fontSize: 22, fontWeight: '800', marginBottom: 4 },
+  statLabel:        { fontSize: 12, fontWeight: '600' },
   card:             { borderRadius: 14, padding: 16, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
   urgentBadge:      { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginBottom: 10 },
   urgentText:       { fontSize: 12, fontWeight: '700' },
@@ -250,4 +301,5 @@ const styles = StyleSheet.create({
   rsvpBtnActiveText:{ color: '#fff', fontWeight: '700', fontSize: 13 },
   rsvpBtnText:      { fontWeight: '600', fontSize: 13 },
   emptyText:        { fontSize: 15, fontWeight: '600' },
+  emptyHint:        { fontSize: 13, lineHeight: 20, textAlign: 'center', marginTop: 8, maxWidth: 280 },
 });
