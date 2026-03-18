@@ -31,6 +31,7 @@ EVENT_TITLE="$(jq -r '.demo.event.title' "$MANIFEST")"
 API_URL="$(jq -r '.urls.api' "$MANIFEST")"
 ADMIN_URL="$(jq -r '.urls.admin' "$MANIFEST")"
 APK_TABLETTE="$(jq -r '.artifacts.apk_tablette.path' "$MANIFEST")"
+APK_TABLETTE_ABI="$(jq -r '.artifacts.apk_tablette.abi' "$MANIFEST")"
 LAN_IP="$("$SCRIPT_DIR/detect_primary_lan_ip.sh" 2>/dev/null || true)"
 SSH_USER="$(getent passwd 1000 2>/dev/null | cut -d: -f1 || true)"
 
@@ -47,6 +48,7 @@ Date de generation : $(date '+%d/%m/%Y %H:%M:%S')
 
 - gate local avant tablette : $(jq -r '.decision.gate_local_avant_tablette' "$MANIFEST")
 - coherence marque couche active : $(jq -r '.decision.coherence_marque_couche_active' "$MANIFEST")
+- coherence systeme visuel categories : $(jq -r '.decision.coherence_systeme_visuel_categories' "$MANIFEST")
 - livraison finale appareil : $(jq -r '.decision.livraison_finale_appareil' "$MANIFEST")
 
 ## URLs
@@ -82,12 +84,13 @@ ${INCIDENTS}
 - audit final local : \`/tmp/ma-commune-latest-audit-final-local.md\`
 - manifeste latest : \`/tmp/ma-commune-latest-manifest-livraison-locale.json\`
 - APK tablette : \`/tmp/ma-commune-latest-app-release-tablette.apk\`
+- ABI tablette : \`${APK_TABLETTE_ABI}\`
 - APK tablette source : \`${APK_TABLETTE}\`
 
 ## Quand La Phase Tablette Sera Autorisee
 
 1. verifier le bundle latest et son checksum
-2. utiliser uniquement l'APK tablette cible "arm64-v8a"
+2. utiliser uniquement l'APK tablette cible \`${APK_TABLETTE_ABI}\`
 3. configurer l'URL serveur dans l'application, en USB ou via l'URL LAN reelle
 4. jouer le parcours citoyen, puis agent, puis admin
 5. verifier logo, splash, notifications et "Mon bilan" sur appareil reel

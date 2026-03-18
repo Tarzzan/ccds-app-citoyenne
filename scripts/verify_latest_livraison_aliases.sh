@@ -131,6 +131,7 @@ grep -q 'gate local avant tablette : PASS' "$HANDOFF_REAL" || {
 GATE_STATUS="$(jq -r '.decision.gate_local_avant_tablette' "$MANIFEST_REAL")"
 DEVICE_STATUS="$(jq -r '.decision.livraison_finale_appareil' "$MANIFEST_REAL")"
 BRANDING_STATUS="$(jq -r '.decision.coherence_marque_couche_active' "$MANIFEST_REAL")"
+CATEGORY_VISUALS_STATUS="$(jq -r '.decision.coherence_systeme_visuel_categories' "$MANIFEST_REAL")"
 
 [[ "$GATE_STATUS" = "PASS" ]] || {
   printf 'ECHEC: gate latest non PASS\n' >&2
@@ -144,6 +145,11 @@ BRANDING_STATUS="$(jq -r '.decision.coherence_marque_couche_active' "$MANIFEST_R
 
 [[ "$BRANDING_STATUS" = "PASS" ]] || {
   printf 'ECHEC: coherence marque latest non PASS\n' >&2
+  exit 1
+}
+
+[[ "$CATEGORY_VISUALS_STATUS" = "PASS" ]] || {
+  printf 'ECHEC: coherence categories visuelles latest non PASS\n' >&2
   exit 1
 }
 

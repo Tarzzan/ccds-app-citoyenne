@@ -32,9 +32,10 @@ GATE_MD="$(sed -n 's/^- gate avant tablette : `\(.*\)`/\1/p' "$AUDIT_MD")"
 PREP_MD="$(sed -n 's/^- preparation livraison : `\(.*\)`/\1/p' "$AUDIT_MD")"
 SEED_JSON="$(sed -n 's/^- seed demonstration : `\(.*\)`/\1/p' "$AUDIT_MD")"
 BRANDING_LOG="$(sed -n 's/^- branding log : `\(.*\)`/\1/p' "$AUDIT_MD")"
+CATEGORY_VISUALS_LOG="$(sed -n 's/^- category visuals log : `\(.*\)`/\1/p' "$AUDIT_MD")"
 TABLET_APK="$(sed -n 's/^- APK cible tablette [^:]* : `\(.*\)` (.*/\1/p' "$AUDIT_MD")"
 
-for required_file in "$MANIFEST_JSON" "$GATE_MD" "$PREP_MD" "$SEED_JSON" "$BRANDING_LOG" "$TABLET_APK"; do
+for required_file in "$MANIFEST_JSON" "$GATE_MD" "$PREP_MD" "$SEED_JSON" "$BRANDING_LOG" "$CATEGORY_VISUALS_LOG" "$TABLET_APK"; do
   [[ -n "${required_file:-}" && -f "$required_file" ]] || {
     printf 'ECHEC: artefact manquant pour le bundle: %s\n' "${required_file:-<vide>}" >&2
     exit 1
@@ -54,6 +55,7 @@ cp "$GATE_MD" "$BUNDLE_DIR/artifacts/"
 cp "$PREP_MD" "$BUNDLE_DIR/artifacts/"
 cp "$SEED_JSON" "$BUNDLE_DIR/artifacts/"
 cp "$BRANDING_LOG" "$BUNDLE_DIR/artifacts/"
+cp "$CATEGORY_VISUALS_LOG" "$BUNDLE_DIR/artifacts/"
 cp "$TABLET_APK" "$BUNDLE_DIR/apk/"
 
 bash "$ROOT_DIR/scripts/publish_latest_handoff.sh" \
@@ -68,6 +70,10 @@ cp "$ROOT_DIR/docs/CREDENTIALS_DEMO_MA_COMMUNE_2026-03-18.md" "$BUNDLE_DIR/docs/
 cp "$ROOT_DIR/docs/MODE_OPERATOIRE_DEMO_MA_COMMUNE_2026-03-18.md" "$BUNDLE_DIR/docs/"
 cp "$ROOT_DIR/docs/RECETTE_MVP_CITOYEN_AGENT_ADMIN_2026-03-18.md" "$BUNDLE_DIR/docs/"
 cp "$ROOT_DIR/docs/AUDIT_PRE_DEPLOIEMENT_LOCAL_MA_COMMUNE_2026-03-18.md" "$BUNDLE_DIR/docs/"
+cp "$ROOT_DIR/docs/CATEGORIES_VISUELLES_MA_COMMUNE_2026-03-18.md" "$BUNDLE_DIR/docs/"
+mkdir -p "$BUNDLE_DIR/previews"
+cp "$ROOT_DIR/assets/category-visuals/index.html" "$BUNDLE_DIR/previews/category-visuals-index.html"
+cp "$ROOT_DIR/assets/category-visuals/generated/category-visuals-preview.png" "$BUNDLE_DIR/previews/"
 
 cat > "$BUNDLE_DIR/README_BUNDLE.md" <<EOF
 # Bundle Livraison Locale - Ma Commune
@@ -76,9 +82,10 @@ Date de generation : $(date '+%d/%m/%Y %H:%M:%S')
 
 ## Contenu
 
-- \`artifacts/\` : audit final local, manifeste, gate, preparation, seed, branding log et handoff operateur
+- \`artifacts/\` : audit final local, manifeste, gate, preparation, seed, branding log, category visuals log et handoff operateur
 - \`apk/\` : APK cible tablette courant
 - \`docs/\` : documents actifs utiles pour la demonstration et la validation
+- \`previews/\` : apercus categories visuelles embarques pour controle rapide
 - \`checksums/SHA256SUMS.txt\` : empreintes des fichiers copies
 
 ## Statut
@@ -90,7 +97,7 @@ EOF
 
 (
   cd "$BUNDLE_DIR"
-  find README_BUNDLE.md artifacts apk docs -type f -print0 | sort -z | xargs -0 sha256sum > "$BUNDLE_DIR/checksums/SHA256SUMS.txt"
+  find README_BUNDLE.md artifacts apk docs previews -type f -print0 | sort -z | xargs -0 sha256sum > "$BUNDLE_DIR/checksums/SHA256SUMS.txt"
 )
 
 rm -f "$OUTPUT_ZIP"

@@ -30,6 +30,7 @@ printf '\n'
 printf 'Decision:\n'
 printf -- '- gate local: %s\n' "$(jq -r '.decision.gate_local_avant_tablette' "$MANIFEST")"
 printf -- '- coherence marque: %s\n' "$(jq -r '.decision.coherence_marque_couche_active' "$MANIFEST")"
+printf -- '- coherence categories visuelles: %s\n' "$(jq -r '.decision.coherence_systeme_visuel_categories' "$MANIFEST")"
 printf -- '- livraison finale appareil: %s\n' "$(jq -r '.decision.livraison_finale_appareil' "$MANIFEST")"
 printf '\n'
 printf 'URLs:\n'
@@ -60,6 +61,7 @@ printf -- '- evenement: %s\n' "$(jq -r '.demo.event.title' "$MANIFEST")"
 printf '\n'
 printf 'Artefacts a utiliser:\n'
 printf -- '- APK tablette: %s\n' "$(jq -r '.artifacts.apk_tablette.path' "$MANIFEST")"
+printf -- '- ABI tablette: %s\n' "$(jq -r '.artifacts.apk_tablette.abi' "$MANIFEST")"
 printf -- '- bundle latest: /tmp/ma-commune-latest-livraison-bundle.zip\n'
 printf -- '- checksum bundle: /tmp/ma-commune-latest-livraison-bundle.zip.sha256\n'
 printf -- '- audit final local: /tmp/ma-commune-latest-audit-final-local.md\n'

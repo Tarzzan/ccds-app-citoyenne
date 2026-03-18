@@ -32,6 +32,7 @@ printf '\n'
 printf 'Decision:\n'
 printf -- '- gate local avant tablette: %s\n' "$(jq -r '.decision.gate_local_avant_tablette' "$MANIFEST")"
 printf -- '- coherence marque couche active: %s\n' "$(jq -r '.decision.coherence_marque_couche_active' "$MANIFEST")"
+printf -- '- coherence systeme visuel categories: %s\n' "$(jq -r '.decision.coherence_systeme_visuel_categories' "$MANIFEST")"
 printf -- '- livraison finale appareil: %s\n' "$(jq -r '.decision.livraison_finale_appareil' "$MANIFEST")"
 printf '\n'
 printf 'Credentials:\n'
@@ -54,6 +55,7 @@ printf -- '- audit final local: /tmp/ma-commune-latest-audit-final-local.md\n'
 printf -- '- manifeste: %s\n' "$MANIFEST"
 printf -- '- handoff latest: /tmp/ma-commune-latest-handoff.md\n'
 printf -- '- APK tablette: /tmp/ma-commune-latest-app-release-tablette.apk\n'
+printf -- '- ABI tablette: %s\n' "$(jq -r '.artifacts.apk_tablette.abi' "$MANIFEST")"
 printf '\n'
 printf 'References:\n'
 printf -- '- index latest: %s\n' "$INDEX"
