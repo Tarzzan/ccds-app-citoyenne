@@ -50,7 +50,7 @@ $total_pages = max(1, ceil($total / $per_page));
 $sql = "
     SELECT i.id, i.reference, i.title, i.description, i.status, i.priority,
            i.votes_count, i.created_at, i.updated_at,
-           c.name AS cat_name, c.color AS cat_color,
+           c.name AS cat_name, c.color AS cat_color, c.icon AS cat_icon,
            u.full_name AS reporter, u.email AS reporter_email,
            (SELECT COUNT(*) FROM photos ph WHERE ph.incident_id = i.id) AS photo_count,
            (SELECT COUNT(*) FROM comments cm WHERE cm.incident_id = i.id AND cm.is_internal = 0) AS comment_count
@@ -207,9 +207,12 @@ function sort_icon(string $field, string $current_sort, string $current_dir): st
             </div>
           </td>
           <td>
-            <span class="badge" style="background:<?= e($inc['cat_color']) ?>22;color:<?= e($inc['cat_color']) ?>">
-              <?= e($inc['cat_name']) ?>
-            </span>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <?= category_visual_html($inc['cat_icon'] ?? 'road', $inc['cat_name'], 'sm', $inc['cat_color'] ?? null) ?>
+              <span class="badge" style="background:<?= e($inc['cat_color']) ?>22;color:<?= e($inc['cat_color']) ?>">
+                <?= e($inc['cat_name']) ?>
+              </span>
+            </div>
           </td>
           <td><span class="badge <?= status_class($inc['status']) ?>"><?= status_label($inc['status']) ?></span></td>
           <td><span class="badge <?= priority_class($inc['priority'] ?? 'medium') ?>"><?= priority_label($inc['priority'] ?? 'medium') ?></span></td>

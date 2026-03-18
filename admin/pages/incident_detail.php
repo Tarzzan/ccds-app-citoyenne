@@ -14,7 +14,7 @@ $db = Database::getInstance();
 
 // Charger le signalement
 $stmt = $db->prepare("
-    SELECT i.*, c.name AS cat_name, c.color AS cat_color,
+    SELECT i.*, c.name AS cat_name, c.color AS cat_color, c.icon AS cat_icon,
            u.full_name AS reporter_name, u.email AS reporter_email, u.phone AS reporter_phone,
            COALESCE(i.votes_count, 0) AS votes_count
     FROM incidents i
@@ -161,10 +161,11 @@ require_once __DIR__ . '/../includes/layout.php';
         <a href="/admin/?page=incidents" class="btn btn-outline btn-sm">← Retour</a>
       </div>
 
-      <div class="d-flex gap-8 flex-wrap" style="margin-bottom:16px">
-        <span class="badge" style="background:<?= e($inc['cat_color']) ?>22;color:<?= e($inc['cat_color']) ?>">
-          <?= e($inc['cat_name']) ?>
-        </span>
+      <div class="d-flex gap-8 flex-wrap" style="margin-bottom:16px;align-items:center">
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:14px;background:<?= e($inc['cat_color']) ?>14;border:1px solid <?= e($inc['cat_color']) ?>33">
+          <?= category_visual_html($inc['cat_icon'] ?? 'road', $inc['cat_name'], 'sm', $inc['cat_color'] ?? null) ?>
+          <span style="font-size:13px;font-weight:700;color:<?= e($inc['cat_color']) ?>"><?= e($inc['cat_name']) ?></span>
+        </div>
         <span class="badge <?= status_class($inc['status']) ?>"><?= status_label($inc['status']) ?></span>
         <span class="badge <?= priority_class($inc['priority'] ?? 'medium') ?>"><?= priority_label($inc['priority'] ?? 'medium') ?></span>
         <span class="badge badge-gray">📅 <?= format_date($inc['created_at']) ?></span>
