@@ -17,6 +17,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { BRAND } from '../theme/brand';
 import { AppStackParamList } from '../navigation/RootNavigator';
 import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
+import { GENERATED_VISUAL_SOURCES } from '../theme/generatedVisualSources';
 
 type NavProp = NativeStackNavigationProp<AppStackParamList>;
 
@@ -171,6 +172,8 @@ export default function ImpactScreen() {
       <ScreenLoadingState
         title="Votre bilan citoyen se construit"
         body="Le relais communal relit vos dossiers, vos statuts et vos reperes d engagement pour rendre votre impact plus concret."
+        visualSource={GENERATED_VISUAL_SOURCES['MOM-05'] ?? COMPANION_VISUAL_SLOTS.impact.source}
+        visualBadgeLabel="Impact"
       />
     );
   }
@@ -184,6 +187,8 @@ export default function ImpactScreen() {
         body={error || 'Impossible de charger votre bilan citoyen.'}
         actionLabel="Relancer le bilan"
         onPress={() => loadStats()}
+        visualSource={GENERATED_VISUAL_SOURCES['MOM-06'] ?? COMPANION_VISUAL_SLOTS.impact.source}
+        visualBadgeLabel="Impact"
       />
     );
   }
@@ -252,7 +257,14 @@ export default function ImpactScreen() {
           tone="status"
           title={`${BRAND.companion.name} lit votre impact avec vous`}
           body={companionBody}
-          visualSource={COMPANION_VISUAL_SLOTS.impact.source}
+          visualSource={
+            stats.pending_count > 0
+              ? GENERATED_VISUAL_SOURCES['MOM-03'] ?? COMPANION_VISUAL_SLOTS.impact.source
+              : stats.resolved_count > 0
+                ? GENERATED_VISUAL_SOURCES['MOM-04'] ?? COMPANION_VISUAL_SLOTS.impact.source
+                : COMPANION_VISUAL_SLOTS.impact.source
+          }
+          visualBadgeLabel="Impact"
           bullets={[
             'prioriser les dossiers encore ouverts',
             'verifier les derniers commentaires et statuts',
@@ -268,6 +280,8 @@ export default function ImpactScreen() {
           icon="🗂️"
           title="Aucun dossier pour le moment"
           body="Vos prochains signalements apparaitront ici avec leur statut, leur reference et une lecture plus concrete du suivi."
+          visualSource={GENERATED_VISUAL_SOURCES['MOM-05'] ?? COMPANION_VISUAL_SLOTS.impact.source}
+          visualBadgeLabel="Impact"
         />
       ) : (
         <View style={styles.incidentList}>

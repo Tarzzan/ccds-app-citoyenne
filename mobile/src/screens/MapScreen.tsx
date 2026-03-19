@@ -23,6 +23,7 @@ import { ScreenLoadingState } from '../components/ScreenStatePanel';
 import { AppStackParamList } from '../navigation/RootNavigator';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
+import { GENERATED_VISUAL_SOURCES } from '../theme/generatedVisualSources';
 
 type NavProp = NativeStackNavigationProp<AppStackParamList>;
 
@@ -135,6 +136,8 @@ export default function MapScreen() {
       <ScreenLoadingState
         title="La carte citoyenne se prepare"
         body="Le relais communal rassemble d abord les reperes utiles du territoire pour que la lecture reste simple des l ouverture."
+        visualSource={GENERATED_VISUAL_SOURCES['MOM-05'] ?? COMPANION_VISUAL_SLOTS.map.source}
+        visualBadgeLabel="Carte"
       />
     );
   }

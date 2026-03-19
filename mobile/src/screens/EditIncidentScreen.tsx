@@ -18,6 +18,7 @@ import { COLORS } from '../components/ui';
 import { ScreenLoadingState } from '../components/ScreenStatePanel';
 import { AppStackParamList } from '../navigation/RootNavigator';
 import { BRAND } from '../theme/brand';
+import { GENERATED_VISUAL_SOURCES } from '../theme/generatedVisualSources';
 
 type RouteProps = RouteProp<AppStackParamList, 'EditIncident'>;
 type NavProp    = NativeStackNavigationProp<AppStackParamList>;
@@ -103,6 +104,8 @@ export default function EditIncidentScreen() {
       <ScreenLoadingState
         title="Le dossier est en cours de relecture"
         body="Le relais communal rassemble les informations modifiables pour vous laisser corriger le dossier sans perdre le contexte."
+        visualSource={GENERATED_VISUAL_SOURCES['MOM-03']}
+        visualBadgeLabel="Edition"
       />
     );
   }
