@@ -167,6 +167,8 @@ Le bon positionnement est :
   Le log de controle rappelle aussi les trois chemins compares et l'empreinte SHA-256 commune
 - `scripts/generate_category_icons.py` : regenere la collection d icones categories Guyane pour mobile et admin
 - `scripts/check_category_visuals.sh` : controle que le catalogue categories, les PNG generes et le mapping mobile restent alignes
+- `scripts/build_visual_production_index.py` : compile les batches visuels en index Markdown et HTML sous `assets/visual-production/generated`
+- `scripts/check_visual_production_batches.sh` : controle la coherence des batches visuels, des IDs d assets et du manifeste de production
 - `assets/category-visuals/index.html` : apercu HTML de la collection visuelle des categories
 - `assets/visual-production/visual-production-manifest.json` : manifeste machine lisible des pistes personnages, categories et ordre de production visuelle
 - `assets/visual-production/character-batch-01.json` : premier batch machine lisible de generation personnages
@@ -213,6 +215,18 @@ Voir aussi :
 - `docs/CATEGORIES_VISUELLES_MA_COMMUNE_2026-03-18.md`
 
 La regeneration alimente aussi `mobile/assets/category-visuals/category-visuals.json`, afin que le build Metro release n'importe plus un fichier situe hors du projet mobile.
+
+### Production visuelle
+
+```bash
+python3 scripts/build_visual_production_index.py
+bash scripts/check_visual_production_batches.sh
+```
+
+Voir aussi :
+
+- `assets/visual-production/generated/visual-production-index.md`
+- `assets/visual-production/generated/visual-production-index.html`
 
 ### Admin
 

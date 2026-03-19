@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Index Production Visuelle Ma Commune</title>
+  <style>
+    :root {
+      --bg: #f5f4ef;
+      --ink: #132118;
+      --muted: #5b6b61;
+      --card: #fffdf8;
+      --line: #dfd8c9;
+      --canopy: #0f4c2a;
+      --awara: #d79f2b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Manrope, system-ui, sans-serif;
+      background: linear-gradient(180deg, #f7f3eb 0%, #eef4ef 100%);
+      color: var(--ink);
+    }
+    .shell {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    h1 { margin: 0 0 10px; font-size: 40px; }
+    .lead {
+      color: var(--muted);
+      margin: 0 0 20px;
+      line-height: 1.6;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    .meta-card, .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: 0 18px 40px rgba(15, 76, 42, 0.06);
+    }
+    .meta-card {
+      padding: 16px 18px;
+    }
+    .meta-card strong {
+      display: block;
+      color: var(--canopy);
+      margin-bottom: 6px;
+    }
+    .grid {
+      display: grid;
+      gap: 18px;
+    }
+    .card {
+      padding: 20px;
+    }
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 22px;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 8px;
+      border-top: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th {
+      color: var(--canopy);
+      font-size: 12px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      color: #12486a;
+    }
+    .category {
+      margin-top: 18px;
+    }
+    @media (max-width: 900px) {
+      .meta-grid { grid-template-columns: 1fr; }
+      table { display: block; overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <h1>Index Production Visuelle Ma Commune</h1>
+    <p class="lead">Vue d'ensemble de la production visuelle cadrée pour <strong>Ma Commune</strong> : personnages, terrain, moments produit et héros commerciaux.</p>
+    <div class="meta-grid">
+      <div class="meta-card">
+        <strong>Version</strong>
+        <span>2026-03-18</span>
+      </div>
+      <div class="meta-card">
+        <strong>Duo recommandé</strong>
+        <span>M1 + A2</span>
+      </div>
+      <div class="meta-card">
+        <strong>Assets total</strong>
+        <span>22</span>
+      </div>
+    </div>
+    <div class="grid">
+      <section class='card'><h2>character-batch-01</h2><p>Premier lot de generation personnages pour Ma Commune</p><p class='meta'>assets/visual-production/character-batch-01.json</p><table><thead><tr><th>ID</th><th>Label</th><th>Ratio</th><th>Cibles</th><th>Fichier</th></tr></thead><tbody><tr><td><code>CHAR-01</code></td><td>Mascotte M1 portrait</td><td><code>4:5</code></td><td>validation_style, avatar, guidance_cards</td><td><code>char-01-mascot-m1-portrait-4x5.png</code></td></tr><tr><td><code>CHAR-02</code></td><td>Mascotte M2 portrait</td><td><code>4:5</code></td><td>validation_style, landing_hero</td><td><code>char-02-mascot-m2-portrait-4x5.png</code></td></tr><tr><td><code>CHAR-03</code></td><td>Mascotte M3 portrait</td><td><code>4:5</code></td><td>validation_style, welcome_states</td><td><code>char-03-mascot-m3-portrait-4x5.png</code></td></tr><tr><td><code>CHAR-04</code></td><td>Agent A1 buste</td><td><code>4:5</code></td><td>validation_style, incident_detail, admin_guidance</td><td><code>char-04-agent-a1-bust-4x5.png</code></td></tr><tr><td><code>CHAR-05</code></td><td>Agent A2 buste</td><td><code>4:5</code></td><td>validation_style, login, onboarding, notifications</td><td><code>char-05-agent-a2-bust-4x5.png</code></td></tr><tr><td><code>CHAR-06</code></td><td>Duo hero M1 + A2</td><td><code>16:9</code></td><td>landing, login_hero, brand_reference</td><td><code>char-06-duo-m1-a2-hero-16x9.png</code></td></tr></tbody></table></section><section class='card'><h2>hero-batch-01</h2><p>Premier lot des visuels hero commerciaux Ma Commune</p><p class='meta'>assets/visual-production/hero-batch-01.json</p><table><thead><tr><th>ID</th><th>Label</th><th>Ratio</th><th>Cibles</th><th>Fichier</th></tr></thead><tbody><tr><td><code>HERO-01</code></td><td>Landing publique</td><td><code>16:9</code></td><td>site_root, commercial_pitch</td><td><code>hero-01-landing-ma-commune-16x9.png</code></td></tr><tr><td><code>HERO-02</code></td><td>Stores mobile</td><td><code>9:16</code></td><td>play_store, app_store, sales_kit</td><td><code>hero-02-store-ma-commune-9x16.png</code></td></tr></tbody></table></section><section class='card'><h2>moments-batch-01</h2><p>Premier lot des illustrations editoriales des moments produit</p><p class='meta'>assets/visual-production/moments-batch-01.json</p><table><thead><tr><th>ID</th><th>Label</th><th>Ratio</th><th>Cibles</th><th>Fichier</th></tr></thead><tbody><tr><td><code>MOM-01</code></td><td>Accueil duo</td><td><code>4:5</code></td><td>login, onboarding, landing</td><td><code>mom-01-welcome-duo-4x5.png</code></td></tr><tr><td><code>MOM-02</code></td><td>Remerciement apres signalement</td><td><code>4:5</code></td><td>create_success, impact, follow_up</td><td><code>mom-02-thank-you-after-report-4x5.png</code></td></tr><tr><td><code>MOM-03</code></td><td>Dossier en cours</td><td><code>4:5</code></td><td>incident_detail, my_incidents, notifications</td><td><code>mom-03-incident-in-progress-4x5.png</code></td></tr><tr><td><code>MOM-04</code></td><td>Dossier resolu</td><td><code>4:5</code></td><td>impact, incident_detail, resolution_states</td><td><code>mom-04-incident-resolved-4x5.png</code></td></tr><tr><td><code>MOM-05</code></td><td>Aucun signalement utile</td><td><code>4:5</code></td><td>my_incidents_empty, dashboard_empty</td><td><code>mom-05-no-incidents-yet-4x5.png</code></td></tr><tr><td><code>MOM-06</code></td><td>Aucune notification importante</td><td><code>4:5</code></td><td>notifications_empty, follow_up_empty</td><td><code>mom-06-no-important-notifications-4x5.png</code></td></tr></tbody></table></section><section class='card'><h2>terrain-batch-01</h2><p>Premier lot de generation des scenes terrain prioritaires</p><p class='meta'>assets/visual-production/terrain-batch-01.json</p><table><thead><tr><th>ID</th><th>Label</th><th>Ratio</th><th>Cibles</th><th>Fichier</th></tr></thead><tbody><tr><td><code>ILL-01</code></td><td>Nid de poule apres pluie tropicale</td><td><code>4:5</code></td><td>onboarding, category_road, hero_cards</td><td><code>ill-01-road-pothole-rain-4x5.png</code></td></tr><tr><td><code>ILL-02</code></td><td>Lampadaire en panne au crepuscule</td><td><code>4:5</code></td><td>category_lighting, empty_states</td><td><code>ill-02-lighting-streetlight-dusk-4x5.png</code></td></tr><tr><td><code>ILL-03</code></td><td>Depot sauvage en bord de voirie</td><td><code>4:5</code></td><td>category_cleanliness, landing_support</td><td><code>ill-03-cleanliness-illegal-dumping-4x5.png</code></td></tr><tr><td><code>ILL-04</code></td><td>Bouche d egout bouchee et ruissellement</td><td><code>4:5</code></td><td>category_networks, incident_guidance</td><td><code>ill-04-drain-runoff-clogged-4x5.png</code></td></tr><tr><td><code>ILL-05</code></td><td>Vegetation envahissante sur passage</td><td><code>4:5</code></td><td>category_greenery, empty_states</td><td><code>ill-05-greenery-overgrown-path-4x5.png</code></td></tr><tr><td><code>ILL-06</code></td><td>Mobilier urbain degrade</td><td><code>4:5</code></td><td>category_furniture, cards</td><td><code>ill-06-urban-furniture-damaged-4x5.png</code></td></tr><tr><td><code>ILL-07</code></td><td>Signalisation endommagee</td><td><code>4:5</code></td><td>category_signage, awareness_cards</td><td><code>ill-07-signage-damaged-4x5.png</code></td></tr><tr><td><code>ILL-08</code></td><td>Batiment communal degrade</td><td><code>4:5</code></td><td>category_buildings, civic_storytelling</td><td><code>ill-08-municipal-building-degraded-4x5.png</code></td></tr></tbody></table></section>
+      <section class="card category">
+        <h2>Correspondance catégories</h2>
+        <table>
+          <thead><tr><th>Catégorie</th><th>Badge</th><th>Scène</th></tr></thead>
+          <tbody><tr><td>Voirie &amp; Chaussee</td><td><code>CAT-01</code></td><td><code>ILL-01</code></td></tr><tr><td>Eclairage Public</td><td><code>CAT-02</code></td><td><code>ILL-02</code></td></tr><tr><td>Espaces Verts</td><td><code>CAT-03</code></td><td><code>ILL-05</code></td></tr><tr><td>Proprete &amp; Dechets</td><td><code>CAT-04</code></td><td><code>ILL-03</code></td></tr><tr><td>Mobilier Urbain</td><td><code>CAT-05</code></td><td><code>ILL-06</code></td></tr><tr><td>Reseaux &amp; Inondations</td><td><code>CAT-06</code></td><td><code>ILL-04</code></td></tr><tr><td>Signalisation</td><td><code>CAT-07</code></td><td><code>ILL-07</code></td></tr><tr><td>Batiments Communaux</td><td><code>CAT-08</code></td><td><code>ILL-08</code></td></tr></tbody>
+        </table>
+      </section>
+    </div>
+  </div>
+</body>
+</html>
