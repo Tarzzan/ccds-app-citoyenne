@@ -521,8 +521,8 @@ class IncidentController extends BaseController
                 'assigned_user_id'  => !empty($currentPlan['assigned_user_id']) ? (int)$currentPlan['assigned_user_id'] : null,
                 'assigned_user_name'=> $currentPlan['assigned_user_name'] ?? null,
                 'scheduled_date'    => $currentPlan['scheduled_date'] ?? null,
-                'time_window_start' => $currentPlan['time_window_start'] ?? null,
-                'time_window_end'   => $currentPlan['time_window_end'] ?? null,
+                'time_window_start' => $this->normalizePlanTimeValue($currentPlan['time_window_start'] ?? null),
+                'time_window_end'   => $this->normalizePlanTimeValue($currentPlan['time_window_end'] ?? null),
                 'internal_note'     => $currentPlan['internal_note'] ?? null,
                 'citizen_message'   => $currentPlan['citizen_message'] ?? null,
                 'source_type'       => $currentPlan['source_type'] ?? null,
@@ -732,6 +732,20 @@ class IncidentController extends BaseController
         } catch (Throwable $e) {
             return $date;
         }
+    }
+
+    private function normalizePlanTimeValue(?string $value): ?string
+    {
+        $value = trim((string)$value);
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $value)) {
+            return substr($value, 0, 5);
+        }
+
+        return $value;
     }
 
     private function citizenLabelForStatus(string $status, ?string $serviceName): string
