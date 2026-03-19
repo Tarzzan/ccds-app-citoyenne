@@ -148,6 +148,8 @@ function buildDashboardInterventionFocus(nextIntervention: DashboardNextInterven
       : 'Le service responsable est deja mobilise.';
     const actorLabel = nextIntervention.assigned_user_name
       ? ` Referent mobilise : ${nextIntervention.assigned_user_name}.`
+      : nextIntervention.source_type === 'internal'
+        ? ' Equipe interne mobilisee.'
       : nextIntervention.provider_name
         ? ` Intervention confiee a ${nextIntervention.provider_name}.`
         : '';

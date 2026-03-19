@@ -330,6 +330,7 @@ export interface DashboardNextIntervention {
   time_window_end?: string | null;
   citizen_message?: string | null;
   assigned_user_name?: string | null;
+  source_type?: 'internal' | 'provider' | null;
   provider_name?: string | null;
 }
 

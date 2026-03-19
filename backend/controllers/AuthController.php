@@ -408,6 +408,7 @@ class AuthController extends BaseController
                 'time_window_end' => $currentPlan['time_window_end'] ?? null,
                 'citizen_message' => $currentPlan['citizen_message'] ?? null,
                 'assigned_user_name' => $currentPlan['assigned_user_name'] ?? null,
+                'source_type' => $currentPlan['source_type'] ?? null,
                 'provider_name' => $currentPlan['provider_name'] ?? null,
             ];
 
