@@ -8,6 +8,37 @@ $page_title = 'Carte des signalements';
 $active_nav = 'map';
 
 $db = Database::getInstance();
+$service_tables_ready = admin_db_has_table($db, 'services')
+    && admin_db_has_table($db, 'service_category_map')
+    && admin_db_has_table($db, 'intervention_plans');
+$agent_service_scope_ids = $service_tables_ready ? admin_allowed_service_ids($admin) : [];
+$agent_is_scoped = $service_tables_ready && admin_is_service_scoped_agent($admin);
+$scope_notice = null;
+$service_scope_join = '';
+$service_scope_where = '';
+
+if ($agent_is_scoped) {
+    if (!empty($agent_service_scope_ids)) {
+        $safeServiceIds = implode(',', array_map('intval', $agent_service_scope_ids));
+        $service_scope_join = "
+            LEFT JOIN service_category_map scm ON scm.category_id = c.id AND scm.is_default = 1
+            LEFT JOIN intervention_plans latest_plan ON latest_plan.id = (
+                SELECT p2.id
+                FROM intervention_plans p2
+                WHERE p2.incident_id = i.id
+                ORDER BY p2.created_at DESC, p2.id DESC
+                LIMIT 1
+            )
+        ";
+        $service_scope_where = " AND COALESCE(latest_plan.service_id, scm.service_id) IN ($safeServiceIds)";
+        $scope_notice = $admin['primary_service_name']
+            ? 'La carte est limitee au service ' . $admin['primary_service_name'] . '.'
+            : 'La carte est limitee a vos services rattaches.';
+    } else {
+        $service_scope_where = ' AND 1 = 0';
+        $scope_notice = 'Aucun service ne vous est encore attribue. La carte restera vide tant que le rattachement n est pas renseigne.';
+    }
+}
 
 // Récupérer tous les signalements avec coordonnées
 $incidents = $db->query("
@@ -18,7 +49,9 @@ $incidents = $db->query("
     FROM incidents i
     JOIN categories c ON c.id = i.category_id
     JOIN users u ON u.id = i.user_id
+    $service_scope_join
     WHERE i.latitude IS NOT NULL AND i.longitude IS NOT NULL
+    $service_scope_where
     ORDER BY i.created_at DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -30,6 +63,10 @@ unset($incident);
 
 require_once __DIR__ . '/../includes/layout.php';
 ?>
+
+<?php if ($scope_notice): ?>
+<div class="alert alert-info" style="margin-bottom:16px;"><?= e($scope_notice) ?></div>
+<?php endif; ?>
 
 <div class="card" style="padding:0;overflow:hidden;">
   <div id="admin-map" style="height:calc(100vh - 200px);min-height:500px;width:100%;"></div>

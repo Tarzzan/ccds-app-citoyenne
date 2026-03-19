@@ -9,6 +9,12 @@ $admin      = require_admin_auth();
 $page_title = 'Recherche';
 $active_nav = 'search';
 $db         = Database::getInstance();
+$service_tables_ready = admin_db_has_table($db, 'services')
+    && admin_db_has_table($db, 'service_category_map')
+    && admin_db_has_table($db, 'intervention_plans');
+$agent_service_scope_ids = $service_tables_ready ? admin_allowed_service_ids($admin) : [];
+$agent_is_scoped = $service_tables_ready && admin_is_service_scoped_agent($admin);
+$scope_notice = null;
 
 $query   = trim($_GET['q'] ?? '');
 $results = ['incidents' => [], 'users' => [], 'categories' => []];
@@ -16,6 +22,36 @@ $total   = 0;
 
 if (strlen($query) >= 2) {
     $like = '%' . $query . '%';
+    $incidentScopeJoin = '';
+    $incidentScopeWhere = '';
+    $categoryScopeJoin = '';
+    $categoryScopeWhere = '';
+
+    if ($agent_is_scoped) {
+        if (!empty($agent_service_scope_ids)) {
+            $safeServiceIds = implode(',', array_map('intval', $agent_service_scope_ids));
+            $incidentScopeJoin = "
+                LEFT JOIN service_category_map scoped_scm ON scoped_scm.category_id = cat.id AND scoped_scm.is_default = 1
+                LEFT JOIN intervention_plans latest_plan ON latest_plan.id = (
+                    SELECT p2.id
+                    FROM intervention_plans p2
+                    WHERE p2.incident_id = i.id
+                    ORDER BY p2.created_at DESC, p2.id DESC
+                    LIMIT 1
+                )
+            ";
+            $incidentScopeWhere = " AND COALESCE(latest_plan.service_id, scoped_scm.service_id) IN ($safeServiceIds)";
+            $categoryScopeJoin = "JOIN service_category_map scoped_scm ON scoped_scm.category_id = c.id AND scoped_scm.is_default = 1";
+            $categoryScopeWhere = " AND scoped_scm.service_id IN ($safeServiceIds)";
+            $scope_notice = $admin['primary_service_name']
+                ? 'La recherche est limitee au service ' . $admin['primary_service_name'] . '.'
+                : 'La recherche est limitee a vos services rattaches.';
+        } else {
+            $incidentScopeWhere = ' AND 1 = 0';
+            $categoryScopeWhere = ' AND 1 = 0';
+            $scope_notice = 'Aucun service ne vous est encore attribue. Les resultats incidents resteront vides tant que le rattachement n est pas renseigne.';
+        }
+    }
 
     $stmtInc = $db->prepare("
         SELECT i.id, i.reference, i.title, i.status, i.votes_count, i.created_at,
@@ -24,30 +60,36 @@ if (strlen($query) >= 2) {
         FROM incidents i
         JOIN categories cat ON cat.id = i.category_id
         JOIN users u ON u.id = i.user_id
-        WHERE i.reference LIKE ? OR i.title LIKE ? OR i.description LIKE ? OR i.address LIKE ?
+        $incidentScopeJoin
+        WHERE (i.reference LIKE ? OR i.title LIKE ? OR i.description LIKE ? OR i.address LIKE ?)
+        $incidentScopeWhere
         ORDER BY i.created_at DESC
         LIMIT 10
     ");
     $stmtInc->execute([$like, $like, $like, $like]);
     $results['incidents'] = $stmtInc->fetchAll(PDO::FETCH_ASSOC);
 
-    $stmtUsr = $db->prepare("
-        SELECT id, full_name, email, phone, role, is_active, created_at,
-               (SELECT COUNT(*) FROM incidents WHERE user_id = users.id) AS incidents_count
-        FROM users
-        WHERE full_name LIKE ? OR email LIKE ? OR phone LIKE ?
-        ORDER BY created_at DESC
-        LIMIT 10
-    ");
-    $stmtUsr->execute([$like, $like, $like]);
-    $results['users'] = $stmtUsr->fetchAll(PDO::FETCH_ASSOC);
+    if (!$agent_is_scoped) {
+        $stmtUsr = $db->prepare("
+            SELECT id, full_name, email, phone, role, is_active, created_at,
+                   (SELECT COUNT(*) FROM incidents WHERE user_id = users.id) AS incidents_count
+            FROM users
+            WHERE full_name LIKE ? OR email LIKE ? OR phone LIKE ?
+            ORDER BY created_at DESC
+            LIMIT 10
+        ");
+        $stmtUsr->execute([$like, $like, $like]);
+        $results['users'] = $stmtUsr->fetchAll(PDO::FETCH_ASSOC);
+    }
 
     $stmtCat = $db->prepare("
         SELECT c.id, c.name, c.icon, c.color, c.is_active,
                COUNT(i.id) AS incidents_count
         FROM categories c
+        $categoryScopeJoin
         LEFT JOIN incidents i ON i.category_id = c.id
         WHERE c.name LIKE ?
+        $categoryScopeWhere
         GROUP BY c.id
         ORDER BY incidents_count DESC
         LIMIT 5
@@ -231,6 +273,10 @@ require_once __DIR__ . '/../includes/layout.php';
     <button type="submit">Rechercher</button>
   </form>
 </div>
+
+<?php if ($scope_notice): ?>
+  <div class="alert alert-info"><?= e($scope_notice) ?></div>
+<?php endif; ?>
 
 <?php if ($query && strlen($query) < 2): ?>
   <div class="alert alert-warning">Saisissez au moins 2 caractères.</div>

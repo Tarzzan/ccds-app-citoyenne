@@ -11,6 +11,31 @@ $page_title = 'Statistiques';
 $active_nav = 'stats';
 
 $db = Database::getInstance();
+$service_tables_ready = admin_db_has_table($db, 'services')
+    && admin_db_has_table($db, 'service_category_map')
+    && admin_db_has_table($db, 'intervention_plans');
+$agent_service_scope_ids = $service_tables_ready ? admin_allowed_service_ids($admin) : [];
+$agent_is_scoped = $service_tables_ready && admin_is_service_scoped_agent($admin);
+$scope_notice = null;
+$incident_scope_join = '';
+$incident_scope_where = '';
+
+if ($agent_is_scoped) {
+    if (!empty($agent_service_scope_ids)) {
+        $safeServiceIds = implode(',', array_map('intval', $agent_service_scope_ids));
+        $incident_scope_join = "
+            JOIN categories scoped_category ON scoped_category.id = incidents.category_id
+            JOIN service_category_map scoped_service_map ON scoped_service_map.category_id = scoped_category.id AND scoped_service_map.is_default = 1
+        ";
+        $incident_scope_where = " AND scoped_service_map.service_id IN ($safeServiceIds)";
+        $scope_notice = $admin['primary_service_name']
+            ? 'Les statistiques sont limitees au service ' . $admin['primary_service_name'] . '.'
+            : 'Les statistiques sont limitees a vos services rattaches.';
+    } else {
+        $incident_scope_where = ' AND 1 = 0';
+        $scope_notice = 'Aucun service ne vous est encore attribue. Les statistiques resteront vides tant que le rattachement n est pas renseigne.';
+    }
+}
 
 // --- Période ---
 $period = (int)($_GET['period'] ?? 30);
@@ -25,7 +50,11 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
         FROM incidents i
         JOIN categories c ON c.id = i.category_id
         JOIN users u ON u.id = i.user_id
+        " . ($agent_is_scoped
+            ? "JOIN service_category_map scoped_service_map ON scoped_service_map.category_id = c.id AND scoped_service_map.is_default = 1"
+            : '') . "
         WHERE i.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+        " . ($agent_is_scoped ? "AND scoped_service_map.service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : '') . "
         ORDER BY i.created_at DESC
     ");
     $rows->execute([$period]);
@@ -45,14 +74,16 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
 $kpis = $db->prepare("
     SELECT
         COUNT(*)                                AS total,
-        SUM(status = 'resolved')                AS resolved,
-        SUM(status = 'rejected')                AS rejected,
-        SUM(status IN ('submitted','acknowledged','in_progress')) AS open,
-        AVG(CASE WHEN status = 'resolved' AND updated_at IS NOT NULL
-                 THEN TIMESTAMPDIFF(HOUR, created_at, updated_at) END) AS avg_resolution_hours,
-        SUM(votes_count)                        AS total_votes
+        SUM(incidents.status = 'resolved')                AS resolved,
+        SUM(incidents.status = 'rejected')                AS rejected,
+        SUM(incidents.status IN ('submitted','acknowledged','in_progress')) AS open,
+        AVG(CASE WHEN incidents.status = 'resolved' AND incidents.updated_at IS NOT NULL
+                 THEN TIMESTAMPDIFF(HOUR, incidents.created_at, incidents.updated_at) END) AS avg_resolution_hours,
+        SUM(incidents.votes_count)                        AS total_votes
     FROM incidents
-    WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    $incident_scope_join
+    WHERE incidents.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    $incident_scope_where
 ");
 $kpis->execute([$period]);
 $kpis = $kpis->fetch(PDO::FETCH_ASSOC);
@@ -64,7 +95,9 @@ $resolution_rate = $kpis['total'] > 0
 // Citoyens actifs (ayant soumis au moins 1 signalement dans la période)
 $active_citizens = $db->prepare("
     SELECT COUNT(DISTINCT user_id) FROM incidents
-    WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    $incident_scope_join
+    WHERE incidents.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    $incident_scope_where
 ");
 $active_citizens->execute([$period]);
 $active_citizens = (int)$active_citizens->fetchColumn();
@@ -72,12 +105,14 @@ $active_citizens = (int)$active_citizens->fetchColumn();
 // --- Évolution quotidienne (soumis vs résolus) ---
 $evolution = $db->prepare("
     SELECT
-        DATE(created_at) AS day,
+        DATE(incidents.created_at) AS day,
         COUNT(*) AS submitted,
-        SUM(status = 'resolved') AS resolved
+        SUM(incidents.status = 'resolved') AS resolved
     FROM incidents
-    WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-    GROUP BY DATE(created_at)
+    $incident_scope_join
+    WHERE incidents.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    $incident_scope_where
+    GROUP BY DATE(incidents.created_at)
     ORDER BY day ASC
 ");
 $evolution->execute([$period]);
@@ -85,15 +120,26 @@ $evolution = $evolution->fetchAll(PDO::FETCH_ASSOC);
 
 // --- Par statut ---
 $by_status = $db->query("
-    SELECT status, COUNT(*) AS cnt FROM incidents GROUP BY status
+    SELECT incidents.status, COUNT(*) AS cnt
+    FROM incidents
+    $incident_scope_join
+    WHERE 1 = 1
+    $incident_scope_where
+    GROUP BY incidents.status
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // --- Par catégorie (période) ---
 $by_cat = $db->prepare("
     SELECT c.name, c.color, c.icon, COUNT(i.id) AS cnt, COALESCE(SUM(i.votes_count),0) AS votes
     FROM categories c
+    " . ($agent_is_scoped
+        ? "JOIN service_category_map scoped_service_map ON scoped_service_map.category_id = c.id AND scoped_service_map.is_default = 1"
+        : '') . "
     LEFT JOIN incidents i ON i.category_id = c.id
         AND i.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    " . ($agent_is_scoped
+        ? "AND scoped_service_map.service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")"
+        : '') . "
     GROUP BY c.id
     ORDER BY cnt DESC
 ");
@@ -104,8 +150,10 @@ $by_cat = $by_cat->fetchAll(PDO::FETCH_ASSOC);
 $top_zones = $db->prepare("
     SELECT address, COUNT(*) AS cnt, SUM(votes_count) AS votes
     FROM incidents
-    WHERE address IS NOT NULL AND address != ''
-      AND created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    $incident_scope_join
+    WHERE incidents.address IS NOT NULL AND incidents.address != ''
+      AND incidents.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+      $incident_scope_where
     GROUP BY address
     ORDER BY cnt DESC
     LIMIT 5
@@ -115,10 +163,12 @@ $top_zones = $top_zones->fetchAll(PDO::FETCH_ASSOC);
 
 // --- Activité par jour de la semaine ---
 $by_weekday = $db->prepare("
-    SELECT DAYOFWEEK(created_at) AS dow, COUNT(*) AS cnt
+    SELECT DAYOFWEEK(incidents.created_at) AS dow, COUNT(*) AS cnt
     FROM incidents
-    WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-    GROUP BY DAYOFWEEK(created_at)
+    $incident_scope_join
+    WHERE incidents.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    $incident_scope_where
+    GROUP BY DAYOFWEEK(incidents.created_at)
     ORDER BY dow ASC
 ");
 $by_weekday->execute([$period]);
@@ -131,10 +181,12 @@ for ($d = 1; $d <= 7; $d++) {
 
 // --- Carte de chaleur horaire (24h × 7j) ---
 $heatmap_raw = $db->prepare("
-    SELECT HOUR(created_at) AS h, DAYOFWEEK(created_at) AS dow, COUNT(*) AS cnt
+    SELECT HOUR(incidents.created_at) AS h, DAYOFWEEK(incidents.created_at) AS dow, COUNT(*) AS cnt
     FROM incidents
-    WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-    GROUP BY HOUR(created_at), DAYOFWEEK(created_at)
+    $incident_scope_join
+    WHERE incidents.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    $incident_scope_where
+    GROUP BY HOUR(incidents.created_at), DAYOFWEEK(incidents.created_at)
 ");
 $heatmap_raw->execute([$period]);
 $heatmap = array_fill(0, 7, array_fill(0, 24, 0));
@@ -148,8 +200,14 @@ $top_voted = $db->prepare("
            c.name AS cat_name, c.color AS cat_color, c.icon AS cat_icon
     FROM incidents i
     JOIN categories c ON c.id = i.category_id
+    " . ($agent_is_scoped
+        ? "JOIN service_category_map scoped_service_map ON scoped_service_map.category_id = c.id AND scoped_service_map.is_default = 1"
+        : '') . "
     WHERE i.votes_count > 0
       AND i.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+      " . ($agent_is_scoped
+        ? "AND scoped_service_map.service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")"
+        : '') . "
     ORDER BY i.votes_count DESC
     LIMIT 5
 ");
@@ -158,6 +216,10 @@ $top_voted = $top_voted->fetchAll(PDO::FETCH_ASSOC);
 
 require_once __DIR__ . '/../includes/layout.php';
 ?>
+
+<?php if ($scope_notice): ?>
+  <div class="alert alert-info" style="margin-bottom:16px;"><?= e($scope_notice) ?></div>
+<?php endif; ?>
 
 <!-- En-tête avec sélecteur de période et export -->
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
