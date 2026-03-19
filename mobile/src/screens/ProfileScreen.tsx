@@ -20,6 +20,7 @@ import { COLORS } from '../components/ui';
 import { BRAND } from '../theme/brand';
 import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { ScreenLoadingState } from '../components/ScreenStatePanel';
+import { GENERATED_VISUAL_SOURCES } from '../theme/generatedVisualSources';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -166,6 +167,8 @@ export default function ProfileScreen() {
       <ScreenLoadingState
         title="Votre espace personnel se remet en place"
         body="Le relais communal rassemble vos coordonnees, vos preferences et vos reperes de securite avant de vous laisser modifier la suite."
+        visualSource={GENERATED_VISUAL_SOURCES['MOM-05']}
+        visualBadgeLabel="Compte"
       />
     );
   }
@@ -192,6 +195,14 @@ export default function ProfileScreen() {
             tone="status"
             title={tabIntro.title}
             body={tabIntro.body}
+            visualSource={
+              activeTab === 'password'
+                ? GENERATED_VISUAL_SOURCES['CHAR-05']
+                : activeTab === 'notifications'
+                  ? GENERATED_VISUAL_SOURCES['MOM-06']
+                  : GENERATED_VISUAL_SOURCES['MOM-02']
+            }
+            visualBadgeLabel={activeTab === 'password' ? 'Securite' : activeTab === 'notifications' ? 'Alertes' : 'Compte'}
             bullets={[
               activeTab === 'profile' ? 'coordonnees faciles a tenir a jour' : activeTab === 'password' ? 'acces mieux protege' : 'alertes plus utiles au quotidien',
               activeTab === 'notifications' ? 'moins de bruit, plus de repere' : 'une relation plus lisible avec la commune',

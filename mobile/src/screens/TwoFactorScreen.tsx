@@ -13,6 +13,7 @@ import { authApi } from '../services/api';
 import { CivicCompanionStage } from '../components/CivicCompanionStage';
 import { ScreenLoadingState } from '../components/ScreenStatePanel';
 import { BRAND } from '../theme/brand';
+import { GENERATED_VISUAL_SOURCES } from '../theme/generatedVisualSources';
 
 type Step = 'status' | 'setup' | 'verify' | 'backup_codes' | 'active';
 
@@ -119,6 +120,8 @@ export default function TwoFactorScreen() {
       <ScreenLoadingState
         title="La securite de votre compte se prepare"
         body="Le relais communal verifie d abord l etat actuel de la double authentification avant de vous proposer la bonne suite."
+        visualSource={GENERATED_VISUAL_SOURCES['CHAR-05']}
+        visualBadgeLabel="Securite"
       />
     );
   }
@@ -141,6 +144,8 @@ export default function TwoFactorScreen() {
             title="La securite doit rester simple a comprendre."
             body="Activez une verification supplementaire pour proteger vos dossiers, vos echanges et vos informations personnelles sans alourdir le reste de l experience."
             aside="Vous pourrez revenir ici a tout moment pour verifier ou ajuster ce niveau de protection."
+            visualSource={GENERATED_VISUAL_SOURCES['CHAR-05']}
+            visualBadgeLabel="Securite"
           />
         </View>
 
@@ -183,6 +188,8 @@ export default function TwoFactorScreen() {
             eyebrow="Relais communal · Mise en place"
             title="Associez une application d authentification en quelques etapes."
             body="Scannez le QR code, saisissez le code temporaire, puis gardez vos codes de secours dans un endroit sur."
+            visualSource={GENERATED_VISUAL_SOURCES['CHAR-05']}
+            visualBadgeLabel="Securite"
           />
         </View>
         <Text style={styles.title}>Configurer l'application</Text>

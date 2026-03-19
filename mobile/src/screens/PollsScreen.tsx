@@ -9,6 +9,7 @@ import { BRAND } from '../theme/brand';
 import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { CivicCompanionStage } from '../components/CivicCompanionStage';
 import { ScreenFeedbackState, ScreenLoadingState } from '../components/ScreenStatePanel';
+import { GENERATED_VISUAL_SOURCES } from '../theme/generatedVisualSources';
 
 export default function PollsScreen() {
   const { theme } = useTheme();
@@ -159,6 +160,8 @@ export default function PollsScreen() {
       <ScreenLoadingState
         title="Les consultations se remettent en contexte"
         body="Le relais communal rassemble les sujets ouverts pour vous laisser lire d abord les choix utiles a la decision locale."
+        visualSource={GENERATED_VISUAL_SOURCES['MOM-05']}
+        visualBadgeLabel="Concertation"
       />
     );
   }
@@ -182,6 +185,8 @@ export default function PollsScreen() {
             icon="🗳️"
             title="Aucune consultation ouverte pour le moment"
             body={`${BRAND.companion.name} vous retrouvera ici les prochaines questions ouvertes par la commune.`}
+            visualSource={GENERATED_VISUAL_SOURCES['MOM-06']}
+            visualBadgeLabel="Concertation"
           />
         }
         ListHeaderComponent={
@@ -199,6 +204,8 @@ export default function PollsScreen() {
                 title="Une consultation doit mener a une decision comprenable."
                 body="Retrouvez ici les sujets ouverts par la commune, votez une fois, puis revenez relire la tendance generale sans perdre le fil."
                 aside="Chaque consultation reste volontairement simple : un choix clair, un resultat lisible."
+                visualSource={GENERATED_VISUAL_SOURCES['HERO-02']}
+                visualBadgeLabel="Concertation"
               />
             </View>
 
@@ -218,6 +225,8 @@ export default function PollsScreen() {
               tone="guide"
               title={`${BRAND.companion.name} vous conseille de voter d abord sur un seul sujet utile`}
               body="L objectif n est pas de multiplier les clics, mais de rendre visible une preference citoyenne claire."
+              visualSource={GENERATED_VISUAL_SOURCES['MOM-02']}
+              visualBadgeLabel="Concertation"
               bullets={[
                 'une consultation = un choix unique',
                 'les resultats restent relisibles apres votre vote',

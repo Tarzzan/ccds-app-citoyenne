@@ -9,6 +9,7 @@ import { BRAND } from '../theme/brand';
 import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { CivicCompanionStage } from '../components/CivicCompanionStage';
 import { ScreenFeedbackState, ScreenLoadingState } from '../components/ScreenStatePanel';
+import { GENERATED_VISUAL_SOURCES } from '../theme/generatedVisualSources';
 
 export default function EventsScreen() {
   const { theme }                     = useTheme();
@@ -195,6 +196,8 @@ export default function EventsScreen() {
       <ScreenLoadingState
         title="L agenda communal se met en place"
         body="Le relais communal rassemble les rendez-vous utiles pour que vous retrouviez d abord les temps les plus proches et les plus concrets."
+        visualSource={GENERATED_VISUAL_SOURCES['MOM-05']}
+        visualBadgeLabel="Agenda"
       />
     );
   }
@@ -228,6 +231,8 @@ export default function EventsScreen() {
                 title="Un rendez-vous doit donner envie de venir, pas seulement afficher une date."
                 body="Retrouvez ici les rencontres utiles du quartier, confirmez votre presence ou gardez un repere simple pour y revenir plus tard."
                 aside="La commune doit rendre ses rendez-vous lisibles, concrets et faciles a rejoindre."
+                visualSource={GENERATED_VISUAL_SOURCES['HERO-02']}
+                visualBadgeLabel="Agenda"
               />
             </View>
 
@@ -247,6 +252,8 @@ export default function EventsScreen() {
               tone="thanks"
               title={`${BRAND.companion.name} vous aide a choisir le bon niveau d engagement`}
               body="Confirmez votre presence si vous venez, ou gardez simplement un repere si vous souhaitez suivre ce rendez-vous de plus loin."
+              visualSource={GENERATED_VISUAL_SOURCES['MOM-02']}
+              visualBadgeLabel="Agenda"
               bullets={[
                 'participer quand vous etes sur de venir',
                 'signaler un interet sans surcharger la suite',
@@ -259,6 +266,8 @@ export default function EventsScreen() {
             icon="📅"
             title="Aucun rendez-vous a venir"
             body={`${BRAND.companion.name} vous signalera ici les prochains rendez-vous utiles de la commune.`}
+            visualSource={GENERATED_VISUAL_SOURCES['MOM-06']}
+            visualBadgeLabel="Agenda"
           />
         }
       />
