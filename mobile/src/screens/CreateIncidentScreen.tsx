@@ -16,6 +16,7 @@ import { categoriesApi, incidentsApi, Category } from '../services/api';
 import { Button, Input, COLORS }                 from '../components/ui';
 import { OfflineBanner }                          from '../components/OfflineBanner';
 import { CategoryMark }                           from '../components/CategoryMark';
+import { CategoryScenePanel }                     from '../components/CategoryScenePanel';
 import { CivicCompanionCard }                     from '../components/CivicCompanionCard';
 import { OfflineQueue }                           from '../services/OfflineQueue';
 import { BRAND, BRAND_SHADOW }                    from '../theme/brand';
@@ -67,6 +68,7 @@ export default function CreateIncidentScreen() {
   const [isConnected,  setIsConnected]  = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const readinessCount = [Boolean(photo), Boolean(categoryId), Boolean(description.trim()), Boolean(coords)].filter(Boolean).length;
+  const selectedCategory = categories.find((cat) => cat.id === categoryId) ?? null;
 
   // Charger les catégories et surveiller la connectivité
   useEffect(() => {
@@ -393,6 +395,13 @@ export default function CreateIncidentScreen() {
               );
             })}
           </View>
+
+          <CategoryScenePanel
+            icon={selectedCategory?.icon}
+            name={selectedCategory?.name}
+            title={selectedCategory ? `${selectedCategory.name} sur le terrain` : undefined}
+            body={selectedCategory ? "Quand un visuel terrain valide sera installe, cette scene aidera a distinguer clairement la situation reelle du simple badge categorie." : undefined}
+          />
 
           <Input
             label={<>Description <Text style={styles.required}>*</Text></> as any}
