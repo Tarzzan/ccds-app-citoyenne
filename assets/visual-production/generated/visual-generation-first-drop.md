@@ -1,0 +1,581 @@
+# Drop Visuel Production Batch 01
+
+- version : `2026-03-18`
+- product : `Ma Commune`
+- profile : `first-drop-batch-01`
+- assets : `22`
+- duo recommande : `M1 + A2`
+
+## Assets
+
+### `CHAR-01` — Mascotte M1 portrait
+
+- batch : `character-batch-01`
+- ratio : `4:5`
+- fichier : `char-01-mascot-m1-portrait-4x5.png`
+- cibles : `validation_style, avatar, guidance_cards`
+- source batch : `assets/visual-production/character-batch-01.json`
+
+Style block :
+
+```text
+semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image
+```
+
+Negative prompt :
+
+```text
+text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted hands, extra limbs, blurry face, over-saturated neon colors, generic corporate background, photorealistic photo look
+```
+
+Prompt :
+
+```text
+Premium civic mascot for a local public service mobile app in French Guiana, a small tropical sentinel bird, semi-realistic, expressive and intelligent eyes, warm and trustworthy, elegant silhouette, cinematic tropical light, deep green and laterite palette, friendly but not childish, premium polished rendering, simple detachable background, bust portrait three-quarter view, subtle hints of humid tropical atmosphere, no text
+```
+
+### `CHAR-02` — Mascotte M2 portrait
+
+- batch : `character-batch-01`
+- ratio : `4:5`
+- fichier : `char-02-mascot-m2-portrait-4x5.png`
+- cibles : `validation_style, landing_hero`
+- source batch : `assets/visual-production/character-batch-01.json`
+
+Style block :
+
+```text
+semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image
+```
+
+Negative prompt :
+
+```text
+text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted hands, extra limbs, blurry face, over-saturated neon colors, generic corporate background, photorealistic photo look
+```
+
+Prompt :
+
+```text
+Premium territorial mascot for a civic mobile app in French Guiana, symbolic guardian creature, elegant and memorable, semi-realistic, warm but dignified, cinematic portrait composition, humid tropical atmosphere, refined palette inspired by forest, river and laterite, premium rendering, noble but approachable posture, no text
+```
+
+### `CHAR-03` — Mascotte M3 portrait
+
+- batch : `character-batch-01`
+- ratio : `4:5`
+- fichier : `char-03-mascot-m3-portrait-4x5.png`
+- cibles : `validation_style, welcome_states`
+- source batch : `assets/visual-production/character-batch-01.json`
+
+Style block :
+
+```text
+semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image
+```
+
+Negative prompt :
+
+```text
+text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted hands, extra limbs, blurry face, over-saturated neon colors, generic corporate background, photorealistic photo look
+```
+
+Prompt :
+
+```text
+Premium tropical companion mascot for a civic mobile app in French Guiana, stylized tropical urban animal, semi-realistic, highly expressive, warm and memorable, strong silhouette, cinematic soft tropical light, polished premium rendering, detachable background, gentle energetic emotion, very readable face, no text
+```
+
+### `CHAR-04` — Agent A1 buste
+
+- batch : `character-batch-01`
+- ratio : `4:5`
+- fichier : `char-04-agent-a1-bust-4x5.png`
+- cibles : `validation_style, incident_detail, admin_guidance`
+- source batch : `assets/visual-production/character-batch-01.json`
+
+Style block :
+
+```text
+semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image
+```
+
+Negative prompt :
+
+```text
+text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted hands, extra limbs, blurry face, over-saturated neon colors, generic corporate background, photorealistic photo look
+```
+
+Prompt :
+
+```text
+Premium municipal field agent for a civic mobile app in French Guiana, semi-realistic human character, calm and trustworthy, municipal workwear kept elegant and simple, warm tropical light, natural textures, cinematic bust framing, service-oriented attitude, credible public service presence, premium rendering, no text
+```
+
+### `CHAR-05` — Agent A2 buste
+
+- batch : `character-batch-01`
+- ratio : `4:5`
+- fichier : `char-05-agent-a2-bust-4x5.png`
+- cibles : `validation_style, login, onboarding, notifications`
+- source batch : `assets/visual-production/character-batch-01.json`
+
+Style block :
+
+```text
+semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image
+```
+
+Negative prompt :
+
+```text
+text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted hands, extra limbs, blurry face, over-saturated neon colors, generic corporate background, photorealistic photo look
+```
+
+Prompt :
+
+```text
+Premium municipal citizen-relations agent for a civic mobile app in French Guiana, semi-realistic human character, warm, pedagogical and reassuring, simple municipal attire, expressive face, cinematic tropical light, polished premium rendering, credible public service presence, welcoming explanatory posture, no text
+```
+
+### `CHAR-06` — Duo hero M1 + A2
+
+- batch : `character-batch-01`
+- ratio : `16:9`
+- fichier : `char-06-duo-m1-a2-hero-16x9.png`
+- cibles : `landing, login_hero, brand_reference`
+- source batch : `assets/visual-production/character-batch-01.json`
+
+Style block :
+
+```text
+semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image
+```
+
+Negative prompt :
+
+```text
+text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted hands, extra limbs, blurry face, over-saturated neon colors, generic corporate background, photorealistic photo look
+```
+
+Prompt :
+
+```text
+Premium civic duo for a mobile public service app in French Guiana, a small tropical sentinel bird mascot and a warm municipal citizen-relations agent, semi-realistic, cinematic, emotionally engaging, trustworthy, elegant, tropical humid atmosphere, lush vegetation hints, polished premium rendering, strong readable silhouettes, medium shot hero composition, no text
+```
+
+### `CAT-01` — Voirie badge V2
+
+- batch : `badge-batch-01`
+- ratio : `1:1`
+- fichier : `cat-01-road-badge-v2-1x1.png`
+- cibles : `mobile_category_badge, admin_category_badge, incident_lists`
+- source batch : `assets/visual-production/badge-batch-01.json`
+
+Style block :
+
+```text
+premium civic category badge, semi-realistic but simplified, strong central motif, polished rendering, tropical and territorial palette, French Guiana public-space cues, premium mobile readability, not flat emoji, not childish, no text in image, square composition
+```
+
+Negative prompt :
+
+```text
+emoji, text, watermark, flat clipart, childish cartoon, low detail, generic smart city symbol, photorealistic photo look, busy composition, tiny unreadable subject
+```
+
+Prompt :
+
+```text
+Premium civic category badge for road issues in French Guiana, semi-realistic simplified pothole or degraded roadway motif, laterite and wet-road cues, strong central subject, polished rendering, square composition, highly readable at small size, no text
+```
+
+### `CAT-02` — Eclairage badge V2
+
+- batch : `badge-batch-01`
+- ratio : `1:1`
+- fichier : `cat-02-lighting-badge-v2-1x1.png`
+- cibles : `mobile_category_badge, admin_category_badge, incident_lists`
+- source batch : `assets/visual-production/badge-batch-01.json`
+
+Style block :
+
+```text
+premium civic category badge, semi-realistic but simplified, strong central motif, polished rendering, tropical and territorial palette, French Guiana public-space cues, premium mobile readability, not flat emoji, not childish, no text in image, square composition
+```
+
+Negative prompt :
+
+```text
+emoji, text, watermark, flat clipart, childish cartoon, low detail, generic smart city symbol, photorealistic photo look, busy composition, tiny unreadable subject
+```
+
+Prompt :
+
+```text
+Premium civic category badge for street lighting issues in French Guiana, semi-realistic simplified lamp post with warm halo at dusk, tropical atmosphere cues, polished rendering, square composition, highly readable at small size, no text
+```
+
+### `CAT-03` — Espaces verts badge V2
+
+- batch : `badge-batch-01`
+- ratio : `1:1`
+- fichier : `cat-03-greenery-badge-v2-1x1.png`
+- cibles : `mobile_category_badge, admin_category_badge, incident_lists`
+- source batch : `assets/visual-production/badge-batch-01.json`
+
+Style block :
+
+```text
+premium civic category badge, semi-realistic but simplified, strong central motif, polished rendering, tropical and territorial palette, French Guiana public-space cues, premium mobile readability, not flat emoji, not childish, no text in image, square composition
+```
+
+Negative prompt :
+
+```text
+emoji, text, watermark, flat clipart, childish cartoon, low detail, generic smart city symbol, photorealistic photo look, busy composition, tiny unreadable subject
+```
+
+Prompt :
+
+```text
+Premium civic category badge for overgrown greenery in French Guiana, semi-realistic simplified tropical leaf and path obstruction motif, lush but readable, polished rendering, square composition, highly readable at small size, no text
+```
+
+### `CAT-04` — Proprete badge V2
+
+- batch : `badge-batch-01`
+- ratio : `1:1`
+- fichier : `cat-04-cleanliness-badge-v2-1x1.png`
+- cibles : `mobile_category_badge, admin_category_badge, incident_lists`
+- source batch : `assets/visual-production/badge-batch-01.json`
+
+Style block :
+
+```text
+premium civic category badge, semi-realistic but simplified, strong central motif, polished rendering, tropical and territorial palette, French Guiana public-space cues, premium mobile readability, not flat emoji, not childish, no text in image, square composition
+```
+
+Negative prompt :
+
+```text
+emoji, text, watermark, flat clipart, childish cartoon, low detail, generic smart city symbol, photorealistic photo look, busy composition, tiny unreadable subject
+```
+
+Prompt :
+
+```text
+Premium civic category badge for cleanliness and waste issues in French Guiana, semi-realistic simplified illegal dumping motif, clear pile or bag silhouette, polished rendering, square composition, highly readable at small size, no text
+```
+
+### `CAT-05` — Mobilier badge V2
+
+- batch : `badge-batch-01`
+- ratio : `1:1`
+- fichier : `cat-05-furniture-badge-v2-1x1.png`
+- cibles : `mobile_category_badge, admin_category_badge, incident_lists`
+- source batch : `assets/visual-production/badge-batch-01.json`
+
+Style block :
+
+```text
+premium civic category badge, semi-realistic but simplified, strong central motif, polished rendering, tropical and territorial palette, French Guiana public-space cues, premium mobile readability, not flat emoji, not childish, no text in image, square composition
+```
+
+Negative prompt :
+
+```text
+emoji, text, watermark, flat clipart, childish cartoon, low detail, generic smart city symbol, photorealistic photo look, busy composition, tiny unreadable subject
+```
+
+Prompt :
+
+```text
+Premium civic category badge for damaged urban furniture in French Guiana, semi-realistic simplified public bench or equipment motif, polished rendering, square composition, highly readable at small size, no text
+```
+
+### `CAT-06` — Reseaux badge V2
+
+- batch : `badge-batch-01`
+- ratio : `1:1`
+- fichier : `cat-06-networks-badge-v2-1x1.png`
+- cibles : `mobile_category_badge, admin_category_badge, incident_lists`
+- source batch : `assets/visual-production/badge-batch-01.json`
+
+Style block :
+
+```text
+premium civic category badge, semi-realistic but simplified, strong central motif, polished rendering, tropical and territorial palette, French Guiana public-space cues, premium mobile readability, not flat emoji, not childish, no text in image, square composition
+```
+
+Negative prompt :
+
+```text
+emoji, text, watermark, flat clipart, childish cartoon, low detail, generic smart city symbol, photorealistic photo look, busy composition, tiny unreadable subject
+```
+
+Prompt :
+
+```text
+Premium civic category badge for drainage, networks and flooding issues in French Guiana, semi-realistic simplified drain grate with flowing water motif, polished rendering, square composition, highly readable at small size, no text
+```
+
+### `CAT-07` — Signalisation badge V2
+
+- batch : `badge-batch-01`
+- ratio : `1:1`
+- fichier : `cat-07-signage-badge-v2-1x1.png`
+- cibles : `mobile_category_badge, admin_category_badge, incident_lists`
+- source batch : `assets/visual-production/badge-batch-01.json`
+
+Style block :
+
+```text
+premium civic category badge, semi-realistic but simplified, strong central motif, polished rendering, tropical and territorial palette, French Guiana public-space cues, premium mobile readability, not flat emoji, not childish, no text in image, square composition
+```
+
+Negative prompt :
+
+```text
+emoji, text, watermark, flat clipart, childish cartoon, low detail, generic smart city symbol, photorealistic photo look, busy composition, tiny unreadable subject
+```
+
+Prompt :
+
+```text
+Premium civic category badge for damaged signage in French Guiana, semi-realistic simplified warning sign motif, strong silhouette, polished rendering, square composition, highly readable at small size, no text
+```
+
+### `CAT-08` — Batiments badge V2
+
+- batch : `badge-batch-01`
+- ratio : `1:1`
+- fichier : `cat-08-buildings-badge-v2-1x1.png`
+- cibles : `mobile_category_badge, admin_category_badge, incident_lists`
+- source batch : `assets/visual-production/badge-batch-01.json`
+
+Style block :
+
+```text
+premium civic category badge, semi-realistic but simplified, strong central motif, polished rendering, tropical and territorial palette, French Guiana public-space cues, premium mobile readability, not flat emoji, not childish, no text in image, square composition
+```
+
+Negative prompt :
+
+```text
+emoji, text, watermark, flat clipart, childish cartoon, low detail, generic smart city symbol, photorealistic photo look, busy composition, tiny unreadable subject
+```
+
+Prompt :
+
+```text
+Premium civic category badge for municipal building issues in French Guiana, semi-realistic simplified public building facade motif, dignified and readable, polished rendering, square composition, highly readable at small size, no text
+```
+
+### `ILL-01` — Nid de poule apres pluie tropicale
+
+- batch : `terrain-batch-01`
+- ratio : `4:5`
+- fichier : `ill-01-road-pothole-rain-4x5.png`
+- cibles : `onboarding, category_road, hero_cards`
+- source batch : `assets/visual-production/terrain-batch-01.json`
+
+Style block :
+
+```text
+semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image
+```
+
+Negative prompt :
+
+```text
+text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted perspective, blurry subject, overcrowded composition, generic european city, dry climate look, photorealistic photo look
+```
+
+Prompt :
+
+```text
+Premium semi-realistic civic illustration of a dangerous pothole after tropical rain in French Guiana, wet road, puddles, humid atmosphere, lush roadside vegetation, visible damage and urgency, clear composition for mobile use, warm cinematic light despite overcast weather, public-space realism, no text, no photo look
+```
+
+### `ILL-02` — Lampadaire en panne au crepuscule
+
+- batch : `terrain-batch-01`
+- ratio : `4:5`
+- fichier : `ill-02-lighting-streetlight-dusk-4x5.png`
+- cibles : `category_lighting, empty_states`
+- source batch : `assets/visual-production/terrain-batch-01.json`
+
+Style block :
+
+```text
+semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image
+```
+
+Negative prompt :
+
+```text
+text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted perspective, blurry subject, overcrowded composition, generic european city, dry climate look, photorealistic photo look
+```
+
+Prompt :
+
+```text
+Premium semi-realistic civic illustration of a broken streetlight at dusk in French Guiana, residential public space, warm evening sky, one dark lamp post as clear focal point, humid tropical atmosphere, readable mobile composition, calm but concerning mood, no text
+```
+
+### `ILL-03` — Depot sauvage en bord de voirie
+
+- batch : `terrain-batch-01`
+- ratio : `4:5`
+- fichier : `ill-03-cleanliness-illegal-dumping-4x5.png`
+- cibles : `category_cleanliness, landing_support`
+- source batch : `assets/visual-production/terrain-batch-01.json`
+
+Style block :
+
+```text
+semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image
+```
+
+Negative prompt :
+
+```text
+text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted perspective, blurry subject, overcrowded composition, generic european city, dry climate look, photorealistic photo look
+```
+
+Prompt :
+
+```text
+Premium semi-realistic civic illustration of illegal dumping on a roadside in French Guiana, public space, tropical vegetation, clear pile of waste as focal point, realistic textures, mobile-friendly composition, civic vigilance mood, no text, no caricature
+```
+
+### `ILL-04` — Bouche d egout bouchee et ruissellement
+
+- batch : `terrain-batch-01`
+- ratio : `4:5`
+- fichier : `ill-04-drain-runoff-clogged-4x5.png`
+- cibles : `category_networks, incident_guidance`
+- source batch : `assets/visual-production/terrain-batch-01.json`
+
+Style block :
+
+```text
+semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image
+```
+
+Negative prompt :
+
+```text
+text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted perspective, blurry subject, overcrowded composition, generic european city, dry climate look, photorealistic photo look
+```
+
+Prompt :
+
+```text
+Premium semi-realistic civic illustration of a clogged drain causing runoff in French Guiana, blocked grate, flowing water, humid urban street, tropical environment, clear focal point, mobile-friendly composition, realistic public-space detail, no text
+```
+
+### `ILL-05` — Vegetation envahissante sur passage
+
+- batch : `terrain-batch-01`
+- ratio : `4:5`
+- fichier : `ill-05-greenery-overgrown-path-4x5.png`
+- cibles : `category_greenery, empty_states`
+- source batch : `assets/visual-production/terrain-batch-01.json`
+
+Style block :
+
+```text
+semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image
+```
+
+Negative prompt :
+
+```text
+text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted perspective, blurry subject, overcrowded composition, generic european city, dry climate look, photorealistic photo look
+```
+
+Prompt :
+
+```text
+Premium semi-realistic civic illustration of overgrown vegetation blocking a sidewalk in French Guiana, dense tropical plants, pedestrian path partially obstructed, humid atmosphere, clear public-space readability, cinematic warm light, no text
+```
+
+### `ILL-06` — Mobilier urbain degrade
+
+- batch : `terrain-batch-01`
+- ratio : `4:5`
+- fichier : `ill-06-urban-furniture-damaged-4x5.png`
+- cibles : `category_furniture, cards`
+- source batch : `assets/visual-production/terrain-batch-01.json`
+
+Style block :
+
+```text
+semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image
+```
+
+Negative prompt :
+
+```text
+text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted perspective, blurry subject, overcrowded composition, generic european city, dry climate look, photorealistic photo look
+```
+
+Prompt :
+
+```text
+Premium semi-realistic civic illustration of damaged urban furniture in French Guiana, broken public bench or local equipment, tropical public space, visible wear and tear, clear central subject, polished premium rendering, no text
+```
+
+### `ILL-07` — Signalisation endommagee
+
+- batch : `terrain-batch-01`
+- ratio : `4:5`
+- fichier : `ill-07-signage-damaged-4x5.png`
+- cibles : `category_signage, awareness_cards`
+- source batch : `assets/visual-production/terrain-batch-01.json`
+
+Style block :
+
+```text
+semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image
+```
+
+Negative prompt :
+
+```text
+text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted perspective, blurry subject, overcrowded composition, generic european city, dry climate look, photorealistic photo look
+```
+
+Prompt :
+
+```text
+Premium semi-realistic civic illustration of damaged road signage in French Guiana, clear warning sign bent or broken, roadside vegetation, humid tropical atmosphere, strong readability for mobile, no text
+```
+
+### `ILL-08` — Batiment communal degrade
+
+- batch : `terrain-batch-01`
+- ratio : `4:5`
+- fichier : `ill-08-municipal-building-degraded-4x5.png`
+- cibles : `category_buildings, civic_storytelling`
+- source batch : `assets/visual-production/terrain-batch-01.json`
+
+Style block :
+
+```text
+semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image
+```
+
+Negative prompt :
+
+```text
+text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted perspective, blurry subject, overcrowded composition, generic european city, dry climate look, photorealistic photo look
+```
+
+Prompt :
+
+```text
+Premium semi-realistic civic illustration of a degraded municipal building facade in French Guiana, public building entrance needing maintenance, realistic textures, tropical light, civic dignity, clear focal point, premium rendering, no text
+```
