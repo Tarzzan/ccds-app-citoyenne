@@ -57,8 +57,10 @@ function getNotificationsCompanion(
   unreadCount: number
 ): { tone: 'guide' | 'thanks' | 'status'; title: string; body: string; bullets: string[] } {
   const latest = notifications[0];
-  const latestPlan = notifications.find((notification) => notification.type === 'intervention_plan');
-  const latestInterventionUpdate = notifications.find((notification) => notification.type === 'intervention_update');
+  const unreadNotifications = notifications.filter((notification) => !notification.is_read);
+  const latestUnread = unreadNotifications[0];
+  const latestPlan = unreadNotifications.find((notification) => notification.type === 'intervention_plan');
+  const latestInterventionUpdate = unreadNotifications.find((notification) => notification.type === 'intervention_update');
 
   if (!latest) {
     return {
@@ -105,7 +107,7 @@ function getNotificationsCompanion(
       body: 'Votre pile de notifications doit vous dire quoi ouvrir tout de suite, pas seulement empiler des alertes.',
       bullets: [
         'commencer par les notifications non lues',
-        latest.incident_reference ? `ouvrir ${latest.incident_reference} si besoin` : 'ouvrir la mise a jour la plus recente',
+        latestUnread?.incident_reference ? `ouvrir ${latestUnread.incident_reference} si besoin` : 'ouvrir la mise a jour la plus recente',
       ],
     };
   }
