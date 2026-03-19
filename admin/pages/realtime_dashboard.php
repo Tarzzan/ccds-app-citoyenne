@@ -20,6 +20,9 @@ if (($admin['role'] ?? null) !== 'admin') {
 
 function realtime_snapshot(PDO $db): array
 {
+    $serviceTablesReady = admin_db_has_table($db, 'services')
+        && admin_db_has_table($db, 'service_category_map')
+        && admin_db_has_table($db, 'intervention_plans');
     $summaryStmt = $db->query("
         SELECT
             (SELECT COUNT(*) FROM incidents WHERE DATE(created_at) = CURDATE()) AS incidents_today,
@@ -157,6 +160,45 @@ function realtime_snapshot(PDO $db): array
     ");
     $activeUsers = $activeUsersStmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $topCategoriesStmt = $db->query("
+        SELECT c.name, c.color, c.icon, COUNT(i.id) AS incident_count
+        FROM categories c
+        JOIN incidents i ON i.category_id = c.id
+        WHERE i.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+        GROUP BY c.id
+        ORDER BY incident_count DESC, c.name ASC
+        LIMIT 4
+    ");
+    $topCategories = $topCategoriesStmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($topCategories as &$category) {
+        $visual = category_visual_resolve($category['icon'] ?? null, $category['name'] ?? null);
+        $category['visual_description'] = $visual['description'] ?? '';
+    }
+    unset($category);
+
+    $executionSummary = null;
+    if ($serviceTablesReady) {
+        $executionStmt = $db->query("
+            SELECT
+                SUM(CASE WHEN i.status IN ('submitted','acknowledged','in_progress') AND latest_plan.id IS NOT NULL
+                    AND COALESCE(latest_plan.status, '') NOT IN ('completed', 'cancelled')
+                    AND COALESCE(latest_plan.source_type, 'internal') = 'internal' THEN 1 ELSE 0 END) AS internal_count,
+                SUM(CASE WHEN i.status IN ('submitted','acknowledged','in_progress') AND latest_plan.id IS NOT NULL
+                    AND COALESCE(latest_plan.status, '') NOT IN ('completed', 'cancelled')
+                    AND latest_plan.source_type = 'provider' THEN 1 ELSE 0 END) AS provider_count,
+                SUM(CASE WHEN i.status IN ('submitted','acknowledged','in_progress') AND latest_plan.id IS NULL THEN 1 ELSE 0 END) AS unplanned_count
+            FROM incidents i
+            LEFT JOIN intervention_plans latest_plan ON latest_plan.id = (
+                SELECT p2.id
+                FROM intervention_plans p2
+                WHERE p2.incident_id = i.id
+                ORDER BY p2.created_at DESC, p2.id DESC
+                LIMIT 1
+            )
+        ");
+        $executionSummary = $executionStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
     return [
         'generated_at' => date(DATE_ATOM),
         'summary' => [
@@ -170,6 +212,8 @@ function realtime_snapshot(PDO $db): array
         'timeline' => $timeline,
         'recent' => $recent,
         'active_users' => $activeUsers,
+        'top_categories' => $topCategories,
+        'execution_summary' => $executionSummary,
     ];
 }
 
@@ -197,6 +241,38 @@ require_once __DIR__ . '/../includes/layout.php';
     Synchronisé à <span id="live-time" style="margin-left:6px;font-weight:800;"><?= date('H:i:s') ?></span>
   </div>
 </div>
+
+<?php if (!empty($snapshot['top_categories'])): ?>
+  <div class="admin-category-strip" style="margin-bottom:18px;">
+    <?php foreach ($snapshot['top_categories'] as $category): ?>
+      <div class="admin-category-pill">
+        <?= category_visual_html($category['icon'] ?? 'road', $category['name'], 'sm', $category['color'] ?? null) ?>
+        <div class="admin-category-pill-copy">
+          <strong><?= e($category['name']) ?></strong>
+          <span><?= e($category['visual_description'] ?: 'Categorie dominante sur les dernières 24 heures') ?></span>
+        </div>
+        <span class="admin-category-pill-count admin-category-pill-count--wide"><?= (int)$category['incident_count'] ?> recents</span>
+      </div>
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+
+<?php if (!empty($snapshot['execution_summary'])): ?>
+  <div class="services-mode-band" style="margin-bottom:24px;">
+    <div class="services-mode-card">
+      <strong>Equipe interne</strong>
+      <span><?= (int)($snapshot['execution_summary']['internal_count'] ?? 0) ?> dossier<?= ((int)($snapshot['execution_summary']['internal_count'] ?? 0)) > 1 ? 's' : '' ?> actuellement portes en interne</span>
+    </div>
+    <div class="services-mode-card">
+      <strong>Prestataire missionne</strong>
+      <span><?= (int)($snapshot['execution_summary']['provider_count'] ?? 0) ?> dossier<?= ((int)($snapshot['execution_summary']['provider_count'] ?? 0)) > 1 ? 's' : '' ?> actuellement portes par un prestataire</span>
+    </div>
+    <div class="services-mode-card">
+      <strong>A planifier</strong>
+      <span><?= (int)($snapshot['execution_summary']['unplanned_count'] ?? 0) ?> dossier<?= ((int)($snapshot['execution_summary']['unplanned_count'] ?? 0)) > 1 ? 's' : '' ?> ouverts restent encore sans plan</span>
+    </div>
+  </div>
+<?php endif; ?>
 
 <div class="stats-grid" style="grid-template-columns:repeat(4, minmax(0, 1fr));margin-bottom:24px;">
   <div class="stat-card">
