@@ -165,10 +165,11 @@ unset($poll);
 
 $page_title = 'Sondages';
 $active_nav = 'polls';
+$pollsHeroVisual = generated_visual_url('CHAR-05');
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
-<div class="page-hero">
+<div class="page-hero <?= $pollsHeroVisual ? 'page-hero--with-visual' : '' ?>">
   <div class="page-hero-copy">
     <div class="page-hero-kicker">Concertation citoyenne</div>
     <h2 class="page-hero-title">Poser une question simple, lire un signal clair.</h2>
@@ -190,6 +191,17 @@ require_once __DIR__ . '/../includes/layout.php';
       <span class="hero-chip-label">consultation(s) au total</span>
     </div>
   </div>
+  <?php if ($pollsHeroVisual): ?>
+    <div class="page-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero">
+        <?= generated_visual_html('CHAR-05', ['class' => 'generated-visual generated-visual--portrait', 'label' => 'Concertation citoyenne']) ?>
+        <div class="generated-visual-caption">
+          <strong>Question claire, signal net</strong>
+          <span>Une consultation courte doit ressembler a une decision lisible, pas a un debat informe.</span>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
 </div>
 
 <div class="admin-guidance-grid">

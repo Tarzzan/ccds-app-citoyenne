@@ -120,7 +120,9 @@ $active_nav = 'notifications';
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
-<div class="page-hero">
+<?php $notificationsHeroVisual = generated_visual_url('MOM-02'); ?>
+
+<div class="page-hero <?= $notificationsHeroVisual ? 'page-hero--with-visual' : '' ?>">
   <div class="page-hero-copy">
     <div class="page-hero-kicker">Lien citoyen</div>
     <h2 class="page-hero-title">Parler peu, mais au bon moment.</h2>
@@ -142,6 +144,17 @@ require_once __DIR__ . '/../includes/layout.php';
       <span class="hero-chip-label">encore non lue(s)</span>
     </div>
   </div>
+  <?php if ($notificationsHeroVisual): ?>
+    <div class="page-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero">
+        <?= generated_visual_html('MOM-02', ['class' => 'generated-visual generated-visual--portrait', 'label' => 'Notification citoyenne utile']) ?>
+        <div class="generated-visual-caption">
+          <strong>Canal utile</strong>
+          <span>Une notification doit remercier, expliquer ou orienter, jamais simplement remplir la pile.</span>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
 </div>
 
 <div class="admin-guidance-grid">

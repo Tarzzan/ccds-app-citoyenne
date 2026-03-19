@@ -147,10 +147,11 @@ foreach ($events as $event) {
 
 $page_title = 'Événements';
 $active_nav = 'events';
+$eventsHeroVisual = generated_visual_url('HERO-02');
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
-<div class="page-hero">
+<div class="page-hero <?= $eventsHeroVisual ? 'page-hero--with-visual' : '' ?>">
   <div class="page-hero-copy">
     <div class="page-hero-kicker">Vie communale</div>
     <h2 class="page-hero-title">Donner de la visibilite aux rendez-vous utiles.</h2>
@@ -172,6 +173,17 @@ require_once __DIR__ . '/../includes/layout.php';
       <span class="hero-chip-label">evenement(s) au total</span>
     </div>
   </div>
+  <?php if ($eventsHeroVisual): ?>
+    <div class="page-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero">
+        <?= generated_visual_html('HERO-02', ['class' => 'generated-visual generated-visual--contain', 'label' => 'Rendez-vous communal']) ?>
+        <div class="generated-visual-caption">
+          <strong>Rendez-vous lisible</strong>
+          <span>Mettre en scene un evenement utile aide la commune a mobiliser sans surcharger la page.</span>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
 </div>
 
 <div class="admin-guidance-grid">
