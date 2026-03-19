@@ -179,6 +179,12 @@ function formatServiceDate(value?: string | null) {
   });
 }
 
+function buildReporterLabel(reporterName: string) {
+  return reporterName === 'Un habitant du territoire'
+    ? 'Signalement partage par un habitant du territoire'
+    : `Signalé par ${reporterName}`;
+}
+
 export default function IncidentDetailScreen() {
   const route = useRoute<RouteType>();
   const { id } = route.params;
@@ -540,7 +546,7 @@ export default function IncidentDetailScreen() {
 
           <View style={styles.infoRow}>
             <Text style={styles.infoIcon}>👤</Text>
-            <Text style={styles.infoText}>Signalé par {incident.reporter_name}</Text>
+            <Text style={styles.infoText}>{buildReporterLabel(incident.reporter_name)}</Text>
           </View>
 
           <View style={styles.infoRow}>
