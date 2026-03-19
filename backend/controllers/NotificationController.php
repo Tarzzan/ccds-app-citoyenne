@@ -67,31 +67,68 @@ class NotificationController extends BaseController
 
         $stmtUnread = $this->db->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0');
         $stmtUnread->execute([$userId]);
-        $unreadCount = (int)$stmtUnread->fetchColumn();
+        $rawUnreadCount = (int)$stmtUnread->fetchColumn();
+
+        $mappedNotifications = array_map(function ($n) {
+            $interventionContext = $this->resolveNotificationInterventionContext($n);
+
+            return [
+                'id'                   => (int)$n['id'],
+                'type'                 => $n['type'],
+                'title'                => $n['title'],
+                'body'                 => $n['body'],
+                'is_read'              => (bool)$n['is_read'],
+                'sent_at'              => $n['sent_at'],
+                'incident_id'          => isset($n['incident_id']) ? (int)$n['incident_id'] : null,
+                'incident_reference'   => $n['incident_reference'],
+                'incident_title'       => $n['incident_title'],
+                'intervention_context' => $interventionContext,
+            ];
+        }, $notifications);
+
+        [$visibleNotifications, $removedUnreadDuplicates] = $this->collapseVisibleDuplicates($mappedNotifications);
+        $unreadCount = max(0, $rawUnreadCount - $removedUnreadDuplicates);
 
         $this->success([
-            'notifications' => array_map(function ($n) {
-                $interventionContext = $this->resolveNotificationInterventionContext($n);
-
-                return [
-                    'id'                 => (int)$n['id'],
-                    'type'               => $n['type'],
-                    'title'              => $n['title'],
-                    'body'               => $n['body'],
-                    'is_read'            => (bool)$n['is_read'],
-                    'sent_at'            => $n['sent_at'],
-                    'incident_id'        => isset($n['incident_id']) ? (int)$n['incident_id'] : null,
-                    'incident_reference' => $n['incident_reference'],
-                    'incident_title'     => $n['incident_title'],
-                    'intervention_context' => $interventionContext,
-                ];
-            }, $notifications),
+            'notifications' => $visibleNotifications,
             'unread_count' => $unreadCount,
             'pagination'   => [
                 'total'       => $total,
                 'page'        => $page,
                 'total_pages' => (int)ceil($total / $limit),
             ],
+        ]);
+    }
+
+    private function collapseVisibleDuplicates(array $notifications): array
+    {
+        $collapsed = [];
+        $removedUnreadDuplicates = 0;
+        $seenSignatures = [];
+
+        foreach ($notifications as $notification) {
+            $signature = $this->notificationVisibleSignature($notification);
+            if (isset($seenSignatures[$signature])) {
+                if (empty($notification['is_read'])) {
+                    $removedUnreadDuplicates++;
+                }
+                continue;
+            }
+
+            $seenSignatures[$signature] = true;
+            $collapsed[] = $notification;
+        }
+
+        return [$collapsed, $removedUnreadDuplicates];
+    }
+
+    private function notificationVisibleSignature(array $notification): string
+    {
+        return implode('|', [
+            trim((string)($notification['type'] ?? '')),
+            (string)((int)($notification['incident_id'] ?? 0)),
+            trim((string)($notification['title'] ?? '')),
+            trim((string)($notification['body'] ?? '')),
         ]);
     }
 
