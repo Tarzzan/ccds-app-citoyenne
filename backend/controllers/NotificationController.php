@@ -48,11 +48,6 @@ class NotificationController extends BaseController
         $this->requirePermission($auth, 'notification:read_own');
         $page   = max(1, (int)($_GET['page'] ?? 1));
         $limit  = 20;
-        $offset = ($page - 1) * $limit;
-
-        $stmtTotal = $this->db->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ?');
-        $stmtTotal->execute([$userId]);
-        $total = (int)$stmtTotal->fetchColumn();
 
         $stmt = $this->db->prepare("
             SELECT n.*, i.reference AS incident_reference, i.title AS incident_title
@@ -60,14 +55,9 @@ class NotificationController extends BaseController
             LEFT JOIN incidents i ON i.id = n.incident_id
             WHERE n.user_id = ?
             ORDER BY n.sent_at DESC
-            LIMIT ? OFFSET ?
         ");
-        $stmt->execute([$userId, $limit, $offset]);
+        $stmt->execute([$userId]);
         $notifications = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-
-        $stmtUnread = $this->db->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0');
-        $stmtUnread->execute([$userId]);
-        $rawUnreadCount = (int)$stmtUnread->fetchColumn();
 
         $mappedNotifications = array_map(function ($n) {
             $interventionContext = $this->resolveNotificationInterventionContext($n);
@@ -86,11 +76,17 @@ class NotificationController extends BaseController
             ];
         }, $notifications);
 
-        [$visibleNotifications, $removedUnreadDuplicates] = $this->collapseVisibleDuplicates($mappedNotifications);
-        $unreadCount = max(0, $rawUnreadCount - $removedUnreadDuplicates);
+        $visibleNotifications = $this->collapseVisibleDuplicates($mappedNotifications);
+        $total = count($visibleNotifications);
+        $offset = ($page - 1) * $limit;
+        $pageNotifications = array_slice($visibleNotifications, $offset, $limit);
+        $unreadCount = count(array_filter(
+            $visibleNotifications,
+            static fn(array $notification): bool => empty($notification['is_read'])
+        ));
 
         $this->success([
-            'notifications' => $visibleNotifications,
+            'notifications' => $pageNotifications,
             'unread_count' => $unreadCount,
             'pagination'   => [
                 'total'       => $total,
@@ -103,15 +99,11 @@ class NotificationController extends BaseController
     private function collapseVisibleDuplicates(array $notifications): array
     {
         $collapsed = [];
-        $removedUnreadDuplicates = 0;
         $seenSignatures = [];
 
         foreach ($notifications as $notification) {
             $signature = $this->notificationVisibleSignature($notification);
             if (isset($seenSignatures[$signature])) {
-                if (empty($notification['is_read'])) {
-                    $removedUnreadDuplicates++;
-                }
                 continue;
             }
 
@@ -119,7 +111,7 @@ class NotificationController extends BaseController
             $collapsed[] = $notification;
         }
 
-        return [$collapsed, $removedUnreadDuplicates];
+        return $collapsed;
     }
 
     private function notificationVisibleSignature(array $notification): string
