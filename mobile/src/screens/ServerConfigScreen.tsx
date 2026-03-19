@@ -23,6 +23,7 @@ import { CivicCompanionStage } from '../components/CivicCompanionStage';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 import { COLORS } from '../components/ui';
 import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
+import { GENERATED_VISUAL_SOURCES } from '../theme/generatedVisualSources';
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
 
@@ -136,7 +137,8 @@ export default function ServerConfigScreen({ onConfigured, isFirstLaunch = true 
             title="Verifier d abord la bonne porte d entree."
             body="Une URL API juste suffit a rendre l application pleinement utile. L objectif ici est de connecter la commune, pas de perdre du temps dans des reglages techniques."
             aside="La bonne adresse doit toujours se terminer par /api."
-            visualSource={COMPANION_VISUAL_SLOTS.serverConfig.source}
+            visualSource={GENERATED_VISUAL_SOURCES['CHAR-04'] ?? COMPANION_VISUAL_SLOTS.serverConfig.source}
+            visualBadgeLabel="Serveur"
           />
         </View>
 

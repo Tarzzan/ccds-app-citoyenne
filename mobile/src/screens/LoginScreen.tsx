@@ -14,6 +14,7 @@ import { Button, Input, COLORS } from '../components/ui';
 import { AuthStackParamList } from '../navigation/RootNavigator';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
+import { GENERATED_VISUAL_SOURCES } from '../theme/generatedVisualSources';
 
 type Props = { navigation: NativeStackNavigationProp<AuthStackParamList, 'Login'> };
 
@@ -80,7 +81,8 @@ export default function LoginScreen({ navigation }: Props) {
             tone="guide"
             title={`${BRAND.companion.name} vous oriente vers la bonne suite`}
             body="Connectez-vous pour signaler, suivre un dossier ou relire une mise a jour utile sans perdre le fil de la prise en charge."
-            visualSource={COMPANION_VISUAL_SLOTS.login.source}
+            visualSource={GENERATED_VISUAL_SOURCES['MOM-01'] ?? COMPANION_VISUAL_SLOTS.login.source}
+            visualBadgeLabel="Accueil"
             bullets={[
               'un point d entree simple',
               'un suivi clair dossier par dossier',
