@@ -14,6 +14,10 @@ $active_nav = 'realtime_dashboard';
 
 $db = Database::getInstance();
 
+if (($admin['role'] ?? null) !== 'admin') {
+    render_error(403, 'Accès réservé aux administrateurs.');
+}
+
 function realtime_snapshot(PDO $db): array
 {
     $summaryStmt = $db->query("

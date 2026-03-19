@@ -7,6 +7,7 @@
  */
 
 $admin = current_admin();
+$is_admin_role = ($admin['role'] ?? null) === 'admin';
 $page_title  = $page_title  ?? (defined('APP_NAME') ? APP_NAME . ' Admin' : 'Ma Commune Admin');
 $active_nav  = $active_nav  ?? '';
 
@@ -114,10 +115,12 @@ try {
         <?php endif; ?>
       </a>
 
-      <a href="/admin/?page=audit_logs" class="nav-item <?= $active_nav === 'audit_logs' ? 'active' : '' ?>">
-        <span class="nav-icon">📋</span>
-        <span>Logs d'audit</span>
-      </a>
+      <?php if ($is_admin_role): ?>
+        <a href="/admin/?page=audit_logs" class="nav-item <?= $active_nav === 'audit_logs' ? 'active' : '' ?>">
+          <span class="nav-icon">📋</span>
+          <span>Logs d'audit</span>
+        </a>
+      <?php endif; ?>
 
       <div class="nav-section-title" style="margin-top:8px">Analyse</div>
 
@@ -126,16 +129,20 @@ try {
         <span>Statistiques</span>
       </a>
 
-      <a href="/admin/?page=realtime_dashboard" class="nav-item <?= $active_nav === 'realtime_dashboard' ? 'active' : '' ?>">
-        <span class="nav-icon">📡</span>
-        <span>Temps réel</span>
-        <span class="nav-badge" style="background:#10B981;animation:pulse 1.5s infinite">LIVE</span>
-      </a>
+      <?php if ($is_admin_role): ?>
+        <a href="/admin/?page=realtime_dashboard" class="nav-item <?= $active_nav === 'realtime_dashboard' ? 'active' : '' ?>">
+          <span class="nav-icon">📡</span>
+          <span>Temps réel</span>
+          <span class="nav-badge" style="background:#10B981;animation:pulse 1.5s infinite">LIVE</span>
+        </a>
+      <?php endif; ?>
 
-      <a href="/admin/?page=predictive_analysis" class="nav-item <?= $active_nav === 'predictive_analysis' ? 'active' : '' ?>">
-        <span class="nav-icon">🔮</span>
-        <span>Analyse prédictive</span>
-      </a>
+      <?php if ($is_admin_role): ?>
+        <a href="/admin/?page=predictive_analysis" class="nav-item <?= $active_nav === 'predictive_analysis' ? 'active' : '' ?>">
+          <span class="nav-icon">🔮</span>
+          <span>Analyse prédictive</span>
+        </a>
+      <?php endif; ?>
 
       <div class="nav-section-title" style="margin-top:8px">Communauté</div>
 

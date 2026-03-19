@@ -13,6 +13,10 @@ $active_nav = 'predictive_analysis';
 
 $db = Database::getInstance();
 
+if (($admin['role'] ?? null) !== 'admin') {
+    render_error(403, 'Accès réservé aux administrateurs.');
+}
+
 $windowDays = (int)($_GET['window'] ?? 180);
 if (!in_array($windowDays, [30, 90, 180, 365], true)) {
     $windowDays = 180;
