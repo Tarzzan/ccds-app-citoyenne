@@ -72,6 +72,23 @@ function formatResolutionDelay(avgResolutionHours: number | null): string {
   return `Délai moyen observé: ${days} j`;
 }
 
+function buildIncidentPlanSummary(incident: Incident): string | null {
+  const plan = incident.current_plan;
+  if (!plan || !plan.scheduled_date) {
+    return null;
+  }
+
+  const dateLabel = new Date(plan.scheduled_date).toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'long',
+  });
+  const timeWindow = [plan.time_window_start, plan.time_window_end].filter(Boolean).join(' - ');
+
+  return timeWindow
+    ? `Intervention prévue le ${dateLabel} · ${timeWindow}`
+    : `Intervention prévue le ${dateLabel}`;
+}
+
 function getCitizenServiceNarrative(stats: UserStats): { title: string; body: string } {
   if (stats.pending_count > 0) {
     return {
@@ -473,6 +490,16 @@ export default function DashboardScreen() {
                       {incident.reference}
                       {incident.assigned_to_name ? ` · ${incident.assigned_to_name}` : ''}
                     </Text>
+                    {incident.service_name ? (
+                      <Text style={styles.incidentService} numberOfLines={1}>
+                        Service {incident.service_name}
+                      </Text>
+                    ) : null}
+                    {buildIncidentPlanSummary(incident) ? (
+                      <Text style={styles.incidentPlan} numberOfLines={2}>
+                        {buildIncidentPlanSummary(incident)}
+                      </Text>
+                    ) : null}
                     {incident.address ? (
                       <Text style={styles.incidentMeta} numberOfLines={1}>
                         📍 {incident.address}
@@ -518,6 +545,16 @@ export default function DashboardScreen() {
                   <View style={styles.incidentInfo}>
                     <Text style={styles.incidentTitle} numberOfLines={1}>{incident.title}</Text>
                     <Text style={styles.incidentRef}>{incident.reference}</Text>
+                    {incident.service_name ? (
+                      <Text style={styles.incidentService} numberOfLines={1}>
+                        Service {incident.service_name}
+                      </Text>
+                    ) : null}
+                    {buildIncidentPlanSummary(incident) ? (
+                      <Text style={styles.incidentPlan} numberOfLines={2}>
+                        {buildIncidentPlanSummary(incident)}
+                      </Text>
+                    ) : null}
                   </View>
                 </View>
                 <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[incident.status] || '#999' }]}>
@@ -624,6 +661,8 @@ const styles = StyleSheet.create({
   incidentInfo:   { flex: 1 },
   incidentTitle:  { fontSize: 14, fontWeight: '700', color: '#333' },
   incidentRef:    { fontSize: 11, color: BRAND.colors.slate, marginTop: 2 },
+  incidentService:{ fontSize: 12, color: BRAND.colors.canopy, marginTop: 4, fontWeight: '700' },
+  incidentPlan:   { fontSize: 12, color: BRAND.colors.slate, marginTop: 4, lineHeight: 17 },
   incidentMeta:   { fontSize: 12, color: BRAND.colors.slate, marginTop: 3 },
   queueStatusWrap:{ alignItems: 'flex-end', gap: 6, marginLeft: 10 },
   priorityPill:   { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },

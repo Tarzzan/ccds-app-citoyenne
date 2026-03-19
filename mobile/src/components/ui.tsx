@@ -149,12 +149,15 @@ interface IncidentCardProps {
   date: string;
   priority?: string;
   assignedToName?: string | null;
+  serviceName?: string | null;
+  planSummary?: string | null;
+  planCitizenMessage?: string | null;
   address?: string;
   onPress: () => void;
 }
 
 export function IncidentCard({
-  reference, title, description, status, categoryName, categoryIcon, categoryColor, date, priority, assignedToName, address, onPress,
+  reference, title, description, status, categoryName, categoryIcon, categoryColor, date, priority, assignedToName, serviceName, planSummary, planCitizenMessage, address, onPress,
 }: IncidentCardProps) {
   const priorityColor = priority ? (PRIORITY_COLORS[priority] ?? COLORS.gray) : null;
   const priorityLabel = priority ? (PRIORITY_LABELS[priority] ?? priority) : null;
@@ -190,6 +193,17 @@ export function IncidentCard({
               📍 {address}
             </Text>
           ) : null}
+        </View>
+      ) : null}
+      {(serviceName || planSummary || planCitizenMessage) ? (
+        <View style={styles.serviceWrap}>
+          {serviceName ? (
+            <View style={styles.servicePill}>
+              <Text style={styles.servicePillText}>Service {serviceName}</Text>
+            </View>
+          ) : null}
+          {planSummary ? <Text style={styles.serviceText}>{planSummary}</Text> : null}
+          {planCitizenMessage ? <Text style={styles.serviceHint}>{planCitizenMessage}</Text> : null}
         </View>
       ) : null}
       <Text style={styles.cardDate}>{new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}</Text>
@@ -311,6 +325,39 @@ const styles = StyleSheet.create({
   },
   cardAddress: {
     fontSize: 12,
+    color: COLORS.gray,
+  },
+  serviceWrap: {
+    marginBottom: 8,
+    backgroundColor: '#F4F7F2',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#D8E2D6',
+  },
+  servicePill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: '#E4EFE7',
+    marginBottom: 8,
+  },
+  servicePillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: BRAND.colors.canopyDeep,
+  },
+  serviceText: {
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: BRAND.colors.canopyDeep,
+    fontWeight: '700',
+  },
+  serviceHint: {
+    marginTop: 5,
+    fontSize: 12,
+    lineHeight: 17,
     color: COLORS.gray,
   },
   cardDate: {

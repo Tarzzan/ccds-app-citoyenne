@@ -136,6 +136,7 @@ class IncidentController extends BaseController
                 $inc['thumbnail'] = UPLOAD_BASE_URL . $inc['thumbnail'];
             }
             $inc['votes_count'] = (int)$inc['votes_count'];
+            $inc = $this->enrichIncidentWithInterventionContext($inc, []);
         }
 
         $this->success($this->paginatedResponse($incidents, $total, $page, $limit));

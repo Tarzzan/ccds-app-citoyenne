@@ -51,6 +51,23 @@ const PRIORITY_FILTERS = [
   { key: 'low', label: 'Faible' },
 ];
 
+function buildIncidentPlanSummary(incident: Incident): string | null {
+  const plan = incident.current_plan;
+  if (!plan || !plan.scheduled_date) {
+    return null;
+  }
+
+  const dateLabel = new Date(plan.scheduled_date).toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'long',
+  });
+  const timeWindow = [plan.time_window_start, plan.time_window_end].filter(Boolean).join(' - ');
+
+  return timeWindow
+    ? `Intervention prévue le ${dateLabel} · ${timeWindow}`
+    : `Intervention prévue le ${dateLabel}`;
+}
+
 export default function MyIncidentsScreen() {
   const navigation = useNavigation<NavProp>();
   const { user, logout, isStaff } = useAuth();
@@ -432,6 +449,9 @@ export default function MyIncidentsScreen() {
           date={item.created_at}
           priority={isStaff ? item.priority : undefined}
           assignedToName={isStaff ? item.assigned_to_name : undefined}
+          serviceName={item.service_name ?? undefined}
+          planSummary={buildIncidentPlanSummary(item) ?? undefined}
+          planCitizenMessage={item.current_plan?.citizen_message ?? undefined}
           address={item.address}
           onPress={() => navigation.navigate('IncidentDetail', { id: item.id })}
         />
