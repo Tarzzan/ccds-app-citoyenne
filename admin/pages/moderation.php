@@ -142,17 +142,25 @@ $stmt = $db->query("
     ORDER BY cr.created_at DESC
 ");
 $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$moderationHeroVisual = generated_visual_url('CHAR-05');
 
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 <style>
 .moderation-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
   background: linear-gradient(135deg, #a64b2a 0%, #174b3a 65%, #2d6f86 100%);
   color: #fff;
   border-radius: 28px;
   padding: 28px;
   margin-bottom: 24px;
   box-shadow: 0 18px 38px rgba(14, 49, 39, .16);
+}
+.moderation-hero--with-visual {
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  align-items: center;
 }
 .moderation-kicker {
   font-size: 11px;
@@ -172,6 +180,13 @@ require_once __DIR__ . '/../includes/layout.php';
 .moderation-text {
   color: rgba(255,255,255,.84);
   max-width: 620px;
+}
+.moderation-hero-copy {
+  min-width: 0;
+}
+.moderation-hero-visual {
+  justify-self: end;
+  width: 100%;
 }
 .moderation-stats {
   display: grid;
@@ -245,14 +260,32 @@ require_once __DIR__ . '/../includes/layout.php';
   padding: 56px 20px;
   color: #8d958f;
 }
+@media (max-width: 768px) {
+  .moderation-hero--with-visual {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
 
-<div class="moderation-hero">
-  <div class="moderation-kicker">Protection de la communauté</div>
-  <div class="moderation-title">Commentaires signalés à examiner</div>
-  <div class="moderation-text">
-    Cette file de modération permet d’arbitrer les contenus signalés et de protéger un espace civique utile, lisible et respectueux.
+<div class="moderation-hero <?= $moderationHeroVisual ? 'moderation-hero--with-visual' : '' ?>">
+  <div class="moderation-hero-copy">
+    <div class="moderation-kicker">Protection de la communauté</div>
+    <div class="moderation-title">Commentaires signalés à examiner</div>
+    <div class="moderation-text">
+      Cette file de modération permet d’arbitrer les contenus signalés et de protéger un espace civique utile, lisible et respectueux.
+    </div>
   </div>
+  <?php if ($moderationHeroVisual): ?>
+    <div class="moderation-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero">
+        <?= generated_visual_html('CHAR-05', ['class' => 'generated-visual generated-visual--portrait', 'label' => 'Moderation communautaire']) ?>
+        <div class="generated-visual-caption">
+          <strong>Protection lisible</strong>
+          <span>La moderation doit rester ferme, tracee et comprehensible, sans brouiller l usage civique du produit.</span>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
 </div>
 
 <div class="moderation-stats">
