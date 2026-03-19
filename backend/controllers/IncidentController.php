@@ -108,7 +108,7 @@ class IncidentController extends BaseController
         // Récupérer les incidents
         $stmt = $this->db->prepare("
             SELECT
-                i.id, i.reference, i.title, i.description,
+                i.id, i.user_id, i.reference, i.title, i.description,
                 i.latitude, i.longitude, i.address,
                 i.status, i.priority, i.assigned_to, i.votes_count,
                 i.created_at, i.updated_at,
@@ -137,6 +137,7 @@ class IncidentController extends BaseController
             }
             $inc['votes_count'] = (int)$inc['votes_count'];
             $inc = $this->enrichIncidentWithInterventionContext($inc, []);
+            $inc = $this->sanitizeIncidentForAudience($inc, $auth, false);
         }
 
         $this->success($this->paginatedResponse($incidents, $total, $page, $limit));
@@ -200,6 +201,7 @@ class IncidentController extends BaseController
         $incident['votes_count']    = (int)$incident['votes_count'];
 
         $incident = $this->enrichIncidentWithInterventionContext($incident, $statusHistory);
+        $incident = $this->sanitizeIncidentForAudience($incident, $auth, true);
 
         $this->success($incident);
     }
@@ -556,6 +558,27 @@ class IncidentController extends BaseController
             $citizenHistory,
             $incident['service_name'] ?? null
         );
+
+        return $incident;
+    }
+
+    private function sanitizeIncidentForAudience(array $incident, ?array $auth, bool $isDetail): array
+    {
+        $isStaff = in_array($auth['role'] ?? '', ['agent', 'admin'], true);
+        $isOwner = !empty($auth['sub']) && (int)$auth['sub'] === (int)($incident['user_id'] ?? 0);
+
+        if (!$isStaff && !$isOwner) {
+            $incident['reporter_name'] = 'Un habitant du territoire';
+            $incident['reporter_email'] = null;
+            $incident['reporter_phone'] = null;
+            $incident['assigned_to_name'] = null;
+
+            if ($isDetail) {
+                $incident['status_history'] = [];
+            }
+        }
+
+        unset($incident['user_id']);
 
         return $incident;
     }
