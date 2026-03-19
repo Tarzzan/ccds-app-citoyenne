@@ -126,6 +126,7 @@ $serviceSignals = [
     'provider_active_plans' => 0,
 ];
 $serviceWorkload = [];
+$categoryHighlights = [];
 
 try {
     $community = array_merge($community, $db->query("
@@ -218,6 +219,18 @@ if ($service_tables_ready) {
     }
 }
 
+foreach (array_slice($by_cat, 0, 4) as $cat) {
+    $visual = category_visual_resolve($cat['icon'] ?? 'road', $cat['name'] ?? null);
+    $categoryHighlights[] = [
+        'name' => $cat['name'] ?? ($visual['label'] ?? 'Categorie'),
+        'short_label' => $visual['short_label'] ?? ($cat['name'] ?? 'Categorie'),
+        'description' => $visual['description'] ?? '',
+        'icon' => $cat['icon'] ?? 'road',
+        'color' => $cat['color'] ?? ($visual['accent'] ?? '#174b3a'),
+        'count' => (int)($cat['cnt'] ?? 0),
+    ];
+}
+
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
@@ -255,6 +268,21 @@ require_once __DIR__ . '/../includes/layout.php';
     </div>
   <?php endif; ?>
 </div>
+
+<?php if (!empty($categoryHighlights)): ?>
+<div class="admin-category-strip">
+  <?php foreach ($categoryHighlights as $highlight): ?>
+    <div class="admin-category-pill" style="--category-accent:<?= e($highlight['color']) ?>;">
+      <?= category_visual_html($highlight['icon'], $highlight['name'], 'md', $highlight['color']) ?>
+      <div class="admin-category-pill-copy">
+        <strong><?= e($highlight['short_label']) ?></strong>
+        <span><?= e($highlight['description']) ?></span>
+      </div>
+      <span class="admin-category-pill-count"><?= (int)$highlight['count'] ?></span>
+    </div>
+  <?php endforeach; ?>
+</div>
+<?php endif; ?>
 
 <?php if ($scope_notice): ?>
 <div class="alert alert-info" style="margin-bottom:16px;"><?= e($scope_notice) ?></div>
@@ -354,6 +382,20 @@ require_once __DIR__ . '/../includes/layout.php';
             <?php else: ?>
               <span class="badge badge-green"><?= (int)$service['active_plans_count'] ?> plan(s)</span>
             <?php endif; ?>
+          </div>
+          <div class="services-mode-band" style="margin-top:12px">
+            <div class="services-mode-card">
+              <strong><?= (int)$service['active_internal_plans_count'] ?></strong>
+              <span>équipe interne</span>
+            </div>
+            <div class="services-mode-card">
+              <strong><?= (int)$service['active_provider_plans_count'] ?></strong>
+              <span>prestataire</span>
+            </div>
+            <div class="services-mode-card">
+              <strong><?= (int)$service['open_incidents_count'] ?></strong>
+              <span>dossiers ouverts</span>
+            </div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
             <span class="badge badge-gray"><?= (int)$service['active_plans_count'] ?> plan(s) actif(s)</span>
@@ -566,9 +608,13 @@ require_once __DIR__ . '/../includes/layout.php';
           <td>
             <div style="display:flex;align-items:center;gap:10px;">
               <?= category_visual_html($inc['cat_icon'] ?? 'road', $inc['cat_name'], 'sm', $inc['cat_color'] ?? null) ?>
-              <span class="badge" style="background:<?= e($inc['cat_color']) ?>22;color:<?= e($inc['cat_color']) ?>">
-                <?= e($inc['cat_name']) ?>
-              </span>
+              <?php $recentVisual = category_visual_resolve($inc['cat_icon'] ?? 'road', $inc['cat_name'] ?? null); ?>
+              <div class="admin-category-cell-copy">
+                <span class="badge" style="background:<?= e($inc['cat_color']) ?>22;color:<?= e($inc['cat_color']) ?>">
+                  <?= e($inc['cat_name']) ?>
+                </span>
+                <div class="text-muted text-small"><?= e($recentVisual['description'] ?? '') ?></div>
+              </div>
             </div>
           </td>
           <td><span class="badge <?= status_class($inc['status']) ?>"><?= status_label($inc['status']) ?></span></td>
