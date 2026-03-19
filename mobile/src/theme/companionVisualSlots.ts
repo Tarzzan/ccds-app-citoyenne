@@ -25,18 +25,18 @@ export type CompanionVisualSlot = {
 // Quand les assets seront valides et installes, chaque slot pourra recevoir un require(...)
 // vers mobile/assets/generated-visuals sans changer les ecrans.
 export const COMPANION_VISUAL_SLOTS: Record<string, CompanionVisualSlot> = {
-  login: { assetId: 'MOM-01', label: 'Accueil duo', source: GENERATED_VISUAL_SOURCES['MOM-01'] },
+  login: { assetId: 'CHAR-05', label: 'Agent relation citoyenne', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
   register: { assetId: 'CHAR-05', label: 'Agente relation usager', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
   serverConfig: { assetId: 'CHAR-05', label: 'Agente relation usager', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
-  onboarding: { assetId: 'MOM-01', label: 'Accueil duo', source: GENERATED_VISUAL_SOURCES['MOM-01'] },
-  dashboard: { assetId: 'MOM-04', label: 'Dossier resolu', source: GENERATED_VISUAL_SOURCES['MOM-04'] },
-  createIncident: { assetId: 'MOM-02', label: 'Remerciement apres signalement', source: GENERATED_VISUAL_SOURCES['MOM-02'] },
-  incidentDetail: { assetId: 'MOM-03', label: 'Dossier en cours', source: GENERATED_VISUAL_SOURCES['MOM-03'] },
-  notifications: { assetId: 'MOM-06', label: 'Aucune notification importante', source: GENERATED_VISUAL_SOURCES['MOM-06'] },
-  impact: { assetId: 'MOM-04', label: 'Dossier resolu', source: GENERATED_VISUAL_SOURCES['MOM-04'] },
+  onboarding: { assetId: 'CHAR-05', label: 'Agent relation citoyenne', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
+  dashboard: { assetId: 'CHAR-04', label: 'Agent terrain', source: GENERATED_VISUAL_SOURCES['CHAR-04'] },
+  createIncident: { assetId: 'CHAR-05', label: 'Agent relation citoyenne', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
+  incidentDetail: { assetId: 'CHAR-04', label: 'Agent terrain', source: GENERATED_VISUAL_SOURCES['CHAR-04'] },
+  notifications: { assetId: 'CHAR-05', label: 'Agent relation citoyenne', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
+  impact: { assetId: 'CHAR-04', label: 'Agent terrain', source: GENERATED_VISUAL_SOURCES['CHAR-04'] },
   profile: { assetId: 'CHAR-05', label: 'Agente relation usager', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
-  map: { assetId: 'CHAR-06', label: 'Duo hero', source: GENERATED_VISUAL_SOURCES['CHAR-06'] },
-  events: { assetId: 'MOM-01', label: 'Accueil duo', source: GENERATED_VISUAL_SOURCES['MOM-01'] },
-  polls: { assetId: 'MOM-01', label: 'Accueil duo', source: GENERATED_VISUAL_SOURCES['MOM-01'] },
+  map: { assetId: 'CHAR-04', label: 'Agent terrain', source: GENERATED_VISUAL_SOURCES['CHAR-04'] },
+  events: { assetId: 'CHAR-05', label: 'Agent relation citoyenne', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
+  polls: { assetId: 'CHAR-05', label: 'Agent relation citoyenne', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
   twoFactor: { assetId: 'CHAR-05', label: 'Agente relation usager', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
 };

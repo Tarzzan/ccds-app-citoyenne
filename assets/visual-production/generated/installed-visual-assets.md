@@ -1,7 +1,7 @@
 # Installed Visual Assets
 
-- installed_at_utc: `2026-03-19T01:22:19.633667+00:00`
-- source_dir: `/tmp/ma-commune-studio-drop-20260318-222131`
+- installed_at_utc: `2026-03-19T05:09:09.927333+00:00`
+- source_dir: `/tmp/ma-commune-aahero-drop`
 - assets_count: `30`
 
 | ID | Section | Label | Ratio | Mobile | Admin | Site |
