@@ -172,6 +172,9 @@ Le bon positionnement est :
 - `scripts/build_visual_production_index.py` : compile les batches visuels en index Markdown et HTML sous `assets/visual-production/generated`
 - `scripts/export_visual_generation_batch.py` : exporte un paquet prêt à produire pour le premier drop visuel (JSON, CSV, Markdown)
 - `scripts/package_visual_generation_handoff.sh` : assemble un bundle zip prêt à transmettre pour la production du premier drop visuel
+- `scripts/publish_latest_visual_generation_aliases.sh` : publie les alias stables du dernier handoff visuel généré
+- `scripts/verify_latest_visual_generation_aliases.sh` : controle que les alias latest du handoff visuel pointent bien vers un lot cohérent et complet
+- `scripts/show_latest_visual_generation_status.sh` : affiche l’état du dernier handoff visuel prêt à produire
 - `scripts/check_visual_production_batches.sh` : controle la coherence des batches visuels, des IDs d assets et du manifeste de production
 - `scripts/install_visual_asset_drop.py` : installe un drop de visuels générés dans les cibles mobile, admin, site et la trace locale de référence
 - `scripts/check_installed_visual_assets.sh` : controle qu un lot de visuels installés est bien présent sur les trois surfaces et tracé dans le manifeste généré

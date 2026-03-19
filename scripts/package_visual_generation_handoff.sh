@@ -60,5 +60,8 @@ EOF
   zip -qr "$(basename "$ZIP_PATH")" "$(basename "$PACKAGE_DIR")"
 )
 
+bash "$ROOT_DIR/scripts/publish_latest_visual_generation_aliases.sh" >/tmp/ma-commune-visual-generation-publish.log
+bash "$ROOT_DIR/scripts/verify_latest_visual_generation_aliases.sh" >/tmp/ma-commune-visual-generation-verify.log
+
 printf 'package_dir=%s\n' "$PACKAGE_DIR"
 printf 'zip=%s\n' "$ZIP_PATH"

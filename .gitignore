@@ -21,6 +21,14 @@ mobile/yarn-error.*
 .DS_Store
 Thumbs.db
 *.log
+assets/visual-production/generated/visual-generation-handoff-*/
+assets/visual-production/generated/visual-generation-handoff-*.zip
+assets/visual-production/generated/visual-generation-handoff-latest
+assets/visual-production/generated/visual-generation-handoff-latest.zip
+assets/visual-production/generated/visual-generation-handoff-latest.md
+assets/visual-production/generated/visual-generation-first-drop-latest.json
+assets/visual-production/generated/visual-generation-first-drop-latest.csv
+assets/visual-production/generated/visual-generation-first-drop-latest.md
 
 # ==============================
 # IDE / Éditeurs
