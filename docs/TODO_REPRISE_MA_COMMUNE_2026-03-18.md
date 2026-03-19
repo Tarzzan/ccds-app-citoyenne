@@ -101,6 +101,32 @@ Le produit cible doit permettre :
   - ecrans de vide
   - splash / launcher
 
+### P1 - Personnages Et Imagerie Narrative
+
+- Figer une bible personnages avant toute nouvelle production visuelle :
+  - 3 pistes mascotte
+  - 2 pistes agent communal
+  - 1 duo final a retenir
+- Sortir definitivement du melange entre :
+  - icones fonctionnelles
+  - badges categories
+  - illustrations editoriales terrain
+- Produire un premier socle d imagerie terrain narrative pour les categories prioritaires :
+  - voirie
+  - eclairage public
+  - proprete
+  - inondations et reseaux
+  - espaces verts
+  - mobilier urbain
+  - signalisation
+  - batiments communaux
+- Brancher cette imagerie sur les moments produit a plus fort impact :
+  - onboarding
+  - remerciement apres signalement
+  - etats vides
+  - suivi d un dossier
+  - categories de signalement
+
 ### P2 - Alignement Technique
 
 - Renommer les constantes visibles :
