@@ -277,6 +277,15 @@ export interface Notification {
   incident_id?: number;
   incident_reference?: string;
   incident_title?: string;
+  intervention_context?: {
+    service_name?: string | null;
+    source_type?: 'internal' | 'provider' | null;
+    provider_name?: string | null;
+    plan_status?: string | null;
+    scheduled_date?: string | null;
+    time_window_start?: string | null;
+    time_window_end?: string | null;
+  } | null;
 }
 
 export interface NotificationsResponse {

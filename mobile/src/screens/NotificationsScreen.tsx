@@ -22,6 +22,36 @@ const TYPE_ICONS: Record<string, string> = {
   intervention_update: '🚧',
 };
 
+function buildNotificationContextLabel(notification: Notification): string | null {
+  const context = notification.intervention_context;
+  if (!context) {
+    return null;
+  }
+
+  const parts: string[] = [];
+
+  if (context.service_name) {
+    parts.push(`Service ${context.service_name}`);
+  }
+
+  if (context.source_type === 'provider' && context.provider_name) {
+    parts.push(`Prestataire ${context.provider_name}`);
+  } else if (context.source_type === 'internal') {
+    parts.push('Equipe interne');
+  }
+
+  if (context.scheduled_date) {
+    const dateLabel = new Date(context.scheduled_date).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+    });
+    const timeWindow = [context.time_window_start, context.time_window_end].filter(Boolean).join(' - ');
+    parts.push(timeWindow ? `${dateLabel} · ${timeWindow}` : dateLabel);
+  }
+
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 function getNotificationsCompanion(
   notifications: Notification[],
   unreadCount: number
@@ -168,6 +198,19 @@ export const NotificationsScreen: React.FC = () => {
     Alert.alert('Notification sans ecran dedie', 'Cette notification a bien ete lue, mais elle ne dispose pas encore d un ecran detaille dans l application.');
   };
 
+  const renderNotificationContext = (notification: Notification) => {
+    const contextLabel = buildNotificationContextLabel(notification);
+    if (!contextLabel) {
+      return null;
+    }
+
+    return (
+      <Text style={styles.contextLabel} numberOfLines={2}>
+        {contextLabel}
+      </Text>
+    );
+  };
+
   const renderItem = ({ item }: { item: Notification }) => (
     <TouchableOpacity
       style={[styles.item, !item.is_read && styles.itemUnread]}
@@ -180,6 +223,7 @@ export const NotificationsScreen: React.FC = () => {
           {item.title}
         </Text>
         <Text style={styles.body} numberOfLines={2}>{item.body}</Text>
+        {renderNotificationContext(item)}
         {item.incident_reference && (
           <Text style={styles.ref}>Réf. {item.incident_reference}</Text>
         )}
@@ -333,6 +377,7 @@ const styles = StyleSheet.create({
   title:        { fontSize: 15, fontWeight: '600', color: COLORS.dark, marginBottom: 3 },
   titleUnread:  { fontWeight: '700' },
   body:         { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19 },
+  contextLabel: { fontSize: 12, color: BRAND.colors.canopyDeep, lineHeight: 18, fontWeight: '700', marginTop: 6 },
   ref:          { fontSize: 11, color: COLORS.primary, marginTop: 4, fontWeight: '600' },
   date:         { fontSize: 11, color: '#94a3b8', marginTop: 4 },
   dot:          {
