@@ -11,6 +11,7 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 VISUAL_DIR = ROOT / "assets" / "visual-production"
@@ -32,6 +33,13 @@ TARGETS = {
     "admin": ROOT / "admin" / "assets" / "img" / "generated-visuals",
     "site": ROOT / "site" / "assets" / "generated-visuals",
     "installed": VISUAL_DIR / "installed" / "current",
+}
+
+RATIO_TARGET_SIZES = {
+    "1x1": (512, 512),
+    "4x5": (768, 960),
+    "16x9": (1280, 720),
+    "9x16": (720, 1280),
 }
 
 
@@ -194,6 +202,24 @@ def write_site_generated_registry(manifest: dict) -> None:
     SITE_GENERATED_REGISTRY.write_text(json.dumps(registry, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
 
 
+def optimize_mobile_assets(manifest: dict) -> None:
+    for asset in manifest["assets"]:
+        mobile_rel = asset["targets"]["mobile"]
+        mobile_path = ROOT / mobile_rel
+        ratio = asset.get("ratio")
+        target_size = RATIO_TARGET_SIZES.get(ratio)
+        if not target_size or not mobile_path.exists():
+            continue
+
+        with Image.open(mobile_path) as image:
+            image.load()
+            if image.mode not in ("RGBA", "LA"):
+                image = image.convert("RGBA")
+            if image.size != target_size:
+                image = image.resize(target_size, Image.Resampling.LANCZOS)
+            image.save(mobile_path, format="PNG", optimize=True, compress_level=9)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Install generated visual asset drop into target folders.")
     parser.add_argument("source_dir", help="Directory containing generated asset files named as expected by the batches.")
@@ -204,6 +230,7 @@ def main() -> None:
         raise SystemExit(f"Source introuvable: {source_dir}")
 
     manifest = install_drop(source_dir)
+    optimize_mobile_assets(manifest)
     write_outputs(manifest)
     write_mobile_generated_sources(manifest)
     write_site_generated_registry(manifest)
