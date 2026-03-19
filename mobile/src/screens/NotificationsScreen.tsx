@@ -18,6 +18,7 @@ const TYPE_ICONS: Record<string, string> = {
   vote_milestone:  '🎉',
   system:          '📢',
   event:           '📅',
+  intervention_plan: '🛠️',
 };
 
 function getNotificationsCompanion(
@@ -25,6 +26,7 @@ function getNotificationsCompanion(
   unreadCount: number
 ): { tone: 'guide' | 'thanks' | 'status'; title: string; body: string; bullets: string[] } {
   const latest = notifications[0];
+  const latestPlan = notifications.find((notification) => notification.type === 'intervention_plan');
 
   if (!latest) {
     return {
@@ -34,6 +36,18 @@ function getNotificationsCompanion(
       bullets: [
         'suivre vos changements de statut ici',
         'ouvrir un dossier des qu une notification importante arrive',
+      ],
+    };
+  }
+
+  if (latestPlan && unreadCount > 0) {
+    return {
+      tone: 'status',
+      title: `${BRAND.companion.name} a une intervention a vous signaler`,
+      body: 'Quand une equipe ou un prestataire est programme, cette vue doit rendre la prochaine etape tout de suite compréhensible.',
+      bullets: [
+        latestPlan.incident_reference ? `ouvrir ${latestPlan.incident_reference} pour relire le passage prevu` : 'ouvrir la planification la plus recente',
+        'verifier la fenetre annoncee et le message transmis par la commune',
       ],
     };
   }

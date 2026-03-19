@@ -99,6 +99,73 @@ class PushNotificationService
     }
 
     /**
+     * Notifier le citoyen qu'une intervention a ete planifiee ou replanifiee.
+     */
+    public function notifyInterventionPlanned(int $incident_id, array $plan, bool $isReschedule = false): void
+    {
+        $stmt = $this->db->prepare("
+            SELECT i.user_id, i.title, i.reference, u.full_name
+            FROM incidents i
+            JOIN users u ON i.user_id = u.id
+            WHERE i.id = ?
+        ");
+        $stmt->execute([$incident_id]);
+        $incident = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$incident) {
+            return;
+        }
+
+        $serviceName = trim((string)($plan['service_name'] ?? 'service communal'));
+        $scheduledDate = $this->formatFrenchDate($plan['scheduled_date'] ?? null);
+        $timeWindow = $this->formatTimeWindow($plan['time_window_start'] ?? null, $plan['time_window_end'] ?? null);
+        $providerLabel = !empty($plan['provider_name'])
+            ? 'Prestataire missionne : ' . trim((string)$plan['provider_name']) . '.'
+            : null;
+
+        $title = $isReschedule
+            ? "Intervention reprogrammee"
+            : "Intervention planifiee";
+
+        $bodyParts = [
+            "Bonjour {$incident['full_name']},",
+            $isReschedule
+                ? "le {$serviceName} a mis a jour l intervention prevue pour votre signalement \"{$incident['title']}\"."
+                : "le {$serviceName} a planifie une intervention pour votre signalement \"{$incident['title']}\".",
+        ];
+
+        if ($scheduledDate !== null) {
+            $bodyParts[] = $timeWindow !== null
+                ? "Passage prevu le {$scheduledDate}, {$timeWindow}."
+                : "Passage prevu le {$scheduledDate}.";
+        }
+
+        if (!empty($plan['citizen_message'])) {
+            $bodyParts[] = trim((string)$plan['citizen_message']);
+        }
+
+        if ($providerLabel !== null) {
+            $bodyParts[] = $providerLabel;
+        }
+
+        $body = implode(' ', array_filter($bodyParts));
+
+        $this->saveNotification($incident['user_id'], $incident_id, 'intervention_plan', $title, $body);
+        $this->sendToUser($incident['user_id'], $title, $body, [
+            'type' => 'intervention_plan',
+            'incident_id' => $incident_id,
+            'reference' => $incident['reference'],
+            'service_name' => $serviceName,
+            'scheduled_date' => $plan['scheduled_date'] ?? null,
+            'time_window_start' => $plan['time_window_start'] ?? null,
+            'time_window_end' => $plan['time_window_end'] ?? null,
+            'citizen_message' => $plan['citizen_message'] ?? null,
+            'provider_name' => $plan['provider_name'] ?? null,
+            'is_reschedule' => $isReschedule,
+        ]);
+    }
+
+    /**
      * Envoyer un lot de notifications via l'API Expo
      */
     private function sendBatch(array $tokens, string $title, string $body, array $data = []): bool
@@ -143,5 +210,47 @@ class PushNotificationService
             VALUES (?, ?, ?, ?, ?)
         ");
         $stmt->execute([$user_id, $incident_id, $type, $title, $body]);
+    }
+
+    private function formatFrenchDate(?string $isoDate): ?string
+    {
+        if (!$isoDate) {
+            return null;
+        }
+
+        $date = \DateTime::createFromFormat('Y-m-d', $isoDate);
+        if (!$date) {
+            return $isoDate;
+        }
+
+        $months = [
+            1 => 'janvier',
+            2 => 'fevrier',
+            3 => 'mars',
+            4 => 'avril',
+            5 => 'mai',
+            6 => 'juin',
+            7 => 'juillet',
+            8 => 'aout',
+            9 => 'septembre',
+            10 => 'octobre',
+            11 => 'novembre',
+            12 => 'decembre',
+        ];
+
+        $month = $months[(int)$date->format('n')] ?? $date->format('m');
+        return $date->format('j') . ' ' . $month . ' ' . $date->format('Y');
+    }
+
+    private function formatTimeWindow(?string $start, ?string $end): ?string
+    {
+        $parts = array_filter([trim((string)$start), trim((string)$end)]);
+        if (empty($parts)) {
+            return null;
+        }
+
+        return count($parts) === 2
+            ? 'entre ' . $parts[0] . ' et ' . $parts[1]
+            : 'autour de ' . $parts[0];
     }
 }

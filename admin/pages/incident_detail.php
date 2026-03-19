@@ -299,6 +299,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             $db->commit();
+
+            try {
+                (new PushNotificationService($db))->notifyInterventionPlanned($id, [
+                    'service_name' => $service['name'],
+                    'scheduled_date' => $scheduled_date,
+                    'time_window_start' => $time_window_start !== '' ? $time_window_start : null,
+                    'time_window_end' => $time_window_end !== '' ? $time_window_end : null,
+                    'citizen_message' => $citizen_message !== '' ? $citizen_message : null,
+                    'provider_name' => $provider_name !== '' ? $provider_name : null,
+                ], $is_reschedule);
+            } catch (Throwable $notificationError) {
+                error_log('Plan notification failed for incident ' . $id . ': ' . $notificationError->getMessage());
+            }
+
             $_SESSION['flash_success'] = $is_reschedule
                 ? 'Intervention replanifiee avec succes.'
                 : 'Intervention planifiee avec succes.';
