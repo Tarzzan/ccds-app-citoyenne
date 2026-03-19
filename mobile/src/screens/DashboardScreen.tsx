@@ -247,7 +247,7 @@ function getDashboardMomentVisual(stats: UserStats, nextIntervention: DashboardN
   }
 
   if (nextIntervention) {
-    return COMPANION_VISUAL_SLOTS.dashboard.source;
+    return GENERATED_VISUAL_SOURCES['MOM-01'] ?? COMPANION_VISUAL_SLOTS.dashboard.source;
   }
 
   if ((stats.resolved_count ?? 0) > 0 && (stats.pending_count ?? 0) === 0 && (stats.in_progress_count ?? 0) === 0) {
@@ -258,7 +258,7 @@ function getDashboardMomentVisual(stats: UserStats, nextIntervention: DashboardN
     return GENERATED_VISUAL_SOURCES['MOM-05'] ?? COMPANION_VISUAL_SLOTS.dashboard.source;
   }
 
-  return COMPANION_VISUAL_SLOTS.dashboard.source;
+  return GENERATED_VISUAL_SOURCES['MOM-02'] ?? COMPANION_VISUAL_SLOTS.dashboard.source;
 }
 
 type StaffQueueSummary = {

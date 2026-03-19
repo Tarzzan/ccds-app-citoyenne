@@ -171,7 +171,8 @@ export default function MapScreen() {
             title="Voir ou la vigilance doit produire une reponse."
             body="La carte ne sert pas a collectionner des points. Elle sert a rendre visibles les zones a surveiller, les dossiers encore ouverts et les signaux deja traites."
             aside="Commencez par le point mis en avant, puis descendez vers les autres reperes."
-            visualSource={COMPANION_VISUAL_SLOTS.map.source}
+            visualSource={GENERATED_VISUAL_SOURCES['HERO-02'] ?? COMPANION_VISUAL_SLOTS.map.source}
+            visualBadgeLabel="Carte"
           />
         </View>
 

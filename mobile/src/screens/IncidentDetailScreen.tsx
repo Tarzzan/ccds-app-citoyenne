@@ -195,13 +195,15 @@ function getIncidentMomentVisual(incident: Incident | null) {
     case 'submitted':
       return GENERATED_VISUAL_SOURCES['MOM-02'] ?? COMPANION_VISUAL_SLOTS.incidentDetail.source;
     case 'acknowledged':
-      return COMPANION_VISUAL_SLOTS.incidentDetail.source;
+      return incident.current_plan
+        ? GENERATED_VISUAL_SOURCES['MOM-03'] ?? COMPANION_VISUAL_SLOTS.incidentDetail.source
+        : GENERATED_VISUAL_SOURCES['MOM-02'] ?? COMPANION_VISUAL_SLOTS.incidentDetail.source;
     case 'in_progress':
       return GENERATED_VISUAL_SOURCES['MOM-03'] ?? COMPANION_VISUAL_SLOTS.incidentDetail.source;
     case 'resolved':
       return GENERATED_VISUAL_SOURCES['MOM-04'] ?? COMPANION_VISUAL_SLOTS.incidentDetail.source;
     default:
-      return COMPANION_VISUAL_SLOTS.incidentDetail.source;
+      return GENERATED_VISUAL_SOURCES['MOM-02'] ?? COMPANION_VISUAL_SLOTS.incidentDetail.source;
   }
 }
 
