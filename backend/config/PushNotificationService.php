@@ -350,7 +350,10 @@ class PushNotificationService
 
     private function formatTimeWindow(?string $start, ?string $end): ?string
     {
-        $parts = array_filter([trim((string)$start), trim((string)$end)]);
+        $parts = array_filter([
+            $this->formatHourMinute($start),
+            $this->formatHourMinute($end),
+        ]);
         if (empty($parts)) {
             return null;
         }
@@ -358,5 +361,19 @@ class PushNotificationService
         return count($parts) === 2
             ? 'entre ' . $parts[0] . ' et ' . $parts[1]
             : 'autour de ' . $parts[0];
+    }
+
+    private function formatHourMinute(?string $value): ?string
+    {
+        $value = trim((string)$value);
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $value)) {
+            return substr($value, 0, 5);
+        }
+
+        return $value;
     }
 }
