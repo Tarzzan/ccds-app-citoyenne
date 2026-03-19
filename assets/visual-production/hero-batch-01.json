@@ -1,0 +1,25 @@
+{
+  "version": "2026-03-18",
+  "batch_id": "hero-batch-01",
+  "description": "Premier lot des visuels hero commerciaux Ma Commune",
+  "style_block": "semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image",
+  "negative_prompt": "text, watermark, logo, childish cartoon, flat clipart, generic smart city cliché, futuristic sci-fi city, overcrowded composition, photorealistic photo look, cold corporate scene, european dry climate look",
+  "assets": [
+    {
+      "id": "HERO-01",
+      "label": "Landing publique",
+      "ratio": "16:9",
+      "filename": "hero-01-landing-ma-commune-16x9.png",
+      "surface_target": ["site_root", "commercial_pitch"],
+      "prompt": "Premium civic hero illustration for a public-service platform in French Guiana, a warm municipal agent and a memorable tropical mascot standing in a lush urban-tropical local environment, subtle signs of public-space care and civic attention, cinematic warm light, polished premium rendering, clear readable silhouettes, strong emotional trust, enough negative space for website text overlay, no text"
+    },
+    {
+      "id": "HERO-02",
+      "label": "Stores mobile",
+      "ratio": "9:16",
+      "filename": "hero-02-store-ma-commune-9x16.png",
+      "surface_target": ["play_store", "app_store", "sales_kit"],
+      "prompt": "Premium app-store hero illustration for a civic mobile app in French Guiana, close and highly readable duo of a warm municipal agent and a memorable tropical mascot, semi-realistic, cinematic warm light, polished rendering, elegant tropical palette, emotion of welcome and useful civic action, simplified premium background suitable for mobile store artwork, no text"
+    }
+  ]
+}
