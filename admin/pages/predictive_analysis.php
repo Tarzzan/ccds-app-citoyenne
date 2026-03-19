@@ -127,6 +127,7 @@ $servicePressure = $servicePressureStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $topSignal = $hotspots[0] ?? null;
 $daysFr = ['', 'Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+$predictiveHeroVisual = generated_visual_url('HERO-01');
 
 function coord_label(float $value, string $positive, string $negative): string
 {
@@ -136,23 +137,49 @@ function coord_label(float $value, string $positive, string $negative): string
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
-<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
-  <div>
-    <div class="text-small" style="text-transform:uppercase;letter-spacing:.16em;color:#7c8b78;">Lecture prospective</div>
-    <h2 style="margin:6px 0 8px;font-size:28px;font-weight:800;">Zones à surveiller en priorité</h2>
-    <p class="text-muted" style="max-width:780px;margin:0;">
-      Cette vue transforme l'historique des signalements en signaux opérationnels.
-      Elle aide à anticiper les secteurs à forte récurrence et à prioriser l'action publique.
+<div class="page-hero <?= $predictiveHeroVisual ? 'page-hero--with-visual' : '' ?>">
+  <div class="page-hero-copy">
+    <div class="page-hero-kicker">Lecture prospective</div>
+    <h2 class="page-hero-title">Zones à surveiller en priorité</h2>
+    <p class="page-hero-text">
+      Cette vue transforme l historique des signalements en signaux opérationnels.
+      Elle aide à anticiper les secteurs à forte récurrence et à prioriser l action publique.
     </p>
   </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <?php foreach ([30 => '30 j', 90 => '90 j', 180 => '180 j', 365 => '1 an'] as $option => $label): ?>
-      <a href="/admin/?page=predictive_analysis&window=<?= $option ?>"
-         class="btn btn-sm <?= $windowDays === $option ? 'btn-primary' : 'btn-outline' ?>">
-        <?= $label ?>
-      </a>
-    <?php endforeach; ?>
+  <div class="page-hero-metrics">
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= count($hotspots) ?></span>
+      <span class="hero-chip-label">zone(s) retenue(s)</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)count($servicePressure) ?></span>
+      <span class="hero-chip-label">service(s) sous tension</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$windowDays ?></span>
+      <span class="hero-chip-label">jours analyses</span>
+    </div>
   </div>
+  <?php if ($predictiveHeroVisual): ?>
+    <div class="page-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero">
+        <?= generated_visual_html('HERO-01', ['class' => 'generated-visual generated-visual--contain', 'label' => 'Lecture prospective']) ?>
+        <div class="generated-visual-caption">
+          <strong>Récurrence lisible</strong>
+          <span>La prediction reste une aide d arbitrage : repérer les zones chaudes, pas promettre une certitude artificielle.</span>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
+</div>
+
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+  <?php foreach ([30 => '30 j', 90 => '90 j', 180 => '180 j', 365 => '1 an'] as $option => $label): ?>
+    <a href="/admin/?page=predictive_analysis&window=<?= $option ?>"
+       class="btn btn-sm <?= $windowDays === $option ? 'btn-primary' : 'btn-outline' ?>">
+      <?= $label ?>
+    </a>
+  <?php endforeach; ?>
 </div>
 
 <?php if (!empty($topCategories)): ?>

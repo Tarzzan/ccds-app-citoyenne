@@ -218,6 +218,7 @@ function realtime_snapshot(PDO $db): array
 }
 
 $snapshot = realtime_snapshot($db);
+$realtimeHeroVisual = generated_visual_url('HERO-01');
 
 if (($_GET['format'] ?? '') === 'json') {
     header('Content-Type: application/json; charset=UTF-8');
@@ -228,18 +229,40 @@ if (($_GET['format'] ?? '') === 'json') {
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
-<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
-  <div>
-    <div class="text-small" style="text-transform:uppercase;letter-spacing:.16em;color:#7c8b78;">Veille opérationnelle</div>
-    <h2 style="margin:6px 0 8px;font-size:28px;font-weight:800;">Flux communal sur 24 heures</h2>
-    <p class="text-muted" style="max-width:760px;margin:0;">
+<div class="page-hero <?= $realtimeHeroVisual ? 'page-hero--with-visual' : '' ?>">
+  <div class="page-hero-copy">
+    <div class="page-hero-kicker">Veille operationnelle</div>
+    <h2 class="page-hero-title">Flux communal sur 24 heures</h2>
+    <p class="page-hero-text">
       Cette vue sert au pilotage rapide des incidents, interactions citoyennes et inscriptions récentes.
       Les données sont actualisées automatiquement depuis la base locale toutes les 20 secondes.
     </p>
   </div>
-  <div class="badge badge-green" id="live-status" style="padding:10px 14px;border-radius:999px;">
-    Synchronisé à <span id="live-time" style="margin-left:6px;font-weight:800;"><?= date('H:i:s') ?></span>
+  <div class="page-hero-metrics">
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$snapshot['summary']['incidents_today'] ?></span>
+      <span class="hero-chip-label">signalements aujourd hui</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$snapshot['summary']['resolved_today'] ?></span>
+      <span class="hero-chip-label">situations resolues</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value" id="live-time"><?= date('H:i:s') ?></span>
+      <span class="hero-chip-label">synchronise a l instant</span>
+    </div>
   </div>
+  <?php if ($realtimeHeroVisual): ?>
+    <div class="page-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero">
+        <?= generated_visual_html('HERO-01', ['class' => 'generated-visual generated-visual--contain', 'label' => 'Veille operationnelle']) ?>
+        <div class="generated-visual-caption">
+          <strong>Vue en mouvement</strong>
+          <span>La veille temps reel doit aider a capter vite les signaux qui montent sur le territoire.</span>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
 </div>
 
 <?php if (!empty($snapshot['top_categories'])): ?>
