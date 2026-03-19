@@ -23,6 +23,7 @@ $offset     = ($page_num - 1) * $per_page;
 $f_status   = $_GET['status']    ?? '';
 $f_cat      = $_GET['cat']       ?? '';
 $f_service  = $_GET['service']   ?? '';
+$f_plan     = $_GET['plan']      ?? '';
 $f_search   = trim($_GET['q']    ?? '');
 $f_priority = $_GET['priority']  ?? '';
 $f_date_from= trim($_GET['date_from'] ?? '');
@@ -41,6 +42,19 @@ $params = [];
 if ($f_status)    { $where[] = 'i.status = ?';                                    $params[] = $f_status; }
 if ($f_cat)       { $where[] = 'i.category_id = ?';                               $params[] = $f_cat; }
 if ($f_service && $service_tables_ready) { $where[] = 'COALESCE(planned_service.id, resolved_service.id) = ?';   $params[] = $f_service; }
+if ($f_plan && $planning_tables_ready) {
+    if ($f_plan === 'unplanned') {
+        $where[] = "((latest_plan.id IS NULL OR latest_plan.status = 'draft' OR latest_plan.scheduled_date IS NULL) AND i.status IN ('submitted', 'acknowledged', 'in_progress'))";
+    } elseif ($f_plan === 'scheduled') {
+        $where[] = "(latest_plan.status IN ('scheduled', 'rescheduled') AND latest_plan.scheduled_date IS NOT NULL AND latest_plan.scheduled_date >= CURDATE())";
+    } elseif ($f_plan === 'overdue') {
+        $where[] = "(latest_plan.status IN ('scheduled', 'rescheduled') AND latest_plan.scheduled_date IS NOT NULL AND latest_plan.scheduled_date < CURDATE())";
+    } elseif ($f_plan === 'in_progress') {
+        $where[] = "latest_plan.status = 'in_progress'";
+    } elseif ($f_plan === 'completed') {
+        $where[] = "(latest_plan.status = 'completed' OR i.status = 'resolved')";
+    }
+}
 if ($f_priority)  { $where[] = 'i.priority = ?';                                  $params[] = $f_priority; }
 if ($f_date_from) { $where[] = 'DATE(i.created_at) >= ?';                         $params[] = $f_date_from; }
 if ($f_date_to)   { $where[] = 'DATE(i.created_at) <= ?';                         $params[] = $f_date_to; }
@@ -176,6 +190,7 @@ $base_params = array_filter([
     'status'    => $f_status,
     'cat'       => $f_cat,
     'service'   => $f_service,
+    'plan'      => $f_plan,
     'priority'  => $f_priority,
     'q'         => $f_search,
     'date_from' => $f_date_from,
@@ -261,7 +276,7 @@ function incident_plan_summary(array $incident): ?string
     return $message !== '' ? $message : null;
 }
 
-$active_filters = array_filter([$f_status, $f_cat, $f_service, $f_search, $f_priority, $f_date_from, $f_date_to]);
+$active_filters = array_filter([$f_status, $f_cat, $f_service, $f_plan, $f_search, $f_priority, $f_date_from, $f_date_to]);
 $open_count = 0;
 $resolved_count = 0;
 foreach ($incidents as $inc) {
@@ -331,6 +346,16 @@ foreach ($incidents as $inc) {
               <?= e($service['name']) ?>
             </option>
           <?php endforeach; ?>
+        </select>
+      <?php endif; ?>
+      <?php if ($planning_tables_ready): ?>
+        <select name="plan" class="form-control">
+          <option value="">Toutes les interventions</option>
+          <option value="unplanned" <?= $f_plan === 'unplanned' ? 'selected' : '' ?>>A planifier</option>
+          <option value="scheduled" <?= $f_plan === 'scheduled' ? 'selected' : '' ?>>Prevues</option>
+          <option value="overdue" <?= $f_plan === 'overdue' ? 'selected' : '' ?>>En retard</option>
+          <option value="in_progress" <?= $f_plan === 'in_progress' ? 'selected' : '' ?>>En intervention</option>
+          <option value="completed" <?= $f_plan === 'completed' ? 'selected' : '' ?>>Terminees</option>
         </select>
       <?php endif; ?>
     </div>
