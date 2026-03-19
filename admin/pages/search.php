@@ -22,7 +22,18 @@ $total   = 0;
 
 if (strlen($query) >= 2) {
     $like = '%' . $query . '%';
-    $incidentScopeJoin = '';
+    $incidentScopeJoin = $service_tables_ready ? "
+        LEFT JOIN service_category_map scoped_scm ON scoped_scm.category_id = cat.id AND scoped_scm.is_default = 1
+        LEFT JOIN services mapped_service ON mapped_service.id = scoped_scm.service_id
+        LEFT JOIN intervention_plans latest_plan ON latest_plan.id = (
+            SELECT p2.id
+            FROM intervention_plans p2
+            WHERE p2.incident_id = i.id
+            ORDER BY p2.created_at DESC, p2.id DESC
+            LIMIT 1
+        )
+        LEFT JOIN services plan_service ON plan_service.id = latest_plan.service_id
+    " : '';
     $incidentScopeWhere = '';
     $categoryScopeJoin = '';
     $categoryScopeWhere = '';
@@ -30,16 +41,6 @@ if (strlen($query) >= 2) {
     if ($agent_is_scoped) {
         if (!empty($agent_service_scope_ids)) {
             $safeServiceIds = implode(',', array_map('intval', $agent_service_scope_ids));
-            $incidentScopeJoin = "
-                LEFT JOIN service_category_map scoped_scm ON scoped_scm.category_id = cat.id AND scoped_scm.is_default = 1
-                LEFT JOIN intervention_plans latest_plan ON latest_plan.id = (
-                    SELECT p2.id
-                    FROM intervention_plans p2
-                    WHERE p2.incident_id = i.id
-                    ORDER BY p2.created_at DESC, p2.id DESC
-                    LIMIT 1
-                )
-            ";
             $incidentScopeWhere = " AND COALESCE(latest_plan.service_id, scoped_scm.service_id) IN ($safeServiceIds)";
             $categoryScopeJoin = "JOIN service_category_map scoped_scm ON scoped_scm.category_id = c.id AND scoped_scm.is_default = 1";
             $categoryScopeWhere = " AND scoped_scm.service_id IN ($safeServiceIds)";
@@ -56,7 +57,24 @@ if (strlen($query) >= 2) {
     $stmtInc = $db->prepare("
         SELECT i.id, i.reference, i.title, i.status, i.votes_count, i.created_at,
                cat.name AS category_name, cat.icon AS category_icon,
-               u.full_name AS reporter_name
+               u.full_name AS reporter_name,
+               " . ($service_tables_ready ? "
+               COALESCE(plan_service.name, mapped_service.name) AS service_name,
+               latest_plan.status AS current_plan_status,
+               latest_plan.scheduled_date AS current_plan_date,
+               latest_plan.time_window_start AS current_plan_time_start,
+               latest_plan.time_window_end AS current_plan_time_end,
+               latest_plan.source_type AS current_plan_source_type,
+               latest_plan.provider_name AS current_plan_provider_name
+               " : "
+               NULL AS service_name,
+               NULL AS current_plan_status,
+               NULL AS current_plan_date,
+               NULL AS current_plan_time_start,
+               NULL AS current_plan_time_end,
+               NULL AS current_plan_source_type,
+               NULL AS current_plan_provider_name
+               ") . "
         FROM incidents i
         JOIN categories cat ON cat.id = i.category_id
         JOIN users u ON u.id = i.user_id
@@ -68,6 +86,11 @@ if (strlen($query) >= 2) {
     ");
     $stmtInc->execute([$like, $like, $like, $like]);
     $results['incidents'] = $stmtInc->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($results['incidents'] as &$incident) {
+        $visual = category_visual_resolve($incident['category_icon'] ?? null, $incident['category_name'] ?? null);
+        $incident['category_description'] = $visual['description'] ?? '';
+    }
+    unset($incident);
 
     if (!$agent_is_scoped) {
         $stmtUsr = $db->prepare("
@@ -96,6 +119,11 @@ if (strlen($query) >= 2) {
     ");
     $stmtCat->execute([$like]);
     $results['categories'] = $stmtCat->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($results['categories'] as &$category) {
+        $visual = category_visual_resolve($category['icon'] ?? null, $category['name'] ?? null);
+        $category['visual_description'] = $visual['description'] ?? '';
+    }
+    unset($category);
 
     $total = count($results['incidents']) + count($results['users']) + count($results['categories']);
 }
@@ -120,6 +148,17 @@ function search_status_color(string $status): string
         'resolved'     => '#2F7D50',
         'rejected'     => '#C94B3C',
     ][$status] ?? '#5E6C67';
+}
+
+function search_plan_label(?string $status): string
+{
+    return [
+        'scheduled'   => 'Prévue',
+        'rescheduled' => 'Reprogrammée',
+        'in_progress' => 'En intervention',
+        'completed'   => 'Terminée',
+        'cancelled'   => 'Annulée',
+    ][$status ?? ''] ?? 'A planifier';
 }
 
 require_once __DIR__ . '/../includes/layout.php';
@@ -243,6 +282,19 @@ require_once __DIR__ . '/../includes/layout.php';
   font-size: 13px;
   margin-top: 4px;
 }
+.result-sub-strong {
+  color: #355248;
+  font-weight: 700;
+}
+.result-sub-soft {
+  color: #7b857f;
+}
+.result-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
 .result-badge {
   padding: 4px 10px;
   border-radius: 999px;
@@ -296,11 +348,45 @@ require_once __DIR__ . '/../includes/layout.php';
         <?= category_visual_html($incident['category_icon'] ?? 'road', $incident['category_name'], 'sm') ?>
         <div class="result-main">
           <div class="result-title"><?= e($incident['reference']) ?> — <?= e($incident['title'] ?: 'Sans titre') ?></div>
-          <div class="result-sub"><?= e($incident['category_name']) ?> · <?= e($incident['reporter_name']) ?> · <?= format_date_short($incident['created_at']) ?></div>
+          <div class="result-sub">
+            <span class="result-sub-strong"><?= e($incident['category_name']) ?></span>
+            <?php if (!empty($incident['category_description'])): ?>
+              · <span class="result-sub-soft"><?= e($incident['category_description']) ?></span>
+            <?php endif; ?>
+          </div>
+          <div class="result-sub">
+            <?= e($incident['reporter_name']) ?> · <?= format_date_short($incident['created_at']) ?>
+            <?php if (!empty($incident['service_name'])): ?>
+              · <span class="result-sub-strong"><?= e($incident['service_name']) ?></span>
+            <?php endif; ?>
+          </div>
+          <?php if (!empty($incident['current_plan_status']) || !empty($incident['service_name'])): ?>
+            <div class="result-sub">
+              <span class="result-sub-soft">
+                <?= e(search_plan_label($incident['current_plan_status'] ?? null)) ?>
+                <?php if (!empty($incident['current_plan_source_type'])): ?>
+                  · <?= $incident['current_plan_source_type'] === 'provider'
+                    ? 'Prestataire' . (!empty($incident['current_plan_provider_name']) ? ' ' . e($incident['current_plan_provider_name']) : '')
+                    : 'Equipe interne' ?>
+                <?php endif; ?>
+                <?php if (!empty($incident['current_plan_date'])): ?>
+                  · <?= e($incident['current_plan_date']) ?>
+                <?php endif; ?>
+                <?php if (!empty($incident['current_plan_time_start']) || !empty($incident['current_plan_time_end'])): ?>
+                  · <?= e(trim(implode(' - ', array_filter([$incident['current_plan_time_start'] ?? null, $incident['current_plan_time_end'] ?? null])))) ?>
+                <?php endif; ?>
+              </span>
+            </div>
+          <?php endif; ?>
         </div>
-        <span class="result-badge" style="background:<?= search_status_color($incident['status']) ?>22;color:<?= search_status_color($incident['status']) ?>">
-          <?= e(search_status_label($incident['status'])) ?>
-        </span>
+        <div class="result-badges">
+          <span class="result-badge" style="background:<?= search_status_color($incident['status']) ?>22;color:<?= search_status_color($incident['status']) ?>">
+            <?= e(search_status_label($incident['status'])) ?>
+          </span>
+          <span class="result-badge" style="background:#eef3f1;color:#355248">
+            <?= e(search_plan_label($incident['current_plan_status'] ?? null)) ?>
+          </span>
+        </div>
       </a>
     <?php endforeach; ?>
   <?php endif; ?>
@@ -332,7 +418,12 @@ require_once __DIR__ . '/../includes/layout.php';
         <?= category_visual_html($category['icon'] ?? 'road', $category['name'], 'sm', $category['color'] ?? null) ?>
         <div class="result-main">
           <div class="result-title"><?= e($category['name']) ?></div>
-          <div class="result-sub"><?= (int)$category['incidents_count'] ?> signalement<?= ((int)$category['incidents_count']) > 1 ? 's' : '' ?></div>
+          <div class="result-sub">
+            <?= (int)$category['incidents_count'] ?> signalement<?= ((int)$category['incidents_count']) > 1 ? 's' : '' ?>
+            <?php if (!empty($category['visual_description'])): ?>
+              · <span class="result-sub-soft"><?= e($category['visual_description']) ?></span>
+            <?php endif; ?>
+          </div>
         </div>
         <span class="result-badge" style="background:<?= $category['is_active'] ? '#dcebdd' : '#efe7d7' ?>;color:<?= $category['is_active'] ? '#2f7d50' : '#8d958f' ?>">
           <?= $category['is_active'] ? 'Active' : 'Inactive' ?>
