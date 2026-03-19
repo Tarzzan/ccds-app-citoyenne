@@ -90,6 +90,23 @@ $forecastStmt = $db->prepare("
 $forecastStmt->execute();
 $forecastSlots = $forecastStmt->fetchAll(PDO::FETCH_ASSOC);
 
+$topCategoriesStmt = $db->prepare("
+    SELECT c.name, c.color, c.icon, COUNT(i.id) AS incident_count
+    FROM categories c
+    JOIN incidents i ON i.category_id = c.id
+    WHERE i.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    GROUP BY c.id
+    ORDER BY incident_count DESC, c.name ASC
+    LIMIT 4
+");
+$topCategoriesStmt->execute([$windowDays]);
+$topCategories = $topCategoriesStmt->fetchAll(PDO::FETCH_ASSOC);
+foreach ($topCategories as &$topCategory) {
+    $visual = category_visual_resolve($topCategory['icon'] ?? null, $topCategory['name'] ?? null);
+    $topCategory['visual_description'] = $visual['description'] ?? '';
+}
+unset($topCategory);
+
 $servicePressureStmt = $db->prepare("
     SELECT
         c.service,
@@ -137,6 +154,21 @@ require_once __DIR__ . '/../includes/layout.php';
     <?php endforeach; ?>
   </div>
 </div>
+
+<?php if (!empty($topCategories)): ?>
+  <div class="admin-category-strip" style="margin-bottom:18px;">
+    <?php foreach ($topCategories as $category): ?>
+      <div class="admin-category-pill">
+        <?= category_visual_html($category['icon'] ?? 'road', $category['name'], 'sm', $category['color'] ?? null) ?>
+        <div class="admin-category-pill-copy">
+          <strong><?= e($category['name']) ?></strong>
+          <span><?= e($category['visual_description'] ?: 'Categorie dominante sur la fenetre analysee') ?></span>
+        </div>
+        <span class="admin-category-pill-count admin-category-pill-count--wide"><?= (int)$category['incident_count'] ?> cas</span>
+      </div>
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
 
 <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:24px;align-items:start;margin-bottom:24px;">
   <div class="card" style="padding:24px;">
