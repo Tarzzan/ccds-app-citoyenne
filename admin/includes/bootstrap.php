@@ -39,6 +39,10 @@ function require_admin_auth(): array
         header('Location: /admin/?page=login');
         exit;
     }
+
+    $db = Database::getInstance();
+    $_SESSION['admin_user'] = admin_enrich_user_with_service_scope($db, $_SESSION['admin_user']);
+
     return $_SESSION['admin_user'];
 }
 
@@ -59,6 +63,54 @@ function require_admin_role(): void
 function current_admin(): ?array
 {
     return $_SESSION['admin_user'] ?? null;
+}
+
+function admin_enrich_user_with_service_scope(PDO $db, array $user): array
+{
+    if (empty($user['id']) || !admin_db_has_table($db, 'user_service_memberships')) {
+        $user['service_memberships'] = [];
+        $user['allowed_service_ids'] = [];
+        $user['primary_service_id'] = null;
+        $user['primary_service_name'] = null;
+        return $user;
+    }
+
+    $memberships = intervention_get_user_memberships($db, (int)$user['id']);
+    $allowedServiceIds = array_values(array_map(
+        static fn(array $membership): int => (int)$membership['service_id'],
+        array_filter($memberships, static fn(array $membership): bool => !empty($membership['service_id']))
+    ));
+    $primaryMembership = $memberships[0] ?? null;
+
+    $user['service_memberships'] = $memberships;
+    $user['allowed_service_ids'] = $allowedServiceIds;
+    $user['primary_service_id'] = $primaryMembership ? (int)$primaryMembership['service_id'] : null;
+    $user['primary_service_name'] = $primaryMembership['service_name'] ?? null;
+
+    return $user;
+}
+
+function admin_is_service_scoped_agent(array $user): bool
+{
+    return ($user['role'] ?? null) === 'agent' && !empty($user['allowed_service_ids']);
+}
+
+function admin_allowed_service_ids(array $user): array
+{
+    return array_values(array_map('intval', $user['allowed_service_ids'] ?? []));
+}
+
+function admin_has_service_access(array $user, ?int $serviceId): bool
+{
+    if (($user['role'] ?? null) === 'admin') {
+        return true;
+    }
+
+    if ($serviceId === null || $serviceId <= 0) {
+        return false;
+    }
+
+    return in_array($serviceId, admin_allowed_service_ids($user), true);
 }
 
 // ----------------------------------------------------------------

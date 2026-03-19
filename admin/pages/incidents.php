@@ -11,6 +11,9 @@ $active_nav = 'incidents';
 
 $db = Database::getInstance();
 $service_tables_ready = admin_db_has_table($db, 'services') && admin_db_has_table($db, 'service_category_map');
+$agent_service_scope_ids = $service_tables_ready ? admin_allowed_service_ids($admin) : [];
+$agent_is_scoped = $service_tables_ready && admin_is_service_scoped_agent($admin);
+$scope_notice = null;
 
 // --- Paramètres de filtre et pagination ---
 $per_page   = 20;
@@ -27,6 +30,10 @@ $f_sort     = in_array($_GET['sort'] ?? '', ['votes_count','updated_at','created
 $f_dir      = ($_GET['dir'] ?? 'DESC') === 'ASC' ? 'ASC' : 'DESC';
 $export_csv = isset($_GET['export']) && $_GET['export'] === 'csv';
 
+if ($agent_is_scoped && $f_service !== '' && !in_array((int)$f_service, $agent_service_scope_ids, true)) {
+    $f_service = (string)($admin['primary_service_id'] ?? $agent_service_scope_ids[0] ?? '');
+}
+
 // Construction de la clause WHERE
 $where  = ['1=1'];
 $params = [];
@@ -40,6 +47,21 @@ if ($f_search)    {
     $where[] = '(i.reference LIKE ? OR i.title LIKE ? OR i.description LIKE ? OR u.full_name LIKE ? OR u.email LIKE ?)';
     $like = "%$f_search%";
     $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like;
+}
+if ($agent_is_scoped) {
+    if (!empty($agent_service_scope_ids)) {
+        $placeholders = implode(',', array_fill(0, count($agent_service_scope_ids), '?'));
+        $where[] = "resolved_service.id IN ($placeholders)";
+        foreach ($agent_service_scope_ids as $serviceId) {
+            $params[] = $serviceId;
+        }
+        $scope_notice = $admin['primary_service_name']
+            ? 'Votre file est limitee au service ' . $admin['primary_service_name'] . '.'
+            : 'Votre file est limitee a vos services rattaches.';
+    } else {
+        $where[] = '1 = 0';
+        $scope_notice = 'Aucun service ne vous est encore attribue. Cette file restera vide tant que le rattachement n est pas renseigne.';
+    }
 }
 $where_sql = implode(' AND ', $where);
 
@@ -111,6 +133,9 @@ if ($export_csv) {
 // Catégories pour le filtre
 $categories = $db->query("SELECT id, name FROM categories ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 $services = $service_tables_ready ? intervention_get_services($db) : [];
+if ($agent_is_scoped && !empty($agent_service_scope_ids)) {
+    $services = array_values(array_filter($services, static fn(array $service): bool => in_array((int)$service['id'], $agent_service_scope_ids, true)));
+}
 
 require_once __DIR__ . '/../includes/layout.php';
 
@@ -178,6 +203,9 @@ foreach ($incidents as $inc) {
 
 <!-- Filtres avancés v1.2 -->
 <div class="card" style="padding:16px 24px;margin-bottom:16px;">
+  <?php if ($scope_notice): ?>
+    <div class="alert alert-info" style="margin-bottom:12px"><?= e($scope_notice) ?></div>
+  <?php endif; ?>
   <form method="GET" action="" id="filter-form">
     <input type="hidden" name="page" value="incidents">
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;">

@@ -11,18 +11,48 @@ $db = Database::getInstance();
 $service_tables_ready = admin_db_has_table($db, 'services')
     && admin_db_has_table($db, 'service_category_map')
     && admin_db_has_table($db, 'intervention_plans');
+$agent_service_scope_ids = $service_tables_ready ? admin_allowed_service_ids($admin) : [];
+$agent_is_scoped = $service_tables_ready && admin_is_service_scoped_agent($admin);
+$scope_notice = null;
+$incident_scope_join = '';
+$incident_scope_where = '';
+$service_scope_where = '';
+$scoped_incidents_link = '/admin/?page=incidents';
+
+if ($agent_is_scoped) {
+    if (!empty($agent_service_scope_ids)) {
+        $safeServiceIds = implode(',', array_map('intval', $agent_service_scope_ids));
+        $incident_scope_join = "
+            JOIN categories scoped_category ON scoped_category.id = incidents.category_id
+            JOIN service_category_map scoped_service_map ON scoped_service_map.category_id = scoped_category.id AND scoped_service_map.is_default = 1
+        ";
+        $incident_scope_where = "WHERE scoped_service_map.service_id IN ($safeServiceIds)";
+        $service_scope_where = "WHERE s.id IN ($safeServiceIds)";
+        $scope_notice = $admin['primary_service_name']
+            ? 'Votre tableau de bord est limite au service ' . $admin['primary_service_name'] . '.'
+            : 'Votre tableau de bord est limite a vos services rattaches.';
+        $scoped_incidents_link = '/admin/?page=incidents&service=' . (int)($admin['primary_service_id'] ?? $agent_service_scope_ids[0]);
+    } else {
+        $incident_scope_join = '';
+        $incident_scope_where = 'WHERE 1 = 0';
+        $service_scope_where = 'WHERE 1 = 0';
+        $scope_notice = 'Aucun service ne vous est encore attribue. Les indicateurs restent vides tant que votre rattachement n est pas renseigne.';
+    }
+}
 
 // --- KPIs globaux ---
 $kpis = $db->query("
     SELECT
         COUNT(*)                                              AS total,
-        SUM(status = 'submitted')                            AS submitted,
-        SUM(status = 'in_progress')                          AS in_progress,
-        SUM(status = 'resolved')                             AS resolved,
-        SUM(status = 'rejected')                             AS rejected,
-        SUM(DATE(created_at) = CURDATE())                    AS today,
-        SUM(created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY))   AS week
+        SUM(incidents.status = 'submitted')                            AS submitted,
+        SUM(incidents.status = 'in_progress')                          AS in_progress,
+        SUM(incidents.status = 'resolved')                             AS resolved,
+        SUM(incidents.status = 'rejected')                             AS rejected,
+        SUM(DATE(incidents.created_at) = CURDATE())                    AS today,
+        SUM(incidents.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY))   AS week
     FROM incidents
+    $incident_scope_join
+    $incident_scope_where
 ")->fetch(PDO::FETCH_ASSOC);
 
 // --- Répartition par catégorie ---
@@ -30,15 +60,20 @@ $by_cat = $db->query("
     SELECT c.name, c.color, c.icon, COUNT(i.id) AS cnt
     FROM categories c
     LEFT JOIN incidents i ON i.category_id = c.id
+    " . ($agent_is_scoped
+        ? "JOIN service_category_map scoped_service_map ON scoped_service_map.category_id = c.id AND scoped_service_map.is_default = 1
+           WHERE scoped_service_map.service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")"
+        : '') . "
     GROUP BY c.id ORDER BY cnt DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // --- Évolution sur 14 jours ---
 $evolution = $db->query("
-    SELECT DATE(created_at) AS day, COUNT(*) AS cnt
+    SELECT DATE(incidents.created_at) AS day, COUNT(*) AS cnt
     FROM incidents
-    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
-    GROUP BY DATE(created_at)
+    $incident_scope_join
+    " . ($incident_scope_where === '' ? 'WHERE' : $incident_scope_where . ' AND') . " incidents.created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+    GROUP BY DATE(incidents.created_at)
     ORDER BY day ASC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -50,6 +85,12 @@ $recent = $db->query("
     FROM incidents i
     JOIN categories c ON c.id = i.category_id
     JOIN users u ON u.id = i.user_id
+    " . ($agent_is_scoped
+        ? "JOIN service_category_map scoped_service_map ON scoped_service_map.category_id = c.id AND scoped_service_map.is_default = 1"
+        : '') . "
+    " . ($agent_is_scoped
+        ? "WHERE scoped_service_map.service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")"
+        : '') . "
     ORDER BY i.created_at DESC
     LIMIT 10
 ")->fetchAll(PDO::FETCH_ASSOC);
@@ -112,9 +153,9 @@ if ($service_tables_ready) {
     try {
         $serviceSignals = array_merge($serviceSignals, $db->query("
             SELECT
-                (SELECT COUNT(*) FROM services WHERE is_active = 1) AS services_active,
-                (SELECT COUNT(*) FROM intervention_plans WHERE status IN ('scheduled', 'rescheduled', 'in_progress') AND scheduled_date = CURDATE()) AS plans_today,
-                (SELECT COUNT(*) FROM intervention_plans WHERE status IN ('scheduled', 'rescheduled') AND scheduled_date IS NOT NULL AND scheduled_date < CURDATE()) AS overdue_plans,
+                (SELECT COUNT(*) FROM services " . ($agent_is_scoped ? "WHERE id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ") AND is_active = 1" : "WHERE is_active = 1") . ") AS services_active,
+                (SELECT COUNT(*) FROM intervention_plans WHERE status IN ('scheduled', 'rescheduled', 'in_progress') AND scheduled_date = CURDATE() " . ($agent_is_scoped ? "AND service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . ") AS plans_today,
+                (SELECT COUNT(*) FROM intervention_plans WHERE status IN ('scheduled', 'rescheduled') AND scheduled_date IS NOT NULL AND scheduled_date < CURDATE() " . ($agent_is_scoped ? "AND service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . ") AS overdue_plans,
                 (
                     SELECT COUNT(*)
                     FROM incidents i
@@ -126,6 +167,7 @@ if ($service_tables_ready) {
                         GROUP BY incident_id
                     ) planned_lookup ON planned_lookup.incident_id = i.id
                     WHERE i.status IN ('submitted', 'acknowledged', 'in_progress')
+                      " . ($agent_is_scoped ? "AND scm.service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . "
                       AND planned_lookup.plan_id IS NULL
                 ) AS unplanned_open
         ")->fetch(PDO::FETCH_ASSOC) ?: []);
@@ -143,6 +185,7 @@ if ($service_tables_ready) {
             LEFT JOIN incidents i ON i.category_id = c.id
             LEFT JOIN intervention_plans p ON p.service_id = s.id
             WHERE s.is_active = 1
+            " . ($agent_is_scoped ? "AND s.id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . "
             GROUP BY s.id
             ORDER BY overdue_plans_count DESC, open_incidents_count DESC, active_plans_count DESC, s.name ASC
             LIMIT 4
@@ -196,6 +239,10 @@ require_once __DIR__ . '/../includes/layout.php';
   <?php endif; ?>
 </div>
 
+<?php if ($scope_notice): ?>
+<div class="alert alert-info" style="margin-bottom:16px;"><?= e($scope_notice) ?></div>
+<?php endif; ?>
+
 <div class="admin-guidance-grid">
   <div class="admin-guidance-card">
     <div class="admin-guidance-kicker">Lecture du jour</div>
@@ -211,7 +258,7 @@ require_once __DIR__ . '/../includes/layout.php';
       Le back-office doit servir a trois gestes simples : ouvrir la bonne fiche, publier une information communale utile, puis rendre l execution lisible.
     </p>
     <div class="admin-quick-links">
-      <a href="/admin/?page=incidents" class="btn btn-primary btn-sm">Ouvrir la file</a>
+      <a href="<?= e($scoped_incidents_link) ?>" class="btn btn-primary btn-sm">Ouvrir la file</a>
       <a href="/admin/?page=polls" class="btn btn-outline btn-sm">Lancer une consultation</a>
       <a href="/admin/?page=events" class="btn btn-outline btn-sm">Publier un rendez-vous</a>
     </div>
@@ -255,7 +302,7 @@ require_once __DIR__ . '/../includes/layout.php';
     <span class="card-title">🧭 Charge par service</span>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <a href="/admin/?page=services" class="btn btn-outline btn-sm">Voir les services</a>
-      <a href="/admin/?page=incidents" class="btn btn-outline btn-sm">Voir toute la file</a>
+      <a href="<?= e($scoped_incidents_link) ?>" class="btn btn-outline btn-sm">Voir la file</a>
     </div>
   </div>
   <?php if (empty($serviceWorkload)): ?>
@@ -462,7 +509,7 @@ require_once __DIR__ . '/../includes/layout.php';
 <div class="card">
   <div class="card-header">
     <span class="card-title">🕐 Derniers signalements</span>
-    <a href="/admin/?page=incidents" class="btn btn-outline btn-sm">Voir tout →</a>
+    <a href="<?= e($scoped_incidents_link) ?>" class="btn btn-outline btn-sm">Voir tout →</a>
   </div>
   <div class="table-wrapper">
     <table>

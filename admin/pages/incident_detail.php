@@ -71,6 +71,14 @@ $service_context = intervention_get_incident_service_context(
     isset($inc['category_id']) ? (int)$inc['category_id'] : null,
     $inc['service'] ?? null
 );
+
+if (admin_is_service_scoped_agent($admin)) {
+    $incidentServiceId = !empty($service_context['service_id']) ? (int)$service_context['service_id'] : null;
+    if (!$incidentServiceId || !admin_has_service_access($admin, $incidentServiceId)) {
+        render_error(403, 'Ce dossier ne fait pas partie de votre perimetre de service.');
+    }
+}
+
 $current_plan = $service_tables_ready ? intervention_get_current_plan($db, $id) : null;
 $service_history = $service_tables_ready ? intervention_get_history($db, $id, false) : [];
 
@@ -197,6 +205,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        if (admin_is_service_scoped_agent($admin) && !admin_has_service_access($admin, $service_id)) {
+            $_SESSION['flash_error'] = 'Vous ne pouvez planifier que dans votre perimetre de service.';
+            header("Location: /admin/?page=incident_detail&id=$id");
+            exit;
+        }
+
         if ($scheduled_date === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $scheduled_date)) {
             $_SESSION['flash_error'] = 'La date planifiee est obligatoire.';
             header("Location: /admin/?page=incident_detail&id=$id");
@@ -217,6 +231,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $service = $service_stmt->fetch(PDO::FETCH_ASSOC);
             if (!$service) {
                 throw new RuntimeException('Service introuvable.');
+            }
+
+            if ($assigned_user_id > 0) {
+                $assignedMemberships = intervention_get_user_memberships($db, $assigned_user_id);
+                $assignedInService = false;
+                foreach ($assignedMemberships as $membership) {
+                    if ((int)$membership['service_id'] === $service_id) {
+                        $assignedInService = true;
+                        break;
+                    }
+                }
+
+                if (!$assignedInService) {
+                    throw new RuntimeException('L agent assigne doit etre rattache au service selectionne.');
+                }
             }
 
             $existing_plan = intervention_get_current_plan($db, $id);

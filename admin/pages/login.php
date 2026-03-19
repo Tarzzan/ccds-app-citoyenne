@@ -29,12 +29,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $passwordOk = $user && $passwordHash ? password_verify($password, $passwordHash) : false;
 
             if ($passwordOk) {
-                $_SESSION['admin_user'] = [
+                $sessionUser = [
                     'id'        => $user['id'],
                     'email'     => $user['email'],
                     'full_name' => $user['full_name'],
                     'role'      => $user['role'],
                 ];
+                $_SESSION['admin_user'] = admin_enrich_user_with_service_scope($db, $sessionUser);
                 // Le schéma local n'expose pas toujours last_login.
                 try {
                     $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")->execute([$user['id']]);

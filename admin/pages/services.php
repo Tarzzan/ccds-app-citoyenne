@@ -18,6 +18,9 @@ $db         = Database::getInstance();
 $tablesReady = admin_db_has_table($db, 'services')
     && admin_db_has_table($db, 'service_category_map')
     && admin_db_has_table($db, 'user_service_memberships');
+$agent_service_scope_ids = admin_allowed_service_ids($admin);
+$agent_is_scoped = admin_is_service_scoped_agent($admin);
+$scope_notice = null;
 
 if (!$tablesReady) {
     $_SESSION['flash_error'] = "Le socle services n'est pas encore disponible sur cet environnement.";
@@ -131,6 +134,21 @@ $services = $db->query("
     ORDER BY s.is_active DESC, s.name ASC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
+if ($agent_is_scoped) {
+    if (!empty($agent_service_scope_ids)) {
+        $services = array_values(array_filter(
+            $services,
+            static fn(array $service): bool => in_array((int)$service['id'], $agent_service_scope_ids, true)
+        ));
+        $scope_notice = $admin['primary_service_name']
+            ? 'Votre pilotage est limite au service ' . $admin['primary_service_name'] . '.'
+            : 'Votre pilotage est limite a vos services rattaches.';
+    } else {
+        $services = [];
+        $scope_notice = 'Aucun service ne vous est encore attribue. Cette vue restera vide tant que le rattachement n est pas renseigne.';
+    }
+}
+
 $detailService = null;
 $serviceCategories = [];
 $serviceMembers = [];
@@ -144,6 +162,10 @@ if (isset($_GET['detail'])) {
             $detailService = $service;
             break;
         }
+    }
+
+    if ($detailId > 0 && $agent_is_scoped && !$detailService) {
+        render_error(403, 'Ce service ne fait pas partie de votre perimetre.');
     }
 
     if ($detailService) {
@@ -425,6 +447,10 @@ require_once __DIR__ . '/../includes/layout.php';
     Cette page donne enfin une lecture exploitable du dispositif métier : qui porte quoi, quelle charge est ouverte et quels services structurent la réponse communale.
   </div>
 </div>
+
+<?php if ($scope_notice): ?>
+  <div class="alert alert-info" style="margin:16px 0 0"><?= e($scope_notice) ?></div>
+<?php endif; ?>
 
 <div class="services-grid">
   <div class="services-kpi"><strong><?= (int)$kpis['total'] ?></strong><span>services configurés</span></div>
