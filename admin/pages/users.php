@@ -439,15 +439,23 @@ function users_sort_url(string $column, string $currentSort, string $currentDir,
 }
 
 require_once __DIR__ . '/../includes/layout.php';
+$usersHeroVisual = generated_visual_url('CHAR-05');
 ?>
 <style>
 .users-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
   background: linear-gradient(135deg, #0e3127 0%, #174b3a 56%, #2d6f86 100%);
   color: #fff;
   border-radius: 28px;
   padding: 28px;
   margin-bottom: 24px;
   box-shadow: 0 18px 38px rgba(14, 49, 39, .16);
+}
+.users-hero--with-visual {
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  align-items: center;
 }
 .users-kicker {
   font-size: 11px;
@@ -467,6 +475,13 @@ require_once __DIR__ . '/../includes/layout.php';
 .users-text {
   color: rgba(255,255,255,.84);
   max-width: 640px;
+}
+.users-hero-copy {
+  min-width: 0;
+}
+.users-hero-visual {
+  justify-self: end;
+  width: 100%;
 }
 .users-grid {
   display: grid;
@@ -696,20 +711,36 @@ require_once __DIR__ . '/../includes/layout.php';
   margin-top: 4px;
 }
 @media (max-width: 768px) {
+  .users-hero--with-visual {
+    grid-template-columns: 1fr;
+  }
   .user-detail-grid {
     grid-template-columns: 1fr;
   }
 }
 </style>
 
-<div class="users-hero">
-  <div class="users-kicker">Administration des comptes</div>
-  <div class="users-title"><?= $agentIsScoped ? 'Annuaire operationnel du service' : 'Suivre les citoyens, agents et administrateurs' ?></div>
-  <div class="users-text">
-    <?= $agentIsScoped
-        ? 'Cette vue rassemble les comptes utiles a votre perimetre de service. Elle reste consultative pour permettre un suivi terrain sans ouvrir la gouvernance globale.'
-        : 'Cette page centralise les comptes actifs du dispositif afin de verifier l activite, suivre l engagement et gerer les acces au service.' ?>
+<div class="users-hero <?= $usersHeroVisual ? 'users-hero--with-visual' : '' ?>">
+  <div class="users-hero-copy">
+    <div class="users-kicker">Administration des comptes</div>
+    <div class="users-title"><?= $agentIsScoped ? 'Annuaire operationnel du service' : 'Suivre les citoyens, agents et administrateurs' ?></div>
+    <div class="users-text">
+      <?= $agentIsScoped
+          ? 'Cette vue rassemble les comptes utiles a votre perimetre de service. Elle reste consultative pour permettre un suivi terrain sans ouvrir la gouvernance globale.'
+          : 'Cette page centralise les comptes actifs du dispositif afin de verifier l activite, suivre l engagement et gerer les acces au service.' ?>
+    </div>
   </div>
+  <?php if ($usersHeroVisual): ?>
+    <div class="users-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero">
+        <?= generated_visual_html('CHAR-05', ['class' => 'generated-visual generated-visual--portrait', 'label' => 'Gestion des comptes']) ?>
+        <div class="generated-visual-caption">
+          <strong>Acces lisibles</strong>
+          <span>Le suivi des comptes doit aider a comprendre qui agit, dans quel perimetre, sans alourdir la gouvernance.</span>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
 </div>
 
 <?php if ($scopeNotice): ?>
