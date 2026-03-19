@@ -169,12 +169,15 @@ Le bon positionnement est :
 - `scripts/check_category_visuals.sh` : controle que le catalogue categories, les PNG generes et le mapping mobile restent alignes
 - `scripts/build_visual_production_index.py` : compile les batches visuels en index Markdown et HTML sous `assets/visual-production/generated`
 - `scripts/check_visual_production_batches.sh` : controle la coherence des batches visuels, des IDs d assets et du manifeste de production
+- `scripts/install_visual_asset_drop.py` : installe un drop de visuels générés dans les cibles mobile, admin, site et la trace locale de référence
+- `scripts/check_installed_visual_assets.sh` : controle qu un lot de visuels installés est bien présent sur les trois surfaces et tracé dans le manifeste généré
 - `assets/category-visuals/index.html` : apercu HTML de la collection visuelle des categories
 - `assets/visual-production/visual-production-manifest.json` : manifeste machine lisible des pistes personnages, categories et ordre de production visuelle
 - `assets/visual-production/character-batch-01.json` : premier batch machine lisible de generation personnages
 - `assets/visual-production/terrain-batch-01.json` : premier batch machine lisible de generation des scenes terrain
 - `assets/visual-production/moments-batch-01.json` : premier batch machine lisible des moments produit
 - `assets/visual-production/hero-batch-01.json` : premier batch machine lisible des visuels hero commerciaux
+- `docs/PIPELINE_INTEGRATION_ASSETS_GENERES_MA_COMMUNE_2026-03-18.md` : pipeline d ingestion des futurs visuels générés
 
 ## Commandes Utiles
 
@@ -221,6 +224,13 @@ La regeneration alimente aussi `mobile/assets/category-visuals/category-visuals.
 ```bash
 python3 scripts/build_visual_production_index.py
 bash scripts/check_visual_production_batches.sh
+```
+
+Pour installer un vrai drop généré :
+
+```bash
+python3 scripts/install_visual_asset_drop.py /chemin/vers/le/drop
+bash scripts/check_installed_visual_assets.sh
 ```
 
 Voir aussi :
