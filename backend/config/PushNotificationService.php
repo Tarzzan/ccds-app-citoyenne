@@ -65,7 +65,9 @@ class PushNotificationService
         }
 
         // Enregistrer en base
-        $this->saveNotification($incident['user_id'], $incident_id, 'status_change', $title, $body);
+        if (!$this->saveNotification($incident['user_id'], $incident_id, 'status_change', $title, $body)) {
+            return;
+        }
 
         // Envoyer la push
         $this->sendToUser($incident['user_id'], $title, $body, [
@@ -91,7 +93,9 @@ class PushNotificationService
         $title = "Nouveau commentaire sur votre signalement";
         $body  = "{$commenter_name} a commenté votre signalement \"{$incident['title']}\".";
 
-        $this->saveNotification($incident['user_id'], $incident_id, 'new_comment', $title, $body);
+        if (!$this->saveNotification($incident['user_id'], $incident_id, 'new_comment', $title, $body)) {
+            return;
+        }
         $this->sendToUser($incident['user_id'], $title, $body, [
             'type'        => 'new_comment',
             'incident_id' => $incident_id,
@@ -150,7 +154,9 @@ class PushNotificationService
 
         $body = implode(' ', array_filter($bodyParts));
 
-        $this->saveNotification($incident['user_id'], $incident_id, 'intervention_plan', $title, $body);
+        if (!$this->saveNotification($incident['user_id'], $incident_id, 'intervention_plan', $title, $body)) {
+            return;
+        }
         $this->sendToUser($incident['user_id'], $title, $body, [
             'type' => 'intervention_plan',
             'incident_id' => $incident_id,
@@ -226,7 +232,9 @@ class PushNotificationService
 
         $body = implode(' ', array_filter($bodyParts));
 
-        $this->saveNotification($incident['user_id'], $incident_id, 'intervention_update', $title, $body);
+        if (!$this->saveNotification($incident['user_id'], $incident_id, 'intervention_update', $title, $body)) {
+            return;
+        }
         $this->sendToUser($incident['user_id'], $title, $body, [
             'type' => 'intervention_update',
             'incident_id' => $incident_id,
@@ -278,13 +286,36 @@ class PushNotificationService
     /**
      * Sauvegarder une notification en base de données
      */
-    private function saveNotification(int $user_id, int $incident_id, string $type, string $title, string $body): void
+    private function saveNotification(int $user_id, int $incident_id, string $type, string $title, string $body): bool
     {
+        if ($this->notificationExistsRecently($user_id, $incident_id, $type, $title, $body)) {
+            return false;
+        }
+
         $stmt = $this->db->prepare("
             INSERT INTO notifications (user_id, incident_id, type, title, body)
             VALUES (?, ?, ?, ?, ?)
         ");
         $stmt->execute([$user_id, $incident_id, $type, $title, $body]);
+        return true;
+    }
+
+    private function notificationExistsRecently(int $user_id, int $incident_id, string $type, string $title, string $body): bool
+    {
+        $stmt = $this->db->prepare("
+            SELECT 1
+            FROM notifications
+            WHERE user_id = ?
+              AND incident_id = ?
+              AND type = ?
+              AND title = ?
+              AND body = ?
+              AND sent_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+            LIMIT 1
+        ");
+        $stmt->execute([$user_id, $incident_id, $type, $title, $body]);
+
+        return (bool)$stmt->fetchColumn();
     }
 
     private function formatFrenchDate(?string $isoDate): ?string
