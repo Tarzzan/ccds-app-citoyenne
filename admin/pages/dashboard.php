@@ -113,6 +113,8 @@ $serviceSignals = [
     'plans_today' => 0,
     'overdue_plans' => 0,
     'unplanned_open' => 0,
+    'internal_active_plans' => 0,
+    'provider_active_plans' => 0,
 ];
 $serviceWorkload = [];
 
@@ -156,6 +158,8 @@ if ($service_tables_ready) {
                 (SELECT COUNT(*) FROM services " . ($agent_is_scoped ? "WHERE id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ") AND is_active = 1" : "WHERE is_active = 1") . ") AS services_active,
                 (SELECT COUNT(*) FROM intervention_plans WHERE status IN ('scheduled', 'rescheduled', 'in_progress') AND scheduled_date = CURDATE() " . ($agent_is_scoped ? "AND service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . ") AS plans_today,
                 (SELECT COUNT(*) FROM intervention_plans WHERE status IN ('scheduled', 'rescheduled') AND scheduled_date IS NOT NULL AND scheduled_date < CURDATE() " . ($agent_is_scoped ? "AND service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . ") AS overdue_plans,
+                (SELECT COUNT(*) FROM intervention_plans WHERE status IN ('scheduled', 'rescheduled', 'in_progress') AND (source_type = 'internal' OR source_type IS NULL) " . ($agent_is_scoped ? "AND service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . ") AS internal_active_plans,
+                (SELECT COUNT(*) FROM intervention_plans WHERE status IN ('scheduled', 'rescheduled', 'in_progress') AND source_type = 'provider' " . ($agent_is_scoped ? "AND service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . ") AS provider_active_plans,
                 (
                     SELECT COUNT(*)
                     FROM incidents i
@@ -178,6 +182,8 @@ if ($service_tables_ready) {
                 s.name,
                 COUNT(DISTINCT CASE WHEN i.status IN ('submitted', 'acknowledged', 'in_progress') THEN i.id END) AS open_incidents_count,
                 COUNT(DISTINCT CASE WHEN p.status IN ('scheduled', 'rescheduled', 'in_progress') THEN p.id END) AS active_plans_count,
+                COUNT(DISTINCT CASE WHEN p.status IN ('scheduled', 'rescheduled', 'in_progress') AND (p.source_type = 'internal' OR p.source_type IS NULL) THEN p.id END) AS active_internal_plans_count,
+                COUNT(DISTINCT CASE WHEN p.status IN ('scheduled', 'rescheduled', 'in_progress') AND p.source_type = 'provider' THEN p.id END) AS active_provider_plans_count,
                 COUNT(DISTINCT CASE WHEN p.status IN ('scheduled', 'rescheduled') AND p.scheduled_date IS NOT NULL AND p.scheduled_date < CURDATE() THEN p.id END) AS overdue_plans_count
             FROM services s
             LEFT JOIN service_category_map scm ON scm.service_id = s.id
@@ -196,6 +202,8 @@ if ($service_tables_ready) {
             'plans_today' => 0,
             'overdue_plans' => 0,
             'unplanned_open' => 0,
+            'internal_active_plans' => 0,
+            'provider_active_plans' => 0,
         ];
         $serviceWorkload = [];
     }
@@ -295,6 +303,20 @@ require_once __DIR__ . '/../includes/layout.php';
       <div class="stat-label">Dossiers ouverts sans plan</div>
     </div>
   </div>
+  <div class="stat-card">
+    <div class="stat-icon leaf">🛠️</div>
+    <div>
+      <div class="stat-value"><?= (int)$serviceSignals['internal_active_plans'] ?></div>
+      <div class="stat-label">Interventions équipe interne</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon sand">🤝</div>
+    <div>
+      <div class="stat-value"><?= (int)$serviceSignals['provider_active_plans'] ?></div>
+      <div class="stat-label">Interventions prestataire</div>
+    </div>
+  </div>
 </div>
 
 <div class="card" style="margin-bottom:24px;">
@@ -326,6 +348,8 @@ require_once __DIR__ . '/../includes/layout.php';
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
             <span class="badge badge-gray"><?= (int)$service['active_plans_count'] ?> plan(s) actif(s)</span>
+            <span class="badge badge-blue"><?= (int)$service['active_internal_plans_count'] ?> équipe interne</span>
+            <span class="badge badge-purple"><?= (int)$service['active_provider_plans_count'] ?> prestataire</span>
             <a href="/admin/?page=services&detail=<?= (int)$service['id'] ?>" class="btn btn-outline btn-sm">Piloter</a>
             <a href="/admin/?page=incidents&service=<?= (int)$service['id'] ?>" class="btn btn-outline btn-sm">Ouvrir la file</a>
           </div>

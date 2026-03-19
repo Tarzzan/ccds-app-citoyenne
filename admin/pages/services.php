@@ -108,6 +108,14 @@ $services = $db->query("
         COUNT(DISTINCT CASE WHEN p.status IN ('scheduled', 'rescheduled', 'in_progress') THEN p.id END) AS active_plans_count,
         COUNT(DISTINCT CASE
             WHEN p.status IN ('scheduled', 'rescheduled', 'in_progress')
+             AND (p.source_type = 'internal' OR p.source_type IS NULL)
+            THEN p.id END) AS active_internal_plans_count,
+        COUNT(DISTINCT CASE
+            WHEN p.status IN ('scheduled', 'rescheduled', 'in_progress')
+             AND p.source_type = 'provider'
+            THEN p.id END) AS active_provider_plans_count,
+        COUNT(DISTINCT CASE
+            WHEN p.status IN ('scheduled', 'rescheduled', 'in_progress')
              AND p.scheduled_date = CURDATE()
             THEN p.id END) AS plans_today_count,
         COUNT(DISTINCT CASE
@@ -202,6 +210,8 @@ if (isset($_GET['detail'])) {
                 p.scheduled_date,
                 p.time_window_start,
                 p.time_window_end,
+                p.source_type,
+                p.provider_name,
                 i.id AS incident_id,
                 i.reference,
                 i.title,
@@ -235,6 +245,8 @@ if (isset($_GET['detail'])) {
                 plan.scheduled_date,
                 plan.time_window_start,
                 plan.time_window_end,
+                plan.source_type AS current_plan_source_type,
+                plan.provider_name AS current_plan_provider_name,
                 assignee.full_name AS assigned_user_name
             FROM incidents i
             JOIN categories c ON c.id = i.category_id
@@ -271,6 +283,8 @@ $kpis = [
     'active' => count(array_filter($services, static fn(array $s): bool => (int)$s['is_active'] === 1)),
     'open_incidents' => array_sum(array_map(static fn(array $s): int => (int)$s['open_incidents_count'], $services)),
     'active_plans' => array_sum(array_map(static fn(array $s): int => (int)$s['active_plans_count'], $services)),
+    'active_internal_plans' => array_sum(array_map(static fn(array $s): int => (int)$s['active_internal_plans_count'], $services)),
+    'active_provider_plans' => array_sum(array_map(static fn(array $s): int => (int)$s['active_provider_plans_count'], $services)),
     'plans_today' => array_sum(array_map(static fn(array $s): int => (int)$s['plans_today_count'], $services)),
     'overdue_plans' => array_sum(array_map(static fn(array $s): int => (int)$s['overdue_plans_count'], $services)),
 ];
@@ -457,6 +471,8 @@ require_once __DIR__ . '/../includes/layout.php';
   <div class="services-kpi"><strong><?= (int)$kpis['active'] ?></strong><span>services actifs</span></div>
   <div class="services-kpi"><strong><?= (int)$kpis['open_incidents'] ?></strong><span>dossiers ouverts via planification</span></div>
   <div class="services-kpi"><strong><?= (int)$kpis['active_plans'] ?></strong><span>interventions planifiées</span></div>
+  <div class="services-kpi"><strong><?= (int)$kpis['active_internal_plans'] ?></strong><span>prises en charge en équipe interne</span></div>
+  <div class="services-kpi"><strong><?= (int)$kpis['active_provider_plans'] ?></strong><span>missions prestataire en cours</span></div>
 </div>
 
 <div class="services-alert-band">
@@ -489,6 +505,8 @@ require_once __DIR__ . '/../includes/layout.php';
               <span class="services-mini-badge"><?= (int)$service['categories_count'] ?> catégorie(s)</span>
               <span class="services-mini-badge"><?= (int)$service['members_count'] ?> membre(s)</span>
               <span class="services-mini-badge"><?= (int)$service['active_plans_count'] ?> plan(s) actif(s)</span>
+              <span class="services-mini-badge"><?= (int)$service['active_internal_plans_count'] ?> équipe interne</span>
+              <span class="services-mini-badge"><?= (int)$service['active_provider_plans_count'] ?> prestataire</span>
               <span class="services-mini-badge"><?= (int)$service['open_incidents_count'] ?> dossier(s) ouvert(s)</span>
             </div>
           </div>
@@ -592,6 +610,13 @@ require_once __DIR__ . '/../includes/layout.php';
                 Dossier <?= e($plan['incident_status']) ?>
                 <?= !empty($plan['assigned_user_name']) ? ' · ' . e($plan['assigned_user_name']) : '' ?>
               </div>
+              <div class="text-muted text-small" style="margin-top:4px">
+                <?php if (($plan['source_type'] ?? '') === 'provider'): ?>
+                  Prestataire missionné<?= !empty($plan['provider_name']) ? ' · ' . e($plan['provider_name']) : '' ?>
+                <?php else: ?>
+                  Équipe interne
+                <?php endif; ?>
+              </div>
             </div>
           <?php endforeach; ?>
           <?php if (!$servicePlans): ?>
@@ -651,6 +676,13 @@ require_once __DIR__ . '/../includes/layout.php';
                         <?php if (!empty($queueItem['assigned_user_name'])): ?>
                           <div class="text-muted text-small"><?= e($queueItem['assigned_user_name']) ?></div>
                         <?php endif; ?>
+                        <div class="text-muted text-small" style="margin-top:4px">
+                          <?php if (($queueItem['current_plan_source_type'] ?? '') === 'provider'): ?>
+                            Prestataire missionné<?= !empty($queueItem['current_plan_provider_name']) ? ' · ' . e($queueItem['current_plan_provider_name']) : '' ?>
+                          <?php else: ?>
+                            Équipe interne
+                          <?php endif; ?>
+                        </div>
                       <?php else: ?>
                         <span class="badge badge-yellow">Pas encore planifié</span>
                       <?php endif; ?>
