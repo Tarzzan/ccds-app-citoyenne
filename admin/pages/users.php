@@ -10,6 +10,12 @@ $active_nav = 'users';
 $db         = Database::getInstance();
 $usersPasswordColumn = admin_db_has_column($db, 'users', 'password_hash') ? 'password_hash' : 'password';
 $serviceTablesReady = admin_db_has_table($db, 'services') && admin_db_has_table($db, 'user_service_memberships');
+$serviceScopeReady = $serviceTablesReady
+    && admin_db_has_table($db, 'service_category_map')
+    && admin_db_has_table($db, 'intervention_plans');
+$agentServiceScopeIds = $serviceScopeReady ? admin_allowed_service_ids($admin) : [];
+$agentIsScoped = $serviceScopeReady && admin_is_service_scoped_agent($admin);
+$scopeNotice = null;
 $services = $serviceTablesReady ? intervention_get_services($db) : [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -135,6 +141,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$userScopeSql = '1=1';
+$userScopeParams = [];
+
+if ($agentIsScoped) {
+    if (!empty($agentServiceScopeIds)) {
+        $servicePlaceholdersMembership = implode(',', array_fill(0, count($agentServiceScopeIds), '?'));
+        $servicePlaceholdersCitizen = implode(',', array_fill(0, count($agentServiceScopeIds), '?'));
+        $userScopeSql = "
+            (
+                u.id = ?
+                OR (
+                    u.role IN ('agent', 'admin')
+                    AND EXISTS (
+                        SELECT 1
+                        FROM user_service_memberships usm
+                        WHERE usm.user_id = u.id
+                          AND usm.service_id IN ($servicePlaceholdersMembership)
+                    )
+                )
+                OR (
+                    u.role = 'citizen'
+                    AND EXISTS (
+                        SELECT 1
+                        FROM incidents scoped_i
+                        JOIN categories scoped_cat ON scoped_cat.id = scoped_i.category_id
+                        LEFT JOIN service_category_map scoped_scm
+                          ON scoped_scm.category_id = scoped_cat.id
+                         AND scoped_scm.is_default = 1
+                        LEFT JOIN intervention_plans scoped_plan ON scoped_plan.id = (
+                            SELECT p2.id
+                            FROM intervention_plans p2
+                            WHERE p2.incident_id = scoped_i.id
+                            ORDER BY p2.created_at DESC, p2.id DESC
+                            LIMIT 1
+                        )
+                        WHERE scoped_i.user_id = u.id
+                          AND COALESCE(scoped_plan.service_id, scoped_scm.service_id) IN ($servicePlaceholdersCitizen)
+                    )
+                )
+            )
+        ";
+        $userScopeParams = array_merge([(int)$admin['id']], $agentServiceScopeIds, $agentServiceScopeIds);
+        $scopeNotice = $admin['primary_service_name']
+            ? 'Cette page est en lecture seule et limitee au service ' . $admin['primary_service_name'] . '.'
+            : 'Cette page est en lecture seule et limitee a vos services rattaches.';
+    } else {
+        $userScopeSql = 'u.id = ?';
+        $userScopeParams = [(int)$admin['id']];
+        $scopeNotice = 'Aucun service ne vous est encore attribue. Vous ne voyez ici que votre propre compte.';
+    }
+}
+
+$incidentScopeSql = '';
+$incidentScopeParams = [];
+
+if ($agentIsScoped) {
+    if (!empty($agentServiceScopeIds)) {
+        $incidentScopeSql = "
+            AND COALESCE(latest_plan.service_id, scoped_scm.service_id) IN ("
+            . implode(',', array_fill(0, count($agentServiceScopeIds), '?'))
+            . ')
+        ';
+        $incidentScopeParams = $agentServiceScopeIds;
+    } else {
+        $incidentScopeSql = ' AND 1 = 0 ';
+    }
+}
+
 $detailUser    = null;
 $userIncidents = [];
 $userActivity  = [];
@@ -155,9 +229,10 @@ if (isset($_GET['detail'])) {
         LEFT JOIN comments c ON c.user_id = u.id
         LEFT JOIN user_gamification g ON g.user_id = u.id
         WHERE u.id = ?
+          AND {$userScopeSql}
         GROUP BY u.id
     ");
-    $stmt->execute([$detailId]);
+    $stmt->execute(array_merge([$detailId], $userScopeParams));
     $detailUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($detailUser) {
@@ -170,27 +245,77 @@ if (isset($_GET['detail'])) {
                    cat.name AS category_name, cat.icon AS category_icon
             FROM incidents i
             JOIN categories cat ON cat.id = i.category_id
+            LEFT JOIN service_category_map scoped_scm ON scoped_scm.category_id = i.category_id AND scoped_scm.is_default = 1
+            LEFT JOIN intervention_plans latest_plan ON latest_plan.id = (
+                SELECT p2.id
+                FROM intervention_plans p2
+                WHERE p2.incident_id = i.id
+                ORDER BY p2.created_at DESC, p2.id DESC
+                LIMIT 1
+            )
             WHERE i.user_id = ?
+            {$incidentScopeSql}
             ORDER BY i.created_at DESC
             LIMIT 10
         ");
-        $stmtInc->execute([$detailId]);
+        $stmtInc->execute(array_merge([$detailId], $incidentScopeParams));
         $userIncidents = $stmtInc->fetchAll(PDO::FETCH_ASSOC);
 
         $stmtAct = $db->prepare("
             (SELECT 'incident' AS type, i.reference AS ref, COALESCE(i.title, 'Sans titre') AS label, i.created_at AS date
-             FROM incidents i WHERE i.user_id = ? ORDER BY i.created_at DESC LIMIT 10)
+             FROM incidents i
+             LEFT JOIN service_category_map scoped_scm ON scoped_scm.category_id = i.category_id AND scoped_scm.is_default = 1
+             LEFT JOIN intervention_plans latest_plan ON latest_plan.id = (
+                 SELECT p2.id
+                 FROM intervention_plans p2
+                 WHERE p2.incident_id = i.id
+                 ORDER BY p2.created_at DESC, p2.id DESC
+                 LIMIT 1
+             )
+             WHERE i.user_id = ? {$incidentScopeSql}
+             ORDER BY i.created_at DESC LIMIT 10)
             UNION ALL
             (SELECT 'comment', i.reference, LEFT(c.comment, 60), c.created_at
-             FROM comments c JOIN incidents i ON i.id = c.incident_id WHERE c.user_id = ? ORDER BY c.created_at DESC LIMIT 10)
+             FROM comments c
+             JOIN incidents i ON i.id = c.incident_id
+             LEFT JOIN service_category_map scoped_scm ON scoped_scm.category_id = i.category_id AND scoped_scm.is_default = 1
+             LEFT JOIN intervention_plans latest_plan ON latest_plan.id = (
+                 SELECT p2.id
+                 FROM intervention_plans p2
+                 WHERE p2.incident_id = i.id
+                 ORDER BY p2.created_at DESC, p2.id DESC
+                 LIMIT 1
+             )
+             WHERE c.user_id = ? {$incidentScopeSql}
+             ORDER BY c.created_at DESC LIMIT 10)
             UNION ALL
             (SELECT 'vote', i.reference, COALESCE(i.title, 'Sans titre'), v.created_at
-             FROM votes v JOIN incidents i ON i.id = v.incident_id WHERE v.user_id = ? ORDER BY v.created_at DESC LIMIT 10)
+             FROM votes v
+             JOIN incidents i ON i.id = v.incident_id
+             LEFT JOIN service_category_map scoped_scm ON scoped_scm.category_id = i.category_id AND scoped_scm.is_default = 1
+             LEFT JOIN intervention_plans latest_plan ON latest_plan.id = (
+                 SELECT p2.id
+                 FROM intervention_plans p2
+                 WHERE p2.incident_id = i.id
+                 ORDER BY p2.created_at DESC, p2.id DESC
+                 LIMIT 1
+             )
+             WHERE v.user_id = ? {$incidentScopeSql}
+             ORDER BY v.created_at DESC LIMIT 10)
             ORDER BY date DESC
             LIMIT 20
         ");
-        $stmtAct->execute([$detailId, $detailId, $detailId]);
+        $stmtAct->execute(array_merge(
+            [$detailId],
+            $incidentScopeParams,
+            [$detailId],
+            $incidentScopeParams,
+            [$detailId],
+            $incidentScopeParams
+        ));
         $userActivity = $stmtAct->fetchAll(PDO::FETCH_ASSOC);
+    } elseif ($agentIsScoped) {
+        render_error(403, 'Cet utilisateur ne fait pas partie de votre perimetre de service.');
     }
 }
 
@@ -225,9 +350,10 @@ if ($statFilt === 'inactive') {
 }
 
 $whereSql = implode(' AND ', $where);
+$whereSql .= ' AND ' . $userScopeSql;
 
 $stmtCount = $db->prepare("SELECT COUNT(*) FROM users u WHERE {$whereSql}");
-$stmtCount->execute($params);
+$stmtCount->execute(array_merge($params, $userScopeParams));
 $total      = (int)$stmtCount->fetchColumn();
 $totalPages = max(1, (int)ceil($total / $perPage));
 
@@ -262,10 +388,10 @@ $stmtUsers = $db->prepare("
     ORDER BY {$sortSql} {$dir}
     LIMIT {$perPage} OFFSET {$offset}
 ");
-$stmtUsers->execute($params);
+$stmtUsers->execute(array_merge($params, $userScopeParams));
 $users = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
 
-$kpis = $db->query("
+$stmtKpis = $db->prepare("
     SELECT
         COUNT(*) AS total,
         SUM(role = 'citizen') AS citizens,
@@ -273,8 +399,11 @@ $kpis = $db->query("
         SUM(role = 'admin') AS admins,
         SUM(is_active = 1) AS active,
         SUM(created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS new_30d
-    FROM users
-")->fetch(PDO::FETCH_ASSOC);
+    FROM users u
+    WHERE {$userScopeSql}
+");
+$stmtKpis->execute($userScopeParams);
+$kpis = $stmtKpis->fetch(PDO::FETCH_ASSOC);
 
 function users_role_badge(string $role): string
 {
@@ -575,11 +704,17 @@ require_once __DIR__ . '/../includes/layout.php';
 
 <div class="users-hero">
   <div class="users-kicker">Administration des comptes</div>
-  <div class="users-title">Suivre les citoyens, agents et administrateurs</div>
+  <div class="users-title"><?= $agentIsScoped ? 'Annuaire operationnel du service' : 'Suivre les citoyens, agents et administrateurs' ?></div>
   <div class="users-text">
-    Cette page centralise les comptes actifs du dispositif afin de vérifier l’activité, suivre l’engagement et gérer les accès au service.
+    <?= $agentIsScoped
+        ? 'Cette vue rassemble les comptes utiles a votre perimetre de service. Elle reste consultative pour permettre un suivi terrain sans ouvrir la gouvernance globale.'
+        : 'Cette page centralise les comptes actifs du dispositif afin de verifier l activite, suivre l engagement et gerer les acces au service.' ?>
   </div>
 </div>
+
+<?php if ($scopeNotice): ?>
+  <div class="alert alert-info" style="margin-bottom:18px"><?= e($scopeNotice) ?></div>
+<?php endif; ?>
 
 <?php if ($detailUser): ?>
   <div class="user-detail">
@@ -727,7 +862,7 @@ require_once __DIR__ . '/../includes/layout.php';
             </li>
           <?php endforeach; ?>
           <?php if (empty($userActivity)): ?>
-            <li><span class="text-muted">Aucune activité récente.</span></li>
+            <li><span class="text-muted"><?= $agentIsScoped ? 'Aucune activite recente visible sur votre perimetre.' : 'Aucune activite recente.' ?></span></li>
           <?php endif; ?>
         </ul>
       </div>
@@ -744,7 +879,7 @@ require_once __DIR__ . '/../includes/layout.php';
   </div>
 
   <div class="users-toolbar">
-    <h2>Gestion des utilisateurs</h2>
+    <h2><?= $agentIsScoped ? 'Annuaire du perimetre visible' : 'Gestion des utilisateurs' ?></h2>
     <?php if ($admin['role'] === 'admin'): ?>
       <button type="button" onclick="document.getElementById('users-create-modal').style.display='flex'" class="btn btn-primary">Créer un agent</button>
     <?php endif; ?>
