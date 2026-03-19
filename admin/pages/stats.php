@@ -19,6 +19,7 @@ $agent_is_scoped = $service_tables_ready && admin_is_service_scoped_agent($admin
 $scope_notice = null;
 $incident_scope_join = '';
 $incident_scope_where = '';
+$execution_scope_where = '';
 
 if ($agent_is_scoped) {
     if (!empty($agent_service_scope_ids)) {
@@ -28,11 +29,13 @@ if ($agent_is_scoped) {
             JOIN service_category_map scoped_service_map ON scoped_service_map.category_id = scoped_category.id AND scoped_service_map.is_default = 1
         ";
         $incident_scope_where = " AND scoped_service_map.service_id IN ($safeServiceIds)";
+        $execution_scope_where = " AND COALESCE(latest_plan.service_id, scoped_service_map.service_id) IN ($safeServiceIds)";
         $scope_notice = $admin['primary_service_name']
             ? 'Les statistiques sont limitees au service ' . $admin['primary_service_name'] . '.'
             : 'Les statistiques sont limitees a vos services rattaches.';
     } else {
         $incident_scope_where = ' AND 1 = 0';
+        $execution_scope_where = ' AND 1 = 0';
         $scope_notice = 'Aucun service ne vous est encore attribue. Les statistiques resteront vides tant que le rattachement n est pas renseigne.';
     }
 }
@@ -145,6 +148,11 @@ $by_cat = $db->prepare("
 ");
 $by_cat->execute([$period]);
 $by_cat = $by_cat->fetchAll(PDO::FETCH_ASSOC);
+foreach ($by_cat as &$cat) {
+    $visual = category_visual_resolve($cat['icon'] ?? null, $cat['name'] ?? null);
+    $cat['visual_description'] = $visual['description'] ?? '';
+}
+unset($cat);
 
 // --- Top 5 zones ---
 $top_zones = $db->prepare("
@@ -213,12 +221,77 @@ $top_voted = $db->prepare("
 ");
 $top_voted->execute([$period]);
 $top_voted = $top_voted->fetchAll(PDO::FETCH_ASSOC);
+foreach ($top_voted as &$topIncident) {
+    $visual = category_visual_resolve($topIncident['cat_icon'] ?? null, $topIncident['cat_name'] ?? null);
+    $topIncident['cat_description'] = $visual['description'] ?? '';
+}
+unset($topIncident);
+
+$execution_summary = null;
+if ($service_tables_ready) {
+    $executionSummaryStmt = $db->prepare("
+        SELECT
+            SUM(CASE WHEN i.status IN ('submitted','acknowledged','in_progress') AND latest_plan.id IS NOT NULL
+                AND COALESCE(latest_plan.status, '') NOT IN ('completed', 'cancelled')
+                AND COALESCE(latest_plan.source_type, 'internal') = 'internal' THEN 1 ELSE 0 END) AS internal_count,
+            SUM(CASE WHEN i.status IN ('submitted','acknowledged','in_progress') AND latest_plan.id IS NOT NULL
+                AND COALESCE(latest_plan.status, '') NOT IN ('completed', 'cancelled')
+                AND latest_plan.source_type = 'provider' THEN 1 ELSE 0 END) AS provider_count,
+            SUM(CASE WHEN i.status IN ('submitted','acknowledged','in_progress') AND latest_plan.id IS NULL THEN 1 ELSE 0 END) AS unplanned_count
+        FROM incidents i
+        JOIN categories scoped_category ON scoped_category.id = i.category_id
+        LEFT JOIN service_category_map scoped_service_map ON scoped_service_map.category_id = scoped_category.id AND scoped_service_map.is_default = 1
+        LEFT JOIN intervention_plans latest_plan ON latest_plan.id = (
+            SELECT p2.id
+            FROM intervention_plans p2
+            WHERE p2.incident_id = i.id
+            ORDER BY p2.created_at DESC, p2.id DESC
+            LIMIT 1
+        )
+        WHERE i.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+        $execution_scope_where
+    ");
+    $executionSummaryStmt->execute([$period]);
+    $execution_summary = $executionSummaryStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
 
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
 <?php if ($scope_notice): ?>
   <div class="alert alert-info" style="margin-bottom:16px;"><?= e($scope_notice) ?></div>
+<?php endif; ?>
+
+<?php if (!empty($by_cat)): ?>
+  <div class="admin-category-strip" style="margin-bottom:18px;">
+    <?php foreach (array_slice($by_cat, 0, 4) as $cat): ?>
+      <div class="admin-category-pill">
+        <?= category_visual_html($cat['icon'] ?? 'road', $cat['name'], 'sm', $cat['color'] ?? null) ?>
+        <div class="admin-category-pill-copy">
+          <strong><?= e($cat['name']) ?></strong>
+          <span><?= e($cat['visual_description'] ?: 'Categorie suivie dans les statistiques') ?></span>
+        </div>
+        <span class="admin-category-pill-count admin-category-pill-count--wide"><?= (int)$cat['cnt'] ?> signalements</span>
+      </div>
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+
+<?php if ($execution_summary): ?>
+  <div class="services-mode-band" style="margin-bottom:18px;">
+    <div class="services-mode-card">
+      <strong>Equipe interne</strong>
+      <span><?= (int)($execution_summary['internal_count'] ?? 0) ?> dossier<?= ((int)($execution_summary['internal_count'] ?? 0)) > 1 ? 's' : '' ?> actuellement portes en interne</span>
+    </div>
+    <div class="services-mode-card">
+      <strong>Prestataire missionne</strong>
+      <span><?= (int)($execution_summary['provider_count'] ?? 0) ?> dossier<?= ((int)($execution_summary['provider_count'] ?? 0)) > 1 ? 's' : '' ?> actuellement portes par un prestataire</span>
+    </div>
+    <div class="services-mode-card">
+      <strong>A planifier</strong>
+      <span><?= (int)($execution_summary['unplanned_count'] ?? 0) ?> dossier<?= ((int)($execution_summary['unplanned_count'] ?? 0)) > 1 ? 's' : '' ?> ouverts restent encore sans plan</span>
+    </div>
+  </div>
 <?php endif; ?>
 
 <!-- En-tête avec sélecteur de période et export -->
@@ -335,6 +408,9 @@ require_once __DIR__ . '/../includes/layout.php';
           <div style="flex:1;min-width:0;">
             <div style="font-size:13px;font-weight:700;color:#183229;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= e($cat['name']) ?></div>
             <div class="text-small text-muted"><?= (int)$cat['cnt'] ?> signalement<?= ((int)$cat['cnt']) > 1 ? 's' : '' ?> · 👍 <?= (int)$cat['votes'] ?></div>
+            <?php if (!empty($cat['visual_description'])): ?>
+              <div class="text-small text-muted" style="margin-top:2px;"><?= e($cat['visual_description']) ?></div>
+            <?php endif; ?>
           </div>
           <span class="badge" style="background:<?= e($cat['color']) ?>22;color:<?= e($cat['color']) ?>"><?= (int)$cat['cnt'] ?></span>
         </div>
@@ -413,6 +489,9 @@ require_once __DIR__ . '/../includes/layout.php';
           <span class="badge" style="background:<?= e($inc['cat_color']) ?>22;color:<?= e($inc['cat_color']) ?>;font-size:10px"><?= e($inc['cat_name']) ?></span>
           <span class="badge <?= status_class($inc['status']) ?>" style="font-size:10px"><?= status_label($inc['status']) ?></span>
         </div>
+        <?php if (!empty($inc['cat_description'])): ?>
+          <div class="text-small text-muted" style="margin-top:4px;"><?= e($inc['cat_description']) ?></div>
+        <?php endif; ?>
       </div>
       <span style="color:#f59e0b;font-weight:800;font-size:16px;flex-shrink:0">👍 <?= $inc['votes_count'] ?></span>
     </div>
