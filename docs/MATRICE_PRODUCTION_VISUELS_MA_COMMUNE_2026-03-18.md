@@ -94,6 +94,7 @@ Livrables :
 - 8 badges categories premium
 - 1 grille d apercu
 - 1 mapping final mobile/admin
+- 1 lot installable separe pour badges generes
 
 Priorite :
 

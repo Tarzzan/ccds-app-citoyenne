@@ -195,6 +195,21 @@ Rôle :
 - badge pour la lecture rapide
 - illustration pour l onboarding et les etats vides
 
+### Lists / Cards
+
+Objectif :
+
+- separer clairement lecture fonctionnelle et lecture narrative
+
+Assets cibles :
+
+- `CAT-01` a `CAT-08`
+
+Rôle :
+
+- remplacer le melange actuel entre pictogramme, emoji et vignette
+- garder une reconnaissance immediate dans les listes et cartes
+
 ## Admin
 
 ### Dashboard
@@ -243,6 +258,22 @@ Rôle :
 
 - clarifier la prochaine action
 - rendre la commune plus presente
+
+### Categories
+
+Objectif :
+
+- piloter un univers categorie lisible avant integration finale
+
+Assets cibles :
+
+- `CAT-01` a `CAT-08`
+- `ILL-01` a `ILL-08`
+
+Rôle :
+
+- badge pour la lecture rapide
+- scene pour raconter le terrain reel associe
 
 ### Polls / Events / Notifications
 

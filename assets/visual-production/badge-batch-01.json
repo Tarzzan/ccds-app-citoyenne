@@ -1,0 +1,73 @@
+{
+  "version": "2026-03-18",
+  "batch_id": "badge-batch-01",
+  "description": "Premier lot de generation des badges categories premium Ma Commune",
+  "style_block": "premium civic category badge, semi-realistic but simplified, strong central motif, polished rendering, tropical and territorial palette, French Guiana public-space cues, premium mobile readability, not flat emoji, not childish, no text in image, square composition",
+  "negative_prompt": "emoji, text, watermark, flat clipart, childish cartoon, low detail, generic smart city symbol, photorealistic photo look, busy composition, tiny unreadable subject",
+  "assets": [
+    {
+      "id": "CAT-01",
+      "label": "Voirie badge V2",
+      "ratio": "1:1",
+      "filename": "cat-01-road-badge-v2-1x1.png",
+      "surface_target": ["mobile_category_badge", "admin_category_badge", "incident_lists"],
+      "prompt": "Premium civic category badge for road issues in French Guiana, semi-realistic simplified pothole or degraded roadway motif, laterite and wet-road cues, strong central subject, polished rendering, square composition, highly readable at small size, no text"
+    },
+    {
+      "id": "CAT-02",
+      "label": "Eclairage badge V2",
+      "ratio": "1:1",
+      "filename": "cat-02-lighting-badge-v2-1x1.png",
+      "surface_target": ["mobile_category_badge", "admin_category_badge", "incident_lists"],
+      "prompt": "Premium civic category badge for street lighting issues in French Guiana, semi-realistic simplified lamp post with warm halo at dusk, tropical atmosphere cues, polished rendering, square composition, highly readable at small size, no text"
+    },
+    {
+      "id": "CAT-03",
+      "label": "Espaces verts badge V2",
+      "ratio": "1:1",
+      "filename": "cat-03-greenery-badge-v2-1x1.png",
+      "surface_target": ["mobile_category_badge", "admin_category_badge", "incident_lists"],
+      "prompt": "Premium civic category badge for overgrown greenery in French Guiana, semi-realistic simplified tropical leaf and path obstruction motif, lush but readable, polished rendering, square composition, highly readable at small size, no text"
+    },
+    {
+      "id": "CAT-04",
+      "label": "Proprete badge V2",
+      "ratio": "1:1",
+      "filename": "cat-04-cleanliness-badge-v2-1x1.png",
+      "surface_target": ["mobile_category_badge", "admin_category_badge", "incident_lists"],
+      "prompt": "Premium civic category badge for cleanliness and waste issues in French Guiana, semi-realistic simplified illegal dumping motif, clear pile or bag silhouette, polished rendering, square composition, highly readable at small size, no text"
+    },
+    {
+      "id": "CAT-05",
+      "label": "Mobilier badge V2",
+      "ratio": "1:1",
+      "filename": "cat-05-furniture-badge-v2-1x1.png",
+      "surface_target": ["mobile_category_badge", "admin_category_badge", "incident_lists"],
+      "prompt": "Premium civic category badge for damaged urban furniture in French Guiana, semi-realistic simplified public bench or equipment motif, polished rendering, square composition, highly readable at small size, no text"
+    },
+    {
+      "id": "CAT-06",
+      "label": "Reseaux badge V2",
+      "ratio": "1:1",
+      "filename": "cat-06-networks-badge-v2-1x1.png",
+      "surface_target": ["mobile_category_badge", "admin_category_badge", "incident_lists"],
+      "prompt": "Premium civic category badge for drainage, networks and flooding issues in French Guiana, semi-realistic simplified drain grate with flowing water motif, polished rendering, square composition, highly readable at small size, no text"
+    },
+    {
+      "id": "CAT-07",
+      "label": "Signalisation badge V2",
+      "ratio": "1:1",
+      "filename": "cat-07-signage-badge-v2-1x1.png",
+      "surface_target": ["mobile_category_badge", "admin_category_badge", "incident_lists"],
+      "prompt": "Premium civic category badge for damaged signage in French Guiana, semi-realistic simplified warning sign motif, strong silhouette, polished rendering, square composition, highly readable at small size, no text"
+    },
+    {
+      "id": "CAT-08",
+      "label": "Batiments badge V2",
+      "ratio": "1:1",
+      "filename": "cat-08-buildings-badge-v2-1x1.png",
+      "surface_target": ["mobile_category_badge", "admin_category_badge", "incident_lists"],
+      "prompt": "Premium civic category badge for municipal building issues in French Guiana, semi-realistic simplified public building facade motif, dignified and readable, polished rendering, square composition, highly readable at small size, no text"
+    }
+  ]
+}

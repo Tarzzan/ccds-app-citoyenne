@@ -34,6 +34,7 @@ Voir les documents de cadrage actifs :
 - `docs/PROMPTS_PRODUCTION_VISUELS_MA_COMMUNE_2026-03-18.md`
 - `docs/INTEGRATION_VISUELS_PRODUIT_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_PERSONNAGES_BATCH_01_MA_COMMUNE_2026-03-18.md`
+- `docs/PLANCHES_GENERATION_BADGES_CATEGORIES_BATCH_01_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_SCENES_TERRAIN_BATCH_01_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_MOMENTS_PRODUIT_BATCH_01_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_HERO_COMMERCIAL_BATCH_01_MA_COMMUNE_2026-03-18.md`
@@ -61,6 +62,7 @@ Documents actifs a privilegier pour comprendre l'etat reel du produit :
 - `docs/PROMPTS_PRODUCTION_VISUELS_MA_COMMUNE_2026-03-18.md`
 - `docs/INTEGRATION_VISUELS_PRODUIT_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_PERSONNAGES_BATCH_01_MA_COMMUNE_2026-03-18.md`
+- `docs/PLANCHES_GENERATION_BADGES_CATEGORIES_BATCH_01_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_SCENES_TERRAIN_BATCH_01_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_MOMENTS_PRODUIT_BATCH_01_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_HERO_COMMERCIAL_BATCH_01_MA_COMMUNE_2026-03-18.md`
@@ -174,6 +176,7 @@ Le bon positionnement est :
 - `assets/category-visuals/index.html` : apercu HTML de la collection visuelle des categories
 - `assets/visual-production/visual-production-manifest.json` : manifeste machine lisible des pistes personnages, categories et ordre de production visuelle
 - `assets/visual-production/character-batch-01.json` : premier batch machine lisible de generation personnages
+- `assets/visual-production/badge-batch-01.json` : premier batch machine lisible des badges categories premium
 - `assets/visual-production/terrain-batch-01.json` : premier batch machine lisible de generation des scenes terrain
 - `assets/visual-production/moments-batch-01.json` : premier batch machine lisible des moments produit
 - `assets/visual-production/hero-batch-01.json` : premier batch machine lisible des visuels hero commerciaux

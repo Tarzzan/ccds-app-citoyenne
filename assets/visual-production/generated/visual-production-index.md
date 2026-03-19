@@ -2,10 +2,28 @@
 
 - version : `2026-03-18`
 - duo recommande : `M1 + A2`
-- batches detectes : `4`
-- assets total : `22`
+- batches detectes : `5`
+- assets total : `30`
 
 ## Batches
+
+### `badge-batch-01`
+
+Premier lot de generation des badges categories premium Ma Commune
+
+- fichier : `assets/visual-production/badge-batch-01.json`
+- assets : `8`
+
+| ID | Label | Ratio | Cibles | Fichier |
+|---|---|---|---|---|
+| `CAT-01` | Voirie badge V2 | `1:1` | mobile_category_badge, admin_category_badge, incident_lists | `cat-01-road-badge-v2-1x1.png` |
+| `CAT-02` | Eclairage badge V2 | `1:1` | mobile_category_badge, admin_category_badge, incident_lists | `cat-02-lighting-badge-v2-1x1.png` |
+| `CAT-03` | Espaces verts badge V2 | `1:1` | mobile_category_badge, admin_category_badge, incident_lists | `cat-03-greenery-badge-v2-1x1.png` |
+| `CAT-04` | Proprete badge V2 | `1:1` | mobile_category_badge, admin_category_badge, incident_lists | `cat-04-cleanliness-badge-v2-1x1.png` |
+| `CAT-05` | Mobilier badge V2 | `1:1` | mobile_category_badge, admin_category_badge, incident_lists | `cat-05-furniture-badge-v2-1x1.png` |
+| `CAT-06` | Reseaux badge V2 | `1:1` | mobile_category_badge, admin_category_badge, incident_lists | `cat-06-networks-badge-v2-1x1.png` |
+| `CAT-07` | Signalisation badge V2 | `1:1` | mobile_category_badge, admin_category_badge, incident_lists | `cat-07-signage-badge-v2-1x1.png` |
+| `CAT-08` | Batiments badge V2 | `1:1` | mobile_category_badge, admin_category_badge, incident_lists | `cat-08-buildings-badge-v2-1x1.png` |
 
 ### `character-batch-01`
 

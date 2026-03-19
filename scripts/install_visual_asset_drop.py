@@ -17,6 +17,7 @@ VISUAL_DIR = ROOT / "assets" / "visual-production"
 GENERATED_DIR = VISUAL_DIR / "generated"
 
 BATCH_FILES = {
+    "badge-batch-01.json": "badges",
     "character-batch-01.json": "characters",
     "terrain-batch-01.json": "terrain",
     "moments-batch-01.json": "moments",
@@ -37,7 +38,7 @@ def load_json(path: Path) -> dict:
 
 def ensure_dirs() -> None:
     for base in TARGETS.values():
-        for section in ("characters", "terrain", "moments", "hero"):
+        for section in ("badges", "characters", "terrain", "moments", "hero"):
             (base / section).mkdir(parents=True, exist_ok=True)
 
 
