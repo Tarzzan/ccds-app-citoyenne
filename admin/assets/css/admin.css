@@ -306,6 +306,10 @@ img { max-width: 100%; }
   gap: 18px;
   box-shadow: var(--shadow-md);
 }
+.page-hero--with-visual {
+  grid-template-columns: 1.35fr .8fr .78fr;
+  align-items: stretch;
+}
 .page-hero-kicker {
   font-size: 11px;
   text-transform: uppercase;
@@ -330,6 +334,10 @@ img { max-width: 100%; }
   display: grid;
   gap: 10px;
   align-content: center;
+}
+.page-hero-visual {
+  display: flex;
+  align-items: stretch;
 }
 .hero-chip {
   background: rgba(255,255,255,.12);
@@ -381,6 +389,29 @@ img { max-width: 100%; }
   color: var(--gray-600);
   font-size: 14px;
   line-height: 1.65;
+}
+.admin-guidance-visual {
+  display: grid;
+  grid-template-columns: 108px 1fr;
+  gap: 14px;
+  align-items: center;
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(23,75,58,.04));
+  border: 1px solid #ece4d5;
+}
+.admin-guidance-visual-copy strong {
+  display: block;
+  color: var(--gray-800);
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+.admin-guidance-visual-copy span {
+  display: block;
+  color: var(--gray-600);
+  font-size: 13px;
+  line-height: 1.55;
 }
 .admin-quick-links {
   display: flex;
@@ -437,6 +468,47 @@ img { max-width: 100%; }
   font-size: 13px;
   color: var(--gray-600);
   line-height: 1.6;
+}
+.generated-visual-panel {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  min-height: 100%;
+  padding: 16px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+  border: 1px solid rgba(255,255,255,.16);
+  backdrop-filter: blur(6px);
+}
+.generated-visual-panel--hero {
+  align-content: stretch;
+}
+.generated-visual {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 18px;
+}
+.generated-visual--contain {
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  background: rgba(255,255,255,.10);
+}
+.generated-visual--portrait {
+  aspect-ratio: 4 / 5;
+}
+.generated-visual-caption {
+  display: grid;
+  gap: 4px;
+}
+.generated-visual-caption strong {
+  color: #fff;
+  font-size: 14px;
+}
+.generated-visual-caption span {
+  color: rgba(255,255,255,.78);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 /* --- Cards ------------------------------------------------- */
@@ -674,10 +746,16 @@ textarea.form-control { resize: vertical; min-height: 90px; }
     grid-template-columns: 1fr;
     padding: 22px;
   }
+  .page-hero--with-visual {
+    grid-template-columns: 1fr;
+  }
   .stats-grid {
     grid-template-columns: 1fr 1fr;
   }
   .admin-guidance-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-guidance-visual {
     grid-template-columns: 1fr;
   }
 }

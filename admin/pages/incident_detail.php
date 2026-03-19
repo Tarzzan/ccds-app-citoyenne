@@ -73,6 +73,8 @@ try {
 $status_flow = ['submitted', 'acknowledged', 'in_progress', 'resolved'];
 $status_index = array_search($inc['status'], $status_flow, true);
 $status_index = $status_index === false ? -1 : $status_index;
+$incidentVisualAsset = $inc['status'] === 'resolved' ? 'MOM-04' : 'MOM-03';
+$incidentVisualUrl = generated_visual_url($incidentVisualAsset);
 $next_step_label = match ($inc['status']) {
     'submitted' => 'Confirmer la prise en charge',
     'acknowledged' => 'Passer en intervention terrain',
@@ -194,6 +196,15 @@ require_once __DIR__ . '/../includes/layout.php';
     <p>
       Garder la prochaine etape explicite evite les traitements hesitants et rend la reponse plus lisible pour toute la chaine commune-terrain-citoyen.
     </p>
+    <?php if ($incidentVisualUrl): ?>
+      <div class="admin-guidance-visual">
+        <?= generated_visual_html($incidentVisualAsset, ['class' => 'generated-visual generated-visual--contain generated-visual--portrait', 'label' => 'Scene de suivi dossier']) ?>
+        <div class="admin-guidance-visual-copy">
+          <strong>Scene de dossier disponible</strong>
+          <span>Le futur lot visuel pourra rendre cet etat de traitement immediatement lisible pour les agents.</span>
+        </div>
+      </div>
+    <?php endif; ?>
   </div>
 </div>
 

@@ -63,6 +63,7 @@ $community = [
 ];
 $community_recent_polls = [];
 $community_upcoming_events = [];
+$dashboardHeroVisual = generated_visual_url('HERO-01');
 
 try {
     $community = array_merge($community, $db->query("
@@ -100,7 +101,7 @@ try {
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
-<div class="page-hero">
+<div class="page-hero <?= $dashboardHeroVisual ? 'page-hero--with-visual' : '' ?>">
   <div class="page-hero-copy">
     <div class="page-hero-kicker">Pilotage territorial</div>
     <h2 class="page-hero-title">Coordonner la réponse publique locale</h2>
@@ -122,6 +123,17 @@ require_once __DIR__ . '/../includes/layout.php';
       <span class="hero-chip-label">situations résolues</span>
     </div>
   </div>
+  <?php if ($dashboardHeroVisual): ?>
+    <div class="page-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero">
+        <?= generated_visual_html('HERO-01', ['class' => 'generated-visual generated-visual--contain', 'label' => 'Hero Ma Commune']) ?>
+        <div class="generated-visual-caption">
+          <strong>Visuel hero installe</strong>
+          <span>Le back-office peut maintenant accueillir le duo premium sans changer la structure de pilotage.</span>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
 </div>
 
 <div class="admin-guidance-grid">

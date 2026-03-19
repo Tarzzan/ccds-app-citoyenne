@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../backend/config/config.php';
 require_once __DIR__ . '/../../backend/config/Database.php';
 require_once __DIR__ . '/../../backend/config/helpers.php';
 require_once __DIR__ . '/category_visuals.php';
+require_once __DIR__ . '/generated_visuals.php';
 require_once __DIR__ . '/../../backend/core/Security.php';
 
 // Démarrer la session PHP sécurisée
