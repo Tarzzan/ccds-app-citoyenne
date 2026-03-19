@@ -302,6 +302,28 @@ export interface UserProfile {
   };
 }
 
+export interface DashboardInterventionOverview {
+  service_bound_open_count: number;
+  unplanned_count: number;
+  planned_count: number;
+  on_site_count: number;
+}
+
+export interface DashboardNextIntervention {
+  incident_id: number;
+  incident_reference?: string | null;
+  incident_title?: string | null;
+  service_id?: number | null;
+  service_name?: string | null;
+  plan_status: 'scheduled' | 'rescheduled' | 'in_progress';
+  scheduled_date?: string | null;
+  time_window_start?: string | null;
+  time_window_end?: string | null;
+  citizen_message?: string | null;
+  assigned_user_name?: string | null;
+  provider_name?: string | null;
+}
+
 export interface UserStats {
   incidents_count: number;
   resolved_count: number;
@@ -316,6 +338,8 @@ export interface UserStats {
   badges: Array<{ key: string; label: string; icon: string; awarded_at: string }>;
   recent_incidents: Incident[];
   monthly_activity: Array<{ month: string; count: number }>;
+  intervention_overview: DashboardInterventionOverview;
+  next_intervention: DashboardNextIntervention | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

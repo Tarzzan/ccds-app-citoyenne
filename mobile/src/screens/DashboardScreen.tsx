@@ -9,7 +9,7 @@ import {
   ActivityIndicator, RefreshControl, Animated,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { authApi, incidentsApi, Incident, UserStats } from '../services/api';
+import { authApi, incidentsApi, DashboardNextIntervention, Incident, UserStats } from '../services/api';
 import { CategoryMark } from '../components/CategoryMark';
 import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { ScreenFeedbackState, ScreenLoadingState } from '../components/ScreenStatePanel';
@@ -128,6 +128,75 @@ function buildIncidentPlanStateLabel(incident: Incident): string | null {
     default:
       return 'A confirmer';
   }
+}
+
+function buildDashboardInterventionFocus(nextIntervention: DashboardNextIntervention | null, stats: UserStats): {
+  title: string;
+  body: string;
+  hint: string;
+  ctaLabel: string;
+  incidentId?: number;
+} {
+  if (nextIntervention) {
+    const serviceLabel = nextIntervention.service_name
+      ? `Service pilote : ${nextIntervention.service_name}.`
+      : 'Le service responsable est deja mobilise.';
+    const actorLabel = nextIntervention.assigned_user_name
+      ? ` Referent mobilise : ${nextIntervention.assigned_user_name}.`
+      : nextIntervention.provider_name
+        ? ` Intervention confiee a ${nextIntervention.provider_name}.`
+        : '';
+    const window = [nextIntervention.time_window_start, nextIntervention.time_window_end].filter(Boolean).join(' - ');
+
+    if (nextIntervention.plan_status === 'in_progress') {
+      return {
+        title: 'Une intervention est en cours',
+        body: `${nextIntervention.incident_reference ?? 'Un dossier'} est actuellement en traitement sur le terrain.${nextIntervention.citizen_message ? ` ${nextIntervention.citizen_message}` : ''}`,
+        hint: `${serviceLabel}${actorLabel}`.trim(),
+        ctaLabel: 'Ouvrir le dossier en cours →',
+        incidentId: nextIntervention.incident_id,
+      };
+    }
+
+    const dateLabel = nextIntervention.scheduled_date
+      ? new Date(nextIntervention.scheduled_date).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: 'long',
+      })
+      : 'a confirmer';
+    const scheduleLabel = window ? `${dateLabel} · ${window}` : dateLabel;
+
+    return {
+      title: 'Une intervention est deja programmee',
+      body: `${nextIntervention.incident_reference ?? 'Un dossier'} doit etre traite le ${scheduleLabel}.${nextIntervention.citizen_message ? ` ${nextIntervention.citizen_message}` : ''}`,
+      hint: `${serviceLabel}${actorLabel}`.trim(),
+      ctaLabel: 'Voir le dossier planifie →',
+      incidentId: nextIntervention.incident_id,
+    };
+  }
+
+  if (stats.intervention_overview.service_bound_open_count > 0) {
+    const plannedCount = stats.intervention_overview.planned_count;
+    const onSiteCount = stats.intervention_overview.on_site_count;
+    const unplannedCount = stats.intervention_overview.unplanned_count;
+    const readinessLabel = plannedCount > 0 || onSiteCount > 0
+      ? `${plannedCount} intervention(s) programmee(s), ${onSiteCount} en cours sur le terrain.`
+      : `${unplannedCount} dossier(s) attendent encore un creneau d intervention.`;
+
+    return {
+      title: 'La prise en charge reste a rendre visible',
+      body: `Vos dossiers relies a un service doivent maintenant passer a une etape plus concrete : attribution, planification puis execution terrain. ${readinessLabel}`,
+      hint: 'Quand un creneau sera pose, il apparaitra ici avant meme l ouverture d un dossier.',
+      ctaLabel: 'Relire mes dossiers ouverts →',
+    };
+  }
+
+  return {
+    title: 'Le suivi terrain apparaitra ici',
+    body: 'Dès qu un service communal qualifiera un de vos dossiers, cette carte vous dira quel service suit le sujet et quand une intervention est attendue.',
+    hint: 'La prochaine etape visible sera soit une attribution de service, soit une planification.',
+    ctaLabel: 'Voir mes signalements →',
+  };
 }
 
 function getCitizenServiceNarrative(stats: UserStats): { title: string; body: string } {
@@ -265,6 +334,9 @@ export default function DashboardScreen() {
   const serviceProofLabel = isStaff
     ? 'Le mobile métier complète le back-office, avec une vue concentrée sur les urgences, les assignations et le terrain.'
     : formatResolutionDelay(stats.avg_resolution_hours);
+  const interventionFocus = !isStaff
+    ? buildDashboardInterventionFocus(stats.next_intervention, stats)
+    : null;
   const impactButtonLabel = stats.badges.length > 0 || stats.points > 0
     ? 'Voir les repères détaillés →'
     : 'Ouvrir le suivi d’impact →';
@@ -418,6 +490,40 @@ export default function DashboardScreen() {
           </View>
           <Text style={styles.proofHint}>{serviceProofLabel}</Text>
         </View>
+
+        {!isStaff && interventionFocus && (
+          <TouchableOpacity
+            style={styles.interventionFocusCard}
+            activeOpacity={0.88}
+            onPress={() => {
+              if (interventionFocus.incidentId) {
+                navigation.navigate('IncidentDetail', { id: interventionFocus.incidentId });
+                return;
+              }
+              navigation.navigate('MyIncidents');
+            }}
+          >
+            <Text style={styles.interventionFocusEyebrow}>Transparence d intervention</Text>
+            <Text style={styles.interventionFocusTitle}>{interventionFocus.title}</Text>
+            <Text style={styles.interventionFocusBody}>{interventionFocus.body}</Text>
+            <View style={styles.interventionFocusMetrics}>
+              <View style={styles.interventionFocusMetric}>
+                <Text style={styles.interventionFocusMetricValue}>{stats.intervention_overview.unplanned_count}</Text>
+                <Text style={styles.interventionFocusMetricLabel}>a planifier</Text>
+              </View>
+              <View style={styles.interventionFocusMetric}>
+                <Text style={styles.interventionFocusMetricValue}>{stats.intervention_overview.planned_count}</Text>
+                <Text style={styles.interventionFocusMetricLabel}>prevues</Text>
+              </View>
+              <View style={styles.interventionFocusMetric}>
+                <Text style={styles.interventionFocusMetricValue}>{stats.intervention_overview.on_site_count}</Text>
+                <Text style={styles.interventionFocusMetricLabel}>terrain</Text>
+              </View>
+            </View>
+            <Text style={styles.interventionFocusHint}>{interventionFocus.hint}</Text>
+            <Text style={styles.interventionFocusLink}>{interventionFocus.ctaLabel}</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.companionSection}>
           <CivicCompanionCard
@@ -672,6 +778,16 @@ const styles = StyleSheet.create({
   proofMetricValue: { color: BRAND.colors.canopyDeep, fontSize: 22, fontWeight: '800' },
   proofMetricLabel: { color: BRAND.colors.slate, fontSize: 11, marginTop: 4 },
   proofHint:      { marginTop: 12, color: BRAND.colors.slate, fontSize: 12, lineHeight: 18 },
+  interventionFocusCard: { backgroundColor: '#E8F0E8', margin: 16, marginTop: 0, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: '#C9D9C9', ...BRAND_SHADOW },
+  interventionFocusEyebrow: { color: BRAND.colors.canopy, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+  interventionFocusTitle: { color: BRAND.colors.canopyDeep, fontSize: 20, fontWeight: '800', marginTop: 6, fontFamily: BRAND.displayFont },
+  interventionFocusBody: { color: BRAND.colors.slate, lineHeight: 21, marginTop: 8 },
+  interventionFocusMetrics: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  interventionFocusMetric: { flex: 1, borderRadius: 16, padding: 12, backgroundColor: 'rgba(255,255,255,0.78)', borderWidth: 1, borderColor: '#D7E4D7' },
+  interventionFocusMetricValue: { color: BRAND.colors.canopyDeep, fontSize: 24, fontWeight: '800' },
+  interventionFocusMetricLabel: { color: BRAND.colors.slate, fontSize: 11, marginTop: 4 },
+  interventionFocusHint: { marginTop: 12, color: BRAND.colors.slate, fontSize: 12, lineHeight: 18 },
+  interventionFocusLink: { marginTop: 14, color: BRAND.colors.canopyDeep, fontSize: 14, fontWeight: '800' },
   companionSection: { marginHorizontal: 16, marginBottom: 16 },
   section:        { backgroundColor: '#FFFDF8', margin: 16, marginTop: 0, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: '#ECE4D5', ...BRAND_SHADOW },
   sectionTitle:   { fontSize: 16, fontWeight: '800', color: BRAND.colors.canopyDeep, marginBottom: 14 },

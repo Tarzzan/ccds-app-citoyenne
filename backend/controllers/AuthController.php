@@ -311,6 +311,8 @@ class AuthController extends BaseController
         $stmtMonthly->execute([$userId]);
         $monthly = $stmtMonthly->fetchAll();
 
+        $interventionFollowUp = $this->buildInterventionFollowUpSnapshot($userId);
+
         $this->success([
             'incidents_count'      => (int)  $kpis['incidents_count'],
             'resolved_count'       => (int)  $kpis['resolved_count'],
@@ -326,7 +328,145 @@ class AuthController extends BaseController
             'badges'               => $badges,
             'recent_incidents'     => $recentIncidents,
             'monthly_activity'     => $monthly,
+            'intervention_overview'=> $interventionFollowUp['overview'],
+            'next_intervention'    => $interventionFollowUp['next_intervention'],
         ]);
+    }
+
+    private function buildInterventionFollowUpSnapshot(int $userId): array
+    {
+        $snapshot = [
+            'overview' => [
+                'service_bound_open_count' => 0,
+                'unplanned_count' => 0,
+                'planned_count' => 0,
+                'on_site_count' => 0,
+            ],
+            'next_intervention' => null,
+        ];
+
+        $stmt = $this->db->prepare('
+            SELECT i.id, i.reference, i.title, i.status, i.category_id, c.service AS category_service
+            FROM incidents i
+            LEFT JOIN categories c ON c.id = i.category_id
+            WHERE i.user_id = ?
+            ORDER BY i.updated_at DESC, i.id DESC
+        ');
+        $stmt->execute([$userId]);
+        $incidents = $stmt->fetchAll() ?: [];
+
+        foreach ($incidents as $incident) {
+            $incidentId = (int) ($incident['id'] ?? 0);
+            if ($incidentId <= 0) {
+                continue;
+            }
+
+            $serviceContext = intervention_get_incident_service_context(
+                $this->db,
+                $incidentId,
+                isset($incident['category_id']) ? (int) $incident['category_id'] : null,
+                $incident['category_service'] ?? null
+            );
+            $currentPlan = intervention_get_current_plan($this->db, $incidentId);
+            $isOpenIncident = in_array($incident['status'] ?? '', ['submitted', 'acknowledged', 'in_progress'], true);
+
+            if ($isOpenIncident && $serviceContext) {
+                $snapshot['overview']['service_bound_open_count']++;
+            }
+
+            if ($isOpenIncident && $serviceContext && !$currentPlan) {
+                $snapshot['overview']['unplanned_count']++;
+            }
+
+            if (!$currentPlan) {
+                continue;
+            }
+
+            if (in_array($currentPlan['status'] ?? '', ['scheduled', 'rescheduled'], true)) {
+                $snapshot['overview']['planned_count']++;
+            }
+
+            if (($currentPlan['status'] ?? null) === 'in_progress') {
+                $snapshot['overview']['on_site_count']++;
+            }
+
+            if (!$this->isCitizenVisibleInterventionPlan($currentPlan)) {
+                continue;
+            }
+
+            $candidate = [
+                'incident_id' => $incidentId,
+                'incident_reference' => $incident['reference'] ?? null,
+                'incident_title' => $incident['title'] ?: 'Signalement citoyen',
+                'service_id' => !empty($currentPlan['service_id'])
+                    ? (int) $currentPlan['service_id']
+                    : ($serviceContext['service_id'] ?? null),
+                'service_name' => $currentPlan['service_name'] ?? ($serviceContext['service_name'] ?? null),
+                'plan_status' => $currentPlan['status'] ?? null,
+                'scheduled_date' => $currentPlan['scheduled_date'] ?? null,
+                'time_window_start' => $currentPlan['time_window_start'] ?? null,
+                'time_window_end' => $currentPlan['time_window_end'] ?? null,
+                'citizen_message' => $currentPlan['citizen_message'] ?? null,
+                'assigned_user_name' => $currentPlan['assigned_user_name'] ?? null,
+                'provider_name' => $currentPlan['provider_name'] ?? null,
+            ];
+
+            if (
+                $snapshot['next_intervention'] === null
+                || $this->shouldReplaceCitizenNextIntervention($snapshot['next_intervention'], $candidate)
+            ) {
+                $snapshot['next_intervention'] = $candidate;
+            }
+        }
+
+        return $snapshot;
+    }
+
+    private function isCitizenVisibleInterventionPlan(array $plan): bool
+    {
+        return in_array($plan['status'] ?? '', ['scheduled', 'rescheduled', 'in_progress'], true);
+    }
+
+    private function shouldReplaceCitizenNextIntervention(array $current, array $candidate): bool
+    {
+        $currentWeight = $this->getCitizenInterventionPriorityWeight($current['plan_status'] ?? null);
+        $candidateWeight = $this->getCitizenInterventionPriorityWeight($candidate['plan_status'] ?? null);
+
+        if ($candidateWeight < $currentWeight) {
+            return true;
+        }
+
+        if ($candidateWeight > $currentWeight) {
+            return false;
+        }
+
+        return $this->getCitizenInterventionSortKey($candidate) < $this->getCitizenInterventionSortKey($current);
+    }
+
+    private function getCitizenInterventionPriorityWeight(?string $status): int
+    {
+        return match ($status) {
+            'in_progress' => 0,
+            'scheduled', 'rescheduled' => 1,
+            default => 9,
+        };
+    }
+
+    private function getCitizenInterventionSortKey(array $intervention): string
+    {
+        $date = trim((string) ($intervention['scheduled_date'] ?? '9999-12-31'));
+        $time = trim((string) ($intervention['time_window_start'] ?? '23:59:59'));
+        if ($time === '') {
+            $time = '23:59:59';
+        }
+
+        return sprintf(
+            '%d|%s|%s|%08d',
+            $this->getCitizenInterventionPriorityWeight($intervention['plan_status'] ?? null),
+            $date,
+            $time,
+            (int) ($intervention['incident_id'] ?? 0)
+        );
     }
 
     private function enrichIncidentSummaryWithServiceContext(array $incident): array
