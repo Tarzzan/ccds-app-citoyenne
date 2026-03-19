@@ -66,42 +66,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 <div class="login-page">
-  <div class="login-card">
-    <div class="login-kicker">Administration communale</div>
-    <div class="login-logo">
-      <img src="/admin/assets/img/ma-commune-guyane-mark.png" alt="Ma Commune Guyane" class="logo-icon">
-      <div class="logo-name"><?= defined('APP_NAME') ? e(APP_NAME) : 'Ma Commune' ?></div>
-      <div class="logo-sub">Guyane · devoir de suivi public</div>
-    </div>
-
-    <div class="login-intro">
-      Le back-office permet de suivre, prioriser et documenter les réponses apportées aux signalements citoyens.
-    </div>
-
-    <?php if ($error): ?>
-      <div class="alert alert-danger"><?= e($error) ?></div>
-    <?php endif; ?>
-
-    <form method="POST" action="">
-      <div class="form-group">
-        <label class="form-label" for="email">Adresse email</label>
-        <input type="email" id="email" name="email" class="form-control"
-               placeholder="admin@mairie.fr" required
-               value="<?= e($_POST['email'] ?? '') ?>">
+  <div class="login-shell">
+    <aside class="login-aside">
+      <div class="login-aside-kicker">Back-office territorial</div>
+      <h1 class="login-aside-title">Coordonner la reponse publique sans perdre le terrain de vue.</h1>
+      <p class="login-aside-text">
+        Le back-office relie les signalements, les services, la planification d intervention
+        et la transparence citoyenne dans une seule lecture de travail.
+      </p>
+      <div class="login-aside-points">
+        <div class="login-aside-point">
+          <strong>Qualifier</strong>
+          <span>Priorites, categories, service responsable et prise en charge.</span>
+        </div>
+        <div class="login-aside-point">
+          <strong>Planifier</strong>
+          <span>Equipe interne ou prestataire, creneau et preuve de suivi.</span>
+        </div>
+        <div class="login-aside-point">
+          <strong>Rendre lisible</strong>
+          <span>Une chronologie claire pour les agents comme pour les habitants.</span>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label" for="password">Mot de passe</label>
-        <input type="password" id="password" name="password" class="form-control"
-               placeholder="••••••••" required>
+      <div class="login-aside-visual">
+        <div class="generated-visual-panel generated-visual-panel--hero">
+          <?= generated_visual_html('CHAR-05', [
+              'class' => 'generated-visual generated-visual--portrait',
+              'label' => 'Agent communal Ma Commune',
+              'loading' => 'eager',
+          ]) ?>
+          <div class="generated-visual-caption">
+            <strong>Relais communal</strong>
+            <span>Une presence plus concrete pour guider la lecture des interventions et des services.</span>
+          </div>
+        </div>
       </div>
-      <button type="submit" class="btn btn-primary w-100" style="justify-content:center;padding:12px;">
-        🔐 Se connecter
-      </button>
-    </form>
+    </aside>
 
-    <p class="login-footnote">
-      Accès réservé aux agents et administrateurs municipaux.
-    </p>
+    <div class="login-card">
+      <div class="login-kicker">Administration communale</div>
+      <div class="login-logo">
+        <img src="/admin/assets/img/ma-commune-guyane-mark.png" alt="Ma Commune Guyane" class="logo-icon">
+        <div class="logo-name"><?= defined('APP_NAME') ? e(APP_NAME) : 'Ma Commune' ?></div>
+        <div class="logo-sub">Guyane · devoir de suivi public</div>
+      </div>
+
+      <div class="login-intro">
+        Le back-office permet de suivre, prioriser et documenter les réponses apportées aux signalements citoyens.
+      </div>
+
+      <?php if ($error): ?>
+        <div class="alert alert-danger"><?= e($error) ?></div>
+      <?php endif; ?>
+
+      <form method="POST" action="">
+        <div class="form-group">
+          <label class="form-label" for="email">Adresse email</label>
+          <input type="email" id="email" name="email" class="form-control"
+                 placeholder="admin@mairie.fr" required
+                 value="<?= e($_POST['email'] ?? '') ?>">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Mot de passe</label>
+          <input type="password" id="password" name="password" class="form-control"
+                 placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-100" style="justify-content:center;padding:12px;">
+          🔐 Se connecter
+        </button>
+      </form>
+
+      <p class="login-footnote">
+        Accès réservé aux agents et administrateurs municipaux.
+      </p>
+    </div>
   </div>
 </div>
 </body>
