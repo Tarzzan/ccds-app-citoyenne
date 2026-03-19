@@ -78,6 +78,11 @@ try {
         <span>Utilisateurs</span>
       </a>
 
+      <a href="/admin/?page=services" class="nav-item <?= $active_nav === 'services' ? 'active' : '' ?>">
+        <span class="nav-icon">🧭</span>
+        <span>Services</span>
+      </a>
+
       <a href="/admin/?page=categories" class="nav-item <?= $active_nav === 'categories' ? 'active' : '' ?>">
         <span class="nav-icon">🏷️</span>
         <span>Catégories</span>

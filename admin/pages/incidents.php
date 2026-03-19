@@ -10,6 +10,7 @@ $page_title = 'Signalements';
 $active_nav = 'incidents';
 
 $db = Database::getInstance();
+$service_tables_ready = admin_db_has_table($db, 'services') && admin_db_has_table($db, 'service_category_map');
 
 // --- Paramètres de filtre et pagination ---
 $per_page   = 20;
@@ -17,6 +18,7 @@ $page_num   = max(1, (int)($_GET['p']        ?? 1));
 $offset     = ($page_num - 1) * $per_page;
 $f_status   = $_GET['status']    ?? '';
 $f_cat      = $_GET['cat']       ?? '';
+$f_service  = $_GET['service']   ?? '';
 $f_search   = trim($_GET['q']    ?? '');
 $f_priority = $_GET['priority']  ?? '';
 $f_date_from= trim($_GET['date_from'] ?? '');
@@ -30,6 +32,7 @@ $where  = ['1=1'];
 $params = [];
 if ($f_status)    { $where[] = 'i.status = ?';                                    $params[] = $f_status; }
 if ($f_cat)       { $where[] = 'i.category_id = ?';                               $params[] = $f_cat; }
+if ($f_service && $service_tables_ready) { $where[] = 'resolved_service.id = ?';   $params[] = $f_service; }
 if ($f_priority)  { $where[] = 'i.priority = ?';                                  $params[] = $f_priority; }
 if ($f_date_from) { $where[] = 'DATE(i.created_at) >= ?';                         $params[] = $f_date_from; }
 if ($f_date_to)   { $where[] = 'DATE(i.created_at) <= ?';                         $params[] = $f_date_to; }
@@ -40,8 +43,22 @@ if ($f_search)    {
 }
 $where_sql = implode(' AND ', $where);
 
+$service_join_sql = $service_tables_ready
+    ? "
+    LEFT JOIN service_category_map scm ON scm.category_id = c.id AND scm.is_default = 1
+    LEFT JOIN services resolved_service ON resolved_service.id = scm.service_id
+    "
+    : '';
+
 // Compter le total
-$count_stmt = $db->prepare("SELECT COUNT(*) FROM incidents i JOIN users u ON u.id = i.user_id WHERE $where_sql");
+$count_stmt = $db->prepare("
+    SELECT COUNT(*)
+    FROM incidents i
+    JOIN categories c ON c.id = i.category_id
+    JOIN users u ON u.id = i.user_id
+    $service_join_sql
+    WHERE $where_sql
+");
 $count_stmt->execute($params);
 $total       = (int)$count_stmt->fetchColumn();
 $total_pages = max(1, ceil($total / $per_page));
@@ -51,12 +68,14 @@ $sql = "
     SELECT i.id, i.reference, i.title, i.description, i.status, i.priority,
            i.votes_count, i.created_at, i.updated_at,
            c.name AS cat_name, c.color AS cat_color, c.icon AS cat_icon,
+           COALESCE(resolved_service.name, c.service) AS service_name,
            u.full_name AS reporter, u.email AS reporter_email,
            (SELECT COUNT(*) FROM photos ph WHERE ph.incident_id = i.id) AS photo_count,
            (SELECT COUNT(*) FROM comments cm WHERE cm.incident_id = i.id AND cm.is_internal = 0) AS comment_count
     FROM incidents i
     JOIN categories c ON c.id = i.category_id
     JOIN users u ON u.id = i.user_id
+    $service_join_sql
     WHERE $where_sql
     ORDER BY i.$f_sort $f_dir
 ";
@@ -91,6 +110,7 @@ if ($export_csv) {
 
 // Catégories pour le filtre
 $categories = $db->query("SELECT id, name FROM categories ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+$services = $service_tables_ready ? intervention_get_services($db) : [];
 
 require_once __DIR__ . '/../includes/layout.php';
 
@@ -99,6 +119,7 @@ $base_params = array_filter([
     'page'      => 'incidents',
     'status'    => $f_status,
     'cat'       => $f_cat,
+    'service'   => $f_service,
     'priority'  => $f_priority,
     'q'         => $f_search,
     'date_from' => $f_date_from,
@@ -118,7 +139,7 @@ function sort_icon(string $field, string $current_sort, string $current_dir): st
     return $current_dir === 'DESC' ? '↓' : '↑';
 }
 
-$active_filters = array_filter([$f_status, $f_cat, $f_search, $f_priority, $f_date_from, $f_date_to]);
+$active_filters = array_filter([$f_status, $f_cat, $f_service, $f_search, $f_priority, $f_date_from, $f_date_to]);
 $open_count = 0;
 $resolved_count = 0;
 foreach ($incidents as $inc) {
@@ -177,6 +198,16 @@ foreach ($incidents as $inc) {
           <option value="<?= $cat['id'] ?>" <?= $f_cat==$cat['id']?'selected':'' ?>><?= e($cat['name']) ?></option>
         <?php endforeach; ?>
       </select>
+      <?php if ($service_tables_ready): ?>
+        <select name="service" class="form-control">
+          <option value="">Tous les services</option>
+          <?php foreach ($services as $service): ?>
+            <option value="<?= (int)$service['id'] ?>" <?= (string)$f_service === (string)$service['id'] ? 'selected' : '' ?>>
+              <?= e($service['name']) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      <?php endif; ?>
     </div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
       <select name="priority" class="form-control" style="width:160px">
@@ -221,7 +252,7 @@ foreach ($incidents as $inc) {
   <div class="card-header">
     <span class="card-title">
       <?= $total ?> signalement<?= $total > 1 ? 's' : '' ?>
-      <?php if ($f_status || $f_cat || $f_search || $f_priority || $f_date_from || $f_date_to): ?>
+      <?php if ($f_status || $f_cat || $f_service || $f_search || $f_priority || $f_date_from || $f_date_to): ?>
         <span class="badge badge-blue" style="margin-left:8px">Filtré</span>
       <?php endif; ?>
     </span>
@@ -239,6 +270,7 @@ foreach ($incidents as $inc) {
           <th>Référence</th>
           <th>Titre / Description</th>
           <th>Catégorie</th>
+          <th>Service</th>
           <th>Statut</th>
           <th>Priorité</th>
           <th><a href="<?= sort_url('votes_count', $f_sort, $f_dir, $base_url) ?>" style="color:inherit;text-decoration:none">
@@ -270,6 +302,7 @@ foreach ($incidents as $inc) {
               </span>
             </div>
           </td>
+          <td class="text-muted text-small"><?= e($inc['service_name'] ?: '—') ?></td>
           <td><span class="badge <?= status_class($inc['status']) ?>"><?= status_label($inc['status']) ?></span></td>
           <td><span class="badge <?= priority_class($inc['priority'] ?? 'medium') ?>"><?= priority_label($inc['priority'] ?? 'medium') ?></span></td>
           <td class="text-center">
@@ -294,7 +327,7 @@ foreach ($incidents as $inc) {
         </tr>
         <?php endforeach; ?>
         <?php if (empty($incidents)): ?>
-        <tr><td colspan="10" class="text-center text-muted" style="padding:40px">
+        <tr><td colspan="11" class="text-center text-muted" style="padding:40px">
           <?= $f_search ? "Aucun résultat pour \"" . e($f_search) . "\"." : 'Aucun signalement trouvé.' ?>
         </td></tr>
         <?php endif; ?>

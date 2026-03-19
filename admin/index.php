@@ -33,6 +33,7 @@ $page_map = [
     'incidents'       => 'pages/incidents.php',
     'incident_detail' => 'pages/incident_detail.php',
     'users'           => 'pages/users.php',
+    'services'        => 'pages/services.php',
     'stats'           => 'pages/stats.php',
     'categories'      => 'pages/categories.php',
     'map'             => 'pages/map.php',
