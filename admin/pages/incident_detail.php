@@ -152,6 +152,8 @@ try {
 $status_flow = ['submitted', 'acknowledged', 'in_progress', 'resolved'];
 $status_index = array_search($inc['status'], $status_flow, true);
 $status_index = $status_index === false ? -1 : $status_index;
+$incidentCategoryVisual = category_visual_resolve($inc['cat_icon'] ?? 'road', $inc['cat_name'] ?? null);
+$incidentCategorySceneUrl = category_scene_visual_url($inc['cat_icon'] ?? 'road', $inc['cat_name'] ?? null);
 $incidentVisualAsset = $inc['status'] === 'resolved' ? 'MOM-04' : 'MOM-03';
 $incidentVisualUrl = generated_visual_url($incidentVisualAsset);
 $next_step_label = match ($inc['status']) {
@@ -706,7 +708,10 @@ require_once __DIR__ . '/../includes/layout.php';
       <div class="d-flex gap-8 flex-wrap" style="margin-bottom:16px;align-items:center">
         <div style="display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:14px;background:<?= e($inc['cat_color']) ?>14;border:1px solid <?= e($inc['cat_color']) ?>33">
           <?= category_visual_html($inc['cat_icon'] ?? 'road', $inc['cat_name'], 'sm', $inc['cat_color'] ?? null) ?>
-          <span style="font-size:13px;font-weight:700;color:<?= e($inc['cat_color']) ?>"><?= e($inc['cat_name']) ?></span>
+          <div class="admin-category-cell-copy">
+            <span style="font-size:13px;font-weight:700;color:<?= e($inc['cat_color']) ?>"><?= e($inc['cat_name']) ?></span>
+            <span class="text-muted text-small"><?= e($incidentCategoryVisual['description'] ?? '') ?></span>
+          </div>
         </div>
         <span class="badge <?= status_class($inc['status']) ?>"><?= status_label($inc['status']) ?></span>
         <span class="badge <?= priority_class($inc['priority'] ?? 'medium') ?>"><?= priority_label($inc['priority'] ?? 'medium') ?></span>
@@ -725,6 +730,16 @@ require_once __DIR__ . '/../includes/layout.php';
       <p class="text-muted text-small">📍 <?= e($inc['address']) ?></p>
       <?php endif; ?>
       <p class="text-muted text-small">🗺️ Coordonnées : <?= number_format($inc['latitude'],6) ?>, <?= number_format($inc['longitude'],6) ?></p>
+
+      <?php if ($incidentCategorySceneUrl): ?>
+        <div class="category-scene-preview is-ready" style="margin-top:18px">
+          <img src="<?= e($incidentCategorySceneUrl) ?>" alt="Scene terrain <?= e($inc['cat_name']) ?>">
+          <div class="category-scene-preview-copy">
+            <strong><?= e($incidentCategoryVisual['label'] ?? $inc['cat_name']) ?></strong>
+            <span><?= e($incidentCategoryVisual['description'] ?? 'Repere terrain de cette categorie.') ?></span>
+          </div>
+        </div>
+      <?php endif; ?>
     </div>
 
     <!-- Photos -->
@@ -868,6 +883,42 @@ require_once __DIR__ . '/../includes/layout.php';
     </div>
 
     <?php if ($service_tables_ready): ?>
+    <div class="card">
+      <div class="card-header"><span class="card-title">🧩 Lecture d execution</span></div>
+      <div class="admin-category-strip" style="grid-template-columns:1fr; margin-bottom:0">
+        <div class="admin-category-pill" style="--category-accent:<?= e($inc['cat_color'] ?? ($incidentCategoryVisual['accent'] ?? '#174b3a')) ?>;">
+          <?= category_visual_html($inc['cat_icon'] ?? 'road', $inc['cat_name'], 'md', $inc['cat_color'] ?? null) ?>
+          <div class="admin-category-pill-copy">
+            <strong>
+              <?php if ($current_plan && ($current_plan['source_type'] ?? 'internal') === 'provider' && !empty($current_plan['provider_name'])): ?>
+                Prestataire missionne · <?= e($current_plan['provider_name']) ?>
+              <?php elseif ($current_plan && ($current_plan['source_type'] ?? 'internal') === 'internal'): ?>
+                Equipe interne
+              <?php else: ?>
+                Service en attente de planification
+              <?php endif; ?>
+            </strong>
+            <span>
+              <?php if ($current_plan): ?>
+                <?= e($current_plan['service_name'] ?? ($service_context['service_name'] ?? 'Service communal')) ?>
+                <?php if (!empty($current_plan['scheduled_date'])): ?>
+                  · <?= e($current_plan['scheduled_date']) ?>
+                <?php endif; ?>
+                <?php if (!empty($current_plan['time_window_start']) || !empty($current_plan['time_window_end'])): ?>
+                  · <?= e(trim(implode(' - ', array_filter([$current_plan['time_window_start'] ?? null, $current_plan['time_window_end'] ?? null])))) ?>
+                <?php endif; ?>
+              <?php else: ?>
+                Le service est connu, mais aucune fenetre visible n est encore posee pour le citoyen.
+              <?php endif; ?>
+            </span>
+          </div>
+          <span class="admin-category-pill-count admin-category-pill-count--wide">
+            <?= e($current_plan ? incident_plan_status_pill((string)$current_plan['status'])['label'] : 'A planifier') ?>
+          </span>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-header"><span class="card-title">🗓️ Planifier l intervention</span></div>
       <form method="POST" action="">

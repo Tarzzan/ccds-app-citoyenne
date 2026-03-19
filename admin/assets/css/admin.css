@@ -112,6 +112,10 @@ img { max-width: 100%; }
   font-weight: 800;
   font-size: 13px;
 }
+.admin-category-pill-count--wide {
+  min-width: auto;
+  padding: 0 12px;
+}
 
 .category-preset-grid {
   display: grid;
