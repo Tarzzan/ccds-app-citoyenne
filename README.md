@@ -35,6 +35,7 @@ Voir les documents de cadrage actifs :
 - `docs/INTEGRATION_VISUELS_PRODUIT_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_PERSONNAGES_BATCH_01_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_SCENES_TERRAIN_BATCH_01_MA_COMMUNE_2026-03-18.md`
+- `docs/PLANCHES_GENERATION_MOMENTS_PRODUIT_BATCH_01_MA_COMMUNE_2026-03-18.md`
 
 ## Documentation Active Vs Archive
 
@@ -60,6 +61,7 @@ Documents actifs a privilegier pour comprendre l'etat reel du produit :
 - `docs/INTEGRATION_VISUELS_PRODUIT_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_PERSONNAGES_BATCH_01_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_SCENES_TERRAIN_BATCH_01_MA_COMMUNE_2026-03-18.md`
+- `docs/PLANCHES_GENERATION_MOMENTS_PRODUIT_BATCH_01_MA_COMMUNE_2026-03-18.md`
 
 Documents historiques a lire comme archives ou matiere de reprise :
 
@@ -167,6 +169,7 @@ Le bon positionnement est :
 - `assets/visual-production/visual-production-manifest.json` : manifeste machine lisible des pistes personnages, categories et ordre de production visuelle
 - `assets/visual-production/character-batch-01.json` : premier batch machine lisible de generation personnages
 - `assets/visual-production/terrain-batch-01.json` : premier batch machine lisible de generation des scenes terrain
+- `assets/visual-production/moments-batch-01.json` : premier batch machine lisible des moments produit
 
 ## Commandes Utiles
 

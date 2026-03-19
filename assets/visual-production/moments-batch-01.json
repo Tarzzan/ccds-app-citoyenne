@@ -1,0 +1,57 @@
+{
+  "version": "2026-03-18",
+  "batch_id": "moments-batch-01",
+  "description": "Premier lot des illustrations editoriales des moments produit",
+  "style_block": "semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image",
+  "negative_prompt": "text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted anatomy, overcrowded composition, exaggerated comedy, cold corporate atmosphere, photorealistic photo look",
+  "assets": [
+    {
+      "id": "MOM-01",
+      "label": "Accueil duo",
+      "ratio": "4:5",
+      "filename": "mom-01-welcome-duo-4x5.png",
+      "surface_target": ["login", "onboarding", "landing"],
+      "prompt": "Premium cinematic welcome illustration for a civic mobile app in French Guiana, municipal agent and tropical mascot welcoming the citizen into a trustworthy local public service, warm light, polished rendering, calm and engaging mood, mobile-first readability, no text"
+    },
+    {
+      "id": "MOM-02",
+      "label": "Remerciement apres signalement",
+      "ratio": "4:5",
+      "filename": "mom-02-thank-you-after-report-4x5.png",
+      "surface_target": ["create_success", "impact", "follow_up"],
+      "prompt": "Premium gratitude illustration for a civic mobile app in French Guiana, the mascot and municipal agent thanking the citizen after reporting a local issue, warm tropical light, sense of useful civic contribution, premium polished rendering, no text"
+    },
+    {
+      "id": "MOM-03",
+      "label": "Dossier en cours",
+      "ratio": "4:5",
+      "filename": "mom-03-incident-in-progress-4x5.png",
+      "surface_target": ["incident_detail", "my_incidents", "notifications"],
+      "prompt": "Premium progress illustration for a civic mobile app in French Guiana, municipal agent reviewing and handling a local issue while the mascot keeps a watchful presence, clear sense of action in progress, warm tropical atmosphere, polished rendering, no text"
+    },
+    {
+      "id": "MOM-04",
+      "label": "Dossier resolu",
+      "ratio": "4:5",
+      "filename": "mom-04-incident-resolved-4x5.png",
+      "surface_target": ["impact", "incident_detail", "resolution_states"],
+      "prompt": "Premium resolution illustration for a civic mobile app in French Guiana, public-space issue fixed, municipal agent and mascot acknowledging the result, sense of calm civic pride, warm light, polished rendering, no text"
+    },
+    {
+      "id": "MOM-05",
+      "label": "Aucun signalement utile",
+      "ratio": "4:5",
+      "filename": "mom-05-no-incidents-yet-4x5.png",
+      "surface_target": ["my_incidents_empty", "dashboard_empty"],
+      "prompt": "Premium calm civic illustration for a mobile app in French Guiana, municipal mascot and local public-service presence in a peaceful territory moment, no active issue shown, sense of readiness and attention, warm tropical light, encouraging but not pushy, polished rendering, no text"
+    },
+    {
+      "id": "MOM-06",
+      "label": "Aucune notification importante",
+      "ratio": "4:5",
+      "filename": "mom-06-no-important-notifications-4x5.png",
+      "surface_target": ["notifications_empty", "follow_up_empty"],
+      "prompt": "Premium calm notification-empty-state illustration for a civic mobile app in French Guiana, mascot or municipal agent in a watchful but relaxed posture, sense of orderly follow-up, warm tropical light, polished rendering, emotionally reassuring, no text"
+    }
+  ]
+}
