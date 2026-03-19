@@ -50,6 +50,9 @@ class CommentController extends BaseController
         $stmtR->execute([$incidentId]);
         $allReplies = $stmtR->fetchAll(\PDO::FETCH_ASSOC);
 
+        $roots = $this->sanitizeCommentsForAudience($roots, $auth);
+        $allReplies = $this->sanitizeCommentsForAudience($allReplies, $auth);
+
         $repliesByParent = [];
         foreach ($allReplies as $r) { $repliesByParent[$r['parent_id']][] = $r; }
         foreach ($roots as &$root) { $root['replies'] = $repliesByParent[$root['id']] ?? []; }
@@ -167,5 +170,31 @@ class CommentController extends BaseController
         $c = $stmt->fetch(\PDO::FETCH_ASSOC);
         if (!$c) { $this->notFound('Commentaire introuvable.'); }
         return $c;
+    }
+
+    private function sanitizeCommentsForAudience(array $comments, array $auth): array
+    {
+        if (in_array($auth['role'] ?? '', ['agent', 'admin'], true)) {
+            return $comments;
+        }
+
+        $currentUserId = (int)($auth['sub'] ?? 0);
+
+        return array_map(static function (array $comment) use ($currentUserId): array {
+            $authorUserId = (int)($comment['user_id'] ?? 0);
+            if ($authorUserId === $currentUserId) {
+                return $comment;
+            }
+
+            $role = (string)($comment['author_role'] ?? 'citizen');
+            $comment['user_id'] = 0;
+            $comment['author_name'] = match ($role) {
+                'agent' => 'Equipe municipale',
+                'admin' => 'Administration communale',
+                default => 'Habitant du territoire',
+            };
+
+            return $comment;
+        }, $comments);
     }
 }
