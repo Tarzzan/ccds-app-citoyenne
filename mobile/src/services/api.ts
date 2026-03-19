@@ -148,6 +148,56 @@ export interface StatusHistory {
   changed_by: string;
 }
 
+export interface IncidentServiceContext {
+  id: number | null;
+  code?: string | null;
+  name?: string | null;
+  source?: string | null;
+}
+
+export interface IncidentPlan {
+  id: number;
+  status: 'draft' | 'scheduled' | 'rescheduled' | 'in_progress' | 'completed' | 'cancelled';
+  service_id?: number | null;
+  service_code?: string | null;
+  service_name?: string | null;
+  planned_by_user_id?: number | null;
+  planned_by_name?: string | null;
+  assigned_user_id?: number | null;
+  assigned_user_name?: string | null;
+  scheduled_date?: string | null;
+  time_window_start?: string | null;
+  time_window_end?: string | null;
+  internal_note?: string | null;
+  citizen_message?: string | null;
+  source_type?: 'internal' | 'provider' | null;
+  provider_name?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface IncidentServiceHistoryEntry {
+  id: number;
+  service_id?: number | null;
+  service_code?: string | null;
+  service_name?: string | null;
+  plan_id?: number | null;
+  actor_user_id?: number | null;
+  actor_name?: string | null;
+  event_type?: string | null;
+  event_label?: string | null;
+  citizen_label?: string | null;
+  payload_json?: string | null;
+  created_at?: string | null;
+}
+
+export interface CitizenTimelineEntry {
+  type: 'status' | 'service';
+  label: string;
+  detail?: string | null;
+  created_at?: string | null;
+}
+
 export interface Comment {
   id: number;
   comment: string;
@@ -195,6 +245,12 @@ export interface Incident {
   thumbnail?: string;
   photos?: Photo[];
   status_history?: StatusHistory[];
+  service?: IncidentServiceContext | null;
+  service_id?: number | null;
+  service_name?: string | null;
+  current_plan?: IncidentPlan | null;
+  service_history?: IncidentServiceHistoryEntry[];
+  citizen_timeline?: CitizenTimelineEntry[];
   votes_count?: number;
   user_has_voted?: boolean;
   created_at: string;

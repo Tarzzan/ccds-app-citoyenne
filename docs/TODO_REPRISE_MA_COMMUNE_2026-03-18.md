@@ -127,6 +127,34 @@ Le produit cible doit permettre :
   - suivi d un dossier
   - categories de signalement
 
+### P1 - Chaine D Intervention Traçable
+
+- Definir un socle `services` relie aux categories prioritaires
+- Rattacher les agents staff a un ou plusieurs services
+- Permettre une prise en charge explicite par service responsable
+- Ajouter une planification simple d intervention :
+  - date
+  - creneau
+  - note interne
+  - message citoyen
+- Rendre cette planification visible dans la chronologie citoyenne sous une forme simple :
+  - attribue au service
+  - intervention planifiee
+  - intervention reprogrammee
+  - intervention terminee
+- Conserver une structure compatible avec une future extension `Prestataires`
+
+### P2 - Module Prestataires
+
+- Ouvrir plus tard un module ou plugin `Prestataires et interventions externes`
+- Limiter ce module a un perimetre borne :
+  - missions assignees
+  - acceptation
+  - planification
+  - depot de preuve
+  - cloture proposee
+- Garder la validation finale et la supervision complete cote commune
+
 ### P2 - Alignement Technique
 
 - Renommer les constantes visibles :
@@ -152,6 +180,7 @@ Le produit cible doit permettre :
 - App icon et favicon derives du logo
 - Renommage produit des surfaces visibles prioritaires
 - Refonte UX des ecrans d'entree, carte, dashboard et profil
+- Cadrage services, planification et traçabilite d intervention
 - Mise a jour de la documentation produit
 - Cadrage MVP de livraison rapide avec definition de fini
 

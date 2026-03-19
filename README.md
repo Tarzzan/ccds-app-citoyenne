@@ -38,6 +38,9 @@ Voir les documents de cadrage actifs :
 - `docs/PLANCHES_GENERATION_SCENES_TERRAIN_BATCH_01_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_MOMENTS_PRODUIT_BATCH_01_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_HERO_COMMERCIAL_BATCH_01_MA_COMMUNE_2026-03-18.md`
+- `docs/BRIEF_CHAINE_INTERVENTION_SERVICES_MA_COMMUNE_2026-03-18.md`
+- `docs/MODELE_DONNEES_SERVICES_INTERVENTIONS_MA_COMMUNE_2026-03-18.md`
+- `docs/RBAC_SERVICES_PRESTATAIRES_MA_COMMUNE_2026-03-18.md`
 
 ## Documentation Active Vs Archive
 
@@ -66,6 +69,9 @@ Documents actifs a privilegier pour comprendre l'etat reel du produit :
 - `docs/PLANCHES_GENERATION_SCENES_TERRAIN_BATCH_01_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_MOMENTS_PRODUIT_BATCH_01_MA_COMMUNE_2026-03-18.md`
 - `docs/PLANCHES_GENERATION_HERO_COMMERCIAL_BATCH_01_MA_COMMUNE_2026-03-18.md`
+- `docs/BRIEF_CHAINE_INTERVENTION_SERVICES_MA_COMMUNE_2026-03-18.md`
+- `docs/MODELE_DONNEES_SERVICES_INTERVENTIONS_MA_COMMUNE_2026-03-18.md`
+- `docs/RBAC_SERVICES_PRESTATAIRES_MA_COMMUNE_2026-03-18.md`
 
 Documents historiques a lire comme archives ou matiere de reprise :
 
@@ -187,6 +193,9 @@ Le bon positionnement est :
 - `assets/visual-production/moments-batch-01.json` : premier batch machine lisible des moments produit
 - `assets/visual-production/hero-batch-01.json` : premier batch machine lisible des visuels hero commerciaux
 - `docs/PIPELINE_INTEGRATION_ASSETS_GENERES_MA_COMMUNE_2026-03-18.md` : pipeline d ingestion des futurs visuels générés
+- `docs/BRIEF_CHAINE_INTERVENTION_SERVICES_MA_COMMUNE_2026-03-18.md` : cadrage du noyau services, planification et traçabilite
+- `docs/MODELE_DONNEES_SERVICES_INTERVENTIONS_MA_COMMUNE_2026-03-18.md` : schema cible phase 1 pour services, plans et historique d intervention
+- `docs/RBAC_SERVICES_PRESTATAIRES_MA_COMMUNE_2026-03-18.md` : roles, droits et trajectoire future vers un module prestataire borne
 
 ## Commandes Utiles
 

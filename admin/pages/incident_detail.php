@@ -53,6 +53,27 @@ $comments_stmt = $db->prepare("
 $comments_stmt->execute([$id]);
 $comments = $comments_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+$service_tables_ready = admin_db_has_table($db, 'services')
+    && admin_db_has_table($db, 'intervention_plans')
+    && admin_db_has_table($db, 'incident_service_history');
+
+$services = $service_tables_ready ? intervention_get_services($db) : [];
+$staff_stmt = $db->query("
+    SELECT id, full_name, role
+    FROM users
+    WHERE role IN ('agent', 'admin') AND is_active = 1
+    ORDER BY full_name ASC
+");
+$staff_users = $staff_stmt->fetchAll(PDO::FETCH_ASSOC);
+$service_context = intervention_get_incident_service_context(
+    $db,
+    $id,
+    isset($inc['category_id']) ? (int)$inc['category_id'] : null,
+    $inc['service'] ?? null
+);
+$current_plan = $service_tables_ready ? intervention_get_current_plan($db, $id) : null;
+$service_history = $service_tables_ready ? intervention_get_history($db, $id, false) : [];
+
 // Charger les votants (v1.1) — si la table existe
 $voters = [];
 try {
@@ -151,6 +172,146 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: /admin/?page=incident_detail&id=$id");
         exit;
     }
+
+    // Planification d'intervention
+    if ($action === 'plan_intervention') {
+        if (!$service_tables_ready) {
+            $_SESSION['flash_error'] = "Le socle services/interventions n'est pas encore disponible sur cet environnement.";
+            header("Location: /admin/?page=incident_detail&id=$id");
+            exit;
+        }
+
+        $service_id = (int)($_POST['service_id'] ?? 0);
+        $assigned_user_id = (int)($_POST['assigned_user_id'] ?? 0);
+        $scheduled_date = trim($_POST['scheduled_date'] ?? '');
+        $time_window_start = trim($_POST['time_window_start'] ?? '');
+        $time_window_end = trim($_POST['time_window_end'] ?? '');
+        $internal_note = trim($_POST['internal_note'] ?? '');
+        $citizen_message = trim($_POST['citizen_message'] ?? '');
+        $source_type = ($_POST['source_type'] ?? 'internal') === 'provider' ? 'provider' : 'internal';
+        $provider_name = trim($_POST['provider_name'] ?? '');
+
+        if ($service_id <= 0) {
+            $_SESSION['flash_error'] = 'Choisissez un service responsable.';
+            header("Location: /admin/?page=incident_detail&id=$id");
+            exit;
+        }
+
+        if ($scheduled_date === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $scheduled_date)) {
+            $_SESSION['flash_error'] = 'La date planifiee est obligatoire.';
+            header("Location: /admin/?page=incident_detail&id=$id");
+            exit;
+        }
+
+        if ($source_type === 'provider' && $provider_name === '') {
+            $_SESSION['flash_error'] = 'Indiquez le nom du prestataire missionne.';
+            header("Location: /admin/?page=incident_detail&id=$id");
+            exit;
+        }
+
+        try {
+            $db->beginTransaction();
+
+            $service_stmt = $db->prepare('SELECT id, name FROM services WHERE id = ? AND is_active = 1 LIMIT 1');
+            $service_stmt->execute([$service_id]);
+            $service = $service_stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$service) {
+                throw new RuntimeException('Service introuvable.');
+            }
+
+            $existing_plan = intervention_get_current_plan($db, $id);
+            $is_reschedule = !empty($existing_plan)
+                && in_array($existing_plan['status'], ['draft', 'scheduled', 'rescheduled', 'in_progress'], true);
+
+            if ($is_reschedule) {
+                $db->prepare('UPDATE intervention_plans SET status = ?, updated_at = NOW() WHERE id = ?')
+                   ->execute(['rescheduled', (int)$existing_plan['id']]);
+            }
+
+            $db->prepare("
+                INSERT INTO intervention_plans
+                    (incident_id, service_id, planned_by_user_id, assigned_user_id, status, scheduled_date,
+                     time_window_start, time_window_end, internal_note, citizen_message, source_type, provider_name, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+            ")->execute([
+                $id,
+                $service_id,
+                $admin['id'],
+                $assigned_user_id > 0 ? $assigned_user_id : null,
+                $is_reschedule ? 'rescheduled' : 'scheduled',
+                $scheduled_date,
+                $time_window_start !== '' ? $time_window_start : null,
+                $time_window_end !== '' ? $time_window_end : null,
+                $internal_note !== '' ? $internal_note : null,
+                $citizen_message !== '' ? $citizen_message : null,
+                $source_type,
+                $provider_name !== '' ? $provider_name : null,
+            ]);
+            $plan_id = (int)$db->lastInsertId();
+
+            $incident_sets = ['updated_at = NOW()'];
+            $incident_params = [];
+            if ($assigned_user_id > 0) {
+                $incident_sets[] = 'assigned_to = ?';
+                $incident_params[] = $assigned_user_id;
+            }
+            if ($inc['status'] === 'submitted') {
+                $incident_sets[] = 'status = ?';
+                $incident_params[] = 'acknowledged';
+            }
+            $incident_params[] = $id;
+            $db->prepare('UPDATE incidents SET ' . implode(', ', $incident_sets) . ' WHERE id = ?')
+               ->execute($incident_params);
+
+            if ($inc['status'] === 'submitted') {
+                $db->prepare("
+                    INSERT INTO status_history (incident_id, old_status, new_status, user_id, note, changed_at)
+                    VALUES (?, ?, ?, ?, ?, NOW())
+                ")->execute([
+                    $id,
+                    'submitted',
+                    'acknowledged',
+                    $admin['id'],
+                    'Dossier pris en charge et intervention planifiee.',
+                ]);
+            }
+
+            $window_label = trim(implode(' - ', array_filter([$time_window_start, $time_window_end])));
+            $citizen_label = $is_reschedule
+                ? 'Intervention reprogrammee'
+                : 'Intervention planifiee';
+            intervention_record_history($db, [
+                'incident_id'   => $id,
+                'service_id'    => $service_id,
+                'plan_id'       => $plan_id,
+                'actor_user_id' => $admin['id'],
+                'event_type'    => $is_reschedule ? 'plan_rescheduled' : 'plan_created',
+                'event_label'   => $is_reschedule
+                    ? 'Planification mise a jour pour le service ' . $service['name']
+                    : 'Intervention planifiee pour le service ' . $service['name'],
+                'citizen_label' => $citizen_label,
+                'payload'       => [
+                    'scheduled_date' => $scheduled_date,
+                    'time_window'    => $window_label !== '' ? $window_label : null,
+                    'source_type'    => $source_type,
+                    'provider_name'  => $provider_name !== '' ? $provider_name : null,
+                ],
+            ]);
+
+            $db->commit();
+            $_SESSION['flash_success'] = $is_reschedule
+                ? 'Intervention replanifiee avec succes.'
+                : 'Intervention planifiee avec succes.';
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            $_SESSION['flash_error'] = 'Echec de la planification : ' . $e->getMessage();
+        }
+
+        header("Location: /admin/?page=incident_detail&id=$id");
+        exit;
+    }
 }
 
 $page_title = 'Signalement ' . e($inc['reference']);
@@ -228,6 +389,34 @@ require_once __DIR__ . '/../includes/layout.php';
     </div>
   <?php endif; ?>
 </div>
+
+<?php if ($service_context || $current_plan): ?>
+<div class="admin-guidance-grid" style="margin-top:18px">
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Service responsable</div>
+    <h3><?= e($service_context['service_name'] ?? 'Aucun service attribue') ?></h3>
+    <p>
+      <?= !empty($service_context['source']) && $service_context['source'] === 'plan'
+        ? 'Le service affiché provient de la planification en cours.'
+        : 'Le service affiché provient du rattachement categorie -> service.' ?>
+    </p>
+  </div>
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Intervention courante</div>
+    <h3><?= $current_plan ? e(ucfirst(str_replace('_', ' ', $current_plan['status']))) : 'Pas encore planifiee' ?></h3>
+    <p>
+      <?php if ($current_plan): ?>
+        <?= e($current_plan['scheduled_date'] ?? 'Date non definie') ?>
+        <?php if (!empty($current_plan['time_window_start']) || !empty($current_plan['time_window_end'])): ?>
+          · <?= e(trim(implode(' - ', array_filter([$current_plan['time_window_start'] ?? null, $current_plan['time_window_end'] ?? null])))) ?>
+        <?php endif; ?>
+      <?php else: ?>
+        Le dossier est suivi, mais aucune fenetre d intervention n est encore visible pour le citoyen.
+      <?php endif; ?>
+    </p>
+  </div>
+</div>
+<?php endif; ?>
 
 <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;">
 
@@ -410,6 +599,85 @@ require_once __DIR__ . '/../includes/layout.php';
       </form>
     </div>
 
+    <?php if ($service_tables_ready): ?>
+    <div class="card">
+      <div class="card-header"><span class="card-title">🗓️ Planifier l intervention</span></div>
+      <form method="POST" action="">
+        <input type="hidden" name="action" value="plan_intervention">
+
+        <div class="form-group">
+          <label class="form-label">Service responsable</label>
+          <select name="service_id" class="form-control" required>
+            <option value="">Choisir un service…</option>
+            <?php foreach ($services as $service): ?>
+              <option value="<?= (int)$service['id'] ?>" <?= ((int)($current_plan['service_id'] ?? $service_context['service_id'] ?? 0) === (int)$service['id']) ? 'selected' : '' ?>>
+                <?= e($service['name']) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Agent en charge</label>
+          <select name="assigned_user_id" class="form-control">
+            <option value="">Laisser non assigne</option>
+            <?php foreach ($staff_users as $staff): ?>
+              <option value="<?= (int)$staff['id'] ?>" <?= ((int)($current_plan['assigned_user_id'] ?? $inc['assigned_to'] ?? 0) === (int)$staff['id']) ? 'selected' : '' ?>>
+                <?= e($staff['full_name']) ?> · <?= e(role_label($staff['role'])) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+
+        <div class="d-flex gap-8">
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Date prevue</label>
+            <input type="date" name="scheduled_date" class="form-control" value="<?= e($current_plan['scheduled_date'] ?? '') ?>" required>
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Debut</label>
+            <input type="time" name="time_window_start" class="form-control" value="<?= e($current_plan['time_window_start'] ?? '') ?>">
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Fin</label>
+            <input type="time" name="time_window_end" class="form-control" value="<?= e($current_plan['time_window_end'] ?? '') ?>">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mode d execution</label>
+          <select name="source_type" class="form-control">
+            <option value="internal" <?= (($current_plan['source_type'] ?? 'internal') === 'internal') ? 'selected' : '' ?>>Equipe interne</option>
+            <option value="provider" <?= (($current_plan['source_type'] ?? '') === 'provider') ? 'selected' : '' ?>>Prestataire missionne</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Prestataire (si mission externe)</label>
+          <input type="text" name="provider_name" class="form-control"
+                 value="<?= e($current_plan['provider_name'] ?? '') ?>"
+                 placeholder="Ex: Entreprise voirie littoral">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Message visible cote citoyen</label>
+          <textarea name="citizen_message" class="form-control" rows="2"
+                    placeholder="Ex: Une intervention est prevue cette semaine pour traiter ce point."><?= e($current_plan['citizen_message'] ?? '') ?></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Note interne</label>
+          <textarea name="internal_note" class="form-control" rows="2"
+                    placeholder="Ex: Intervention a synchroniser avec la tournee secteur ouest."><?= e($current_plan['internal_note'] ?? '') ?></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100" style="justify-content:center">
+          <?= $current_plan ? 'Mettre a jour la planification' : 'Planifier l intervention' ?>
+        </button>
+      </form>
+    </div>
+    <?php endif; ?>
+
     <!-- Historique des statuts -->
     <?php if (!empty($history)): ?>
     <div class="card">
@@ -431,6 +699,44 @@ require_once __DIR__ . '/../includes/layout.php';
             <?php endif; ?>
             <div class="timeline-meta">
               <?= e($h['changed_by_name']) ?> · <?= format_date($h['changed_at']) ?>
+            </div>
+          </div>
+        </li>
+        <?php endforeach; ?>
+      </ul>
+    </div>
+    <?php endif; ?>
+
+    <?php if (!empty($service_history)): ?>
+    <div class="card">
+      <div class="card-header"><span class="card-title">🧭 Trace d intervention</span></div>
+      <ul class="timeline">
+        <?php foreach ($service_history as $entry): ?>
+        <?php $payload = !empty($entry['payload_json']) ? json_decode($entry['payload_json'], true) : []; ?>
+        <li class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <div><strong><?= e($entry['event_label'] ?? $entry['event_type']) ?></strong></div>
+            <?php if (!empty($entry['citizen_label'])): ?>
+              <p style="font-size:13px;margin:4px 0 0;color:#374151"><?= e($entry['citizen_label']) ?></p>
+            <?php endif; ?>
+            <?php if (!empty($payload['scheduled_date'])): ?>
+              <p style="font-size:12px;margin:4px 0 0;color:#64748b">
+                Date prevue : <?= e($payload['scheduled_date']) ?>
+                <?php if (!empty($payload['time_window'])): ?>
+                  · <?= e($payload['time_window']) ?>
+                <?php endif; ?>
+              </p>
+            <?php endif; ?>
+            <?php if (!empty($payload['provider_name'])): ?>
+              <p style="font-size:12px;margin:4px 0 0;color:#64748b">Prestataire : <?= e($payload['provider_name']) ?></p>
+            <?php endif; ?>
+            <div class="timeline-meta">
+              <?= e($entry['actor_name'] ?? 'Systeme') ?>
+              <?php if (!empty($entry['service_name'])): ?>
+                · <?= e($entry['service_name']) ?>
+              <?php endif; ?>
+              · <?= format_date($entry['created_at']) ?>
             </div>
           </div>
         </li>

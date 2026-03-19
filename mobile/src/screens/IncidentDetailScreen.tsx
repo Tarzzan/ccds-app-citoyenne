@@ -167,6 +167,18 @@ function getCitizenStatusCompanion(incident: Incident) {
   }
 }
 
+function formatServiceDate(value?: string | null) {
+  if (!value) {
+    return 'Date non definie';
+  }
+
+  return new Date(value).toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
 export default function IncidentDetailScreen() {
   const route = useRoute<RouteType>();
   const { id } = route.params;
@@ -282,6 +294,9 @@ export default function IncidentDetailScreen() {
   const photos  = incident.photos ?? [];
   const history = incident.status_history ?? [];
   const publicComments = comments.filter(c => !c.is_internal);
+  const currentPlan = incident.current_plan ?? null;
+  const serviceName = incident.service_name ?? incident.service?.name ?? null;
+  const citizenTimeline = incident.citizen_timeline ?? [];
   const staffRoleLabel = user?.role === 'admin' ? 'Administrateur' : 'Agent municipal';
   const recommendedAction = getRecommendedStaffAction(incident, Boolean(assignToMe));
   const citizenCompanion = getCitizenStatusCompanion(incident);
@@ -373,6 +388,47 @@ export default function IncidentDetailScreen() {
             </Text>
           ) : null}
         </View>
+
+        {(serviceName || currentPlan) && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Service et intervention</Text>
+            {serviceName ? (
+              <View style={styles.serviceChip}>
+                <Text style={styles.serviceChipLabel}>Service responsable</Text>
+                <Text style={styles.serviceChipValue}>{serviceName}</Text>
+              </View>
+            ) : null}
+
+            {currentPlan ? (
+              <View style={styles.planCard}>
+                <Text style={styles.planTitle}>Intervention planifiée</Text>
+                <Text style={styles.planText}>
+                  {formatServiceDate(currentPlan.scheduled_date)}
+                  {currentPlan.time_window_start || currentPlan.time_window_end
+                    ? ` · ${[currentPlan.time_window_start, currentPlan.time_window_end].filter(Boolean).join(' - ')}`
+                    : ''}
+                </Text>
+                {currentPlan.assigned_user_name ? (
+                  <Text style={styles.planMeta}>Référent prévu : {currentPlan.assigned_user_name}</Text>
+                ) : null}
+                {currentPlan.source_type === 'provider' && currentPlan.provider_name ? (
+                  <Text style={styles.planMeta}>Prestataire missionné : {currentPlan.provider_name}</Text>
+                ) : null}
+                {currentPlan.citizen_message ? (
+                  <Text style={styles.planCitizenMessage}>{currentPlan.citizen_message}</Text>
+                ) : (
+                  <Text style={styles.planMeta}>
+                    Cette planification reste interne pour l instant. Le prochain cran utile est d exposer un message citoyen plus explicite.
+                  </Text>
+                )}
+              </View>
+            ) : (
+              <Text style={styles.planMeta}>
+                Le dossier a un service de rattachement, mais aucune intervention n est encore planifiée.
+              </Text>
+            )}
+          </View>
+        )}
 
         <View style={styles.card}>
           <View style={styles.refRow}>
@@ -588,6 +644,30 @@ export default function IncidentDetailScreen() {
                   <Text style={styles.historyMeta}>
                     {h.changed_by} · {new Date(h.changed_at).toLocaleDateString('fr-FR')}
                   </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {citizenTimeline.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Chronologie lisible</Text>
+            {citizenTimeline.map((entry, index) => (
+              <View key={`${entry.type}-${entry.created_at ?? index}`} style={styles.timelineItem}>
+                <View style={[styles.timelineDot, entry.type === 'service' && styles.timelineDotService]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.timelineLabel}>{entry.label}</Text>
+                  {entry.detail ? <Text style={styles.timelineDetail}>{entry.detail}</Text> : null}
+                  {entry.created_at ? (
+                    <Text style={styles.timelineMeta}>
+                      {new Date(entry.created_at).toLocaleDateString('fr-FR', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </Text>
+                  ) : null}
                 </View>
               </View>
             ))}
@@ -825,6 +905,55 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: BRAND.colors.slate,
   },
+  serviceChip: {
+    backgroundColor: '#EFF5EF',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#D9E6D9',
+    marginBottom: 12,
+  },
+  serviceChipLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    color: BRAND.colors.canopy,
+    marginBottom: 6,
+  },
+  serviceChipValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: BRAND.colors.canopyDeep,
+  },
+  planCard: {
+    backgroundColor: BRAND.surfaces.mutedCard,
+    borderRadius: 16,
+    padding: 14,
+  },
+  planTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: BRAND.colors.canopyDeep,
+    marginBottom: 6,
+  },
+  planText: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#355248',
+  },
+  planMeta: {
+    marginTop: 6,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: BRAND.colors.slate,
+  },
+  planCitizenMessage: {
+    marginTop: 8,
+    fontSize: 13,
+    lineHeight: 19,
+    color: BRAND.colors.canopyDeep,
+  },
 
   infoRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6, gap: 8 },
   infoIcon:{ fontSize: 16 },
@@ -1003,6 +1132,33 @@ const styles = StyleSheet.create({
   historyStatus: { fontSize: 14, fontWeight: '600', color: COLORS.dark, marginBottom: 2 },
   historyNote:   { fontSize: 13, color: '#355248', marginBottom: 2 },
   historyMeta:   { fontSize: 12, color: COLORS.gray },
+  timelineItem: { flexDirection: 'row', gap: 12, marginBottom: 14 },
+  timelineDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: BRAND.colors.awara,
+    marginTop: 5,
+  },
+  timelineDotService: {
+    backgroundColor: BRAND.colors.leaf,
+  },
+  timelineLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: BRAND.colors.canopyDeep,
+  },
+  timelineDetail: {
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 19,
+    color: BRAND.colors.slate,
+  },
+  timelineMeta: {
+    marginTop: 4,
+    fontSize: 12,
+    color: COLORS.gray,
+  },
 
   noComments: { fontSize: 14, color: COLORS.gray, marginBottom: 16 },
 

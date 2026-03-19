@@ -14,6 +14,7 @@ require_once __DIR__ . '/../core/BaseController.php';
 require_once __DIR__ . '/../core/Permissions.php';
 require_once __DIR__ . '/../core/Security.php';
 require_once __DIR__ . '/../config/PushNotificationService.php';
+require_once __DIR__ . '/../config/InterventionWorkflow.php';
 
 class IncidentController extends BaseController
 {
@@ -115,6 +116,7 @@ class IncidentController extends BaseController
                 c.name AS category_name,
                 c.icon AS category_icon,
                 c.color AS category_color,
+                c.service AS category_service,
                 u.full_name AS reporter_name,
                 assignee.full_name AS assigned_to_name,
                 (SELECT file_path FROM photos WHERE incident_id = i.id ORDER BY id ASC LIMIT 1) AS thumbnail
@@ -153,6 +155,7 @@ class IncidentController extends BaseController
                 c.name  AS category_name,
                 c.icon  AS category_icon,
                 c.color AS category_color,
+                c.service AS category_service,
                 u.full_name AS reporter_name,
                 u.email     AS reporter_email,
                 assignee.full_name AS assigned_to_name
@@ -189,10 +192,13 @@ class IncidentController extends BaseController
             ORDER BY sh.changed_at ASC
         ");
         $stmtH->execute([$id]);
+        $statusHistory = $stmtH->fetchAll();
 
         $incident['photos']         = $photos;
-        $incident['status_history'] = $stmtH->fetchAll();
+        $incident['status_history'] = $statusHistory;
         $incident['votes_count']    = (int)$incident['votes_count'];
+
+        $incident = $this->enrichIncidentWithInterventionContext($incident, $statusHistory);
 
         $this->success($incident);
     }
@@ -292,7 +298,13 @@ class IncidentController extends BaseController
             $this->error('Statut invalide. Valeurs acceptées : ' . implode(', ', $validStatuses), 422);
         }
 
-        $stmt = $this->db->prepare('SELECT id, status FROM incidents WHERE id = ? LIMIT 1');
+        $stmt = $this->db->prepare("
+            SELECT i.id, i.status, i.category_id, c.service AS category_service
+            FROM incidents i
+            JOIN categories c ON c.id = i.category_id
+            WHERE i.id = ?
+            LIMIT 1
+        ");
         $stmt->execute([$id]);
         $incident = $stmt->fetch();
         if (!$incident) {
@@ -326,6 +338,26 @@ class IncidentController extends BaseController
         $this->db->prepare(
             'INSERT INTO status_history (incident_id, user_id, old_status, new_status, note) VALUES (?, ?, ?, ?, ?)'
         )->execute([$id, $auth['sub'], $oldStatus, $newStatus, $note ?: null]);
+
+        $context = intervention_get_incident_service_context(
+            $this->db,
+            $id,
+            isset($incident['category_id']) ? (int)$incident['category_id'] : null,
+            $incident['category_service'] ?? null
+        );
+        intervention_record_history($this->db, [
+            'incident_id'    => $id,
+            'service_id'     => $context['service_id'] ?? null,
+            'actor_user_id'  => (int)$auth['sub'],
+            'event_type'     => 'status_updated',
+            'event_label'    => 'Statut dossier mis a jour',
+            'citizen_label'  => $this->citizenLabelForStatus($newStatus, $context['service_name'] ?? null),
+            'payload'        => [
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus,
+                'assigned_to' => $assignedTo,
+            ],
+        ]);
 
         (new PushNotificationService($this->db))->notifyStatusChange($id, $newStatus, $note ?: null);
 
@@ -447,5 +479,128 @@ class IncidentController extends BaseController
             'mime' => $mimeType,
             'size' => $file['size'],
         ];
+    }
+
+    private function enrichIncidentWithInterventionContext(array $incident, array $statusHistory): array
+    {
+        $serviceContext = intervention_get_incident_service_context(
+            $this->db,
+            (int)$incident['id'],
+            isset($incident['category_id']) ? (int)$incident['category_id'] : null,
+            $incident['category_service'] ?? null
+        );
+        $currentPlan = intervention_get_current_plan($this->db, (int)$incident['id']);
+        $serviceHistory = intervention_get_history($this->db, (int)$incident['id'], false);
+        $citizenHistory = intervention_get_history($this->db, (int)$incident['id'], true);
+
+        if ($serviceContext) {
+            $incident['service'] = [
+                'id'     => $serviceContext['service_id'] ?? null,
+                'code'   => $serviceContext['service_code'] ?? null,
+                'name'   => $serviceContext['service_name'] ?? null,
+                'source' => $serviceContext['source'] ?? null,
+            ];
+            $incident['service_id'] = $serviceContext['service_id'] ?? null;
+            $incident['service_name'] = $serviceContext['service_name'] ?? null;
+        } else {
+            $incident['service'] = null;
+            $incident['service_id'] = null;
+            $incident['service_name'] = null;
+        }
+
+        if ($currentPlan) {
+            $incident['current_plan'] = [
+                'id'                => (int)$currentPlan['id'],
+                'status'            => $currentPlan['status'],
+                'service_id'        => !empty($currentPlan['service_id']) ? (int)$currentPlan['service_id'] : null,
+                'service_code'      => $currentPlan['service_code'] ?? null,
+                'service_name'      => $currentPlan['service_name'] ?? null,
+                'planned_by_user_id'=> !empty($currentPlan['planned_by_user_id']) ? (int)$currentPlan['planned_by_user_id'] : null,
+                'planned_by_name'   => $currentPlan['planned_by_name'] ?? null,
+                'assigned_user_id'  => !empty($currentPlan['assigned_user_id']) ? (int)$currentPlan['assigned_user_id'] : null,
+                'assigned_user_name'=> $currentPlan['assigned_user_name'] ?? null,
+                'scheduled_date'    => $currentPlan['scheduled_date'] ?? null,
+                'time_window_start' => $currentPlan['time_window_start'] ?? null,
+                'time_window_end'   => $currentPlan['time_window_end'] ?? null,
+                'internal_note'     => $currentPlan['internal_note'] ?? null,
+                'citizen_message'   => $currentPlan['citizen_message'] ?? null,
+                'source_type'       => $currentPlan['source_type'] ?? null,
+                'provider_name'     => $currentPlan['provider_name'] ?? null,
+                'created_at'        => $currentPlan['created_at'] ?? null,
+                'updated_at'        => $currentPlan['updated_at'] ?? null,
+            ];
+        } else {
+            $incident['current_plan'] = null;
+        }
+
+        $incident['service_history'] = array_map(function (array $entry): array {
+            return [
+                'id'            => (int)$entry['id'],
+                'service_id'    => isset($entry['service_id']) ? (int)$entry['service_id'] : null,
+                'service_code'  => $entry['service_code'] ?? null,
+                'service_name'  => $entry['service_name'] ?? null,
+                'plan_id'       => isset($entry['plan_id']) ? (int)$entry['plan_id'] : null,
+                'actor_user_id' => isset($entry['actor_user_id']) ? (int)$entry['actor_user_id'] : null,
+                'actor_name'    => $entry['actor_name'] ?? null,
+                'event_type'    => $entry['event_type'] ?? null,
+                'event_label'   => $entry['event_label'] ?? null,
+                'citizen_label' => $entry['citizen_label'] ?? null,
+                'payload_json'  => $entry['payload_json'] ?? null,
+                'created_at'    => $entry['created_at'] ?? null,
+            ];
+        }, $serviceHistory);
+
+        $incident['citizen_timeline'] = $this->buildCitizenTimeline(
+            $statusHistory,
+            $citizenHistory,
+            $incident['service_name'] ?? null
+        );
+
+        return $incident;
+    }
+
+    private function buildCitizenTimeline(array $statusHistory, array $serviceHistory, ?string $serviceName): array
+    {
+        $timeline = [];
+
+        foreach ($statusHistory as $entry) {
+            $timeline[] = [
+                'type'       => 'status',
+                'label'      => $this->citizenLabelForStatus($entry['new_status'] ?? '', $serviceName),
+                'detail'     => $entry['note'] ?? null,
+                'created_at' => $entry['changed_at'] ?? null,
+            ];
+        }
+
+        foreach ($serviceHistory as $entry) {
+            if (!empty($entry['citizen_label'])) {
+                $timeline[] = [
+                    'type'       => 'service',
+                    'label'      => $entry['citizen_label'],
+                    'detail'     => $entry['event_label'] ?? null,
+                    'created_at' => $entry['created_at'] ?? null,
+                ];
+            }
+        }
+
+        usort($timeline, static function (array $a, array $b): int {
+            return strcmp((string)($a['created_at'] ?? ''), (string)($b['created_at'] ?? ''));
+        });
+
+        return $timeline;
+    }
+
+    private function citizenLabelForStatus(string $status, ?string $serviceName): string
+    {
+        return match ($status) {
+            'submitted' => 'Signalement recu',
+            'acknowledged' => $serviceName
+                ? 'Attribue au service ' . $serviceName
+                : 'Pris en charge par la commune',
+            'in_progress' => 'Intervention en cours',
+            'resolved' => 'Intervention terminee',
+            'rejected' => 'Signalement classe avec justification',
+            default => 'Mise a jour du dossier',
+        };
     }
 }

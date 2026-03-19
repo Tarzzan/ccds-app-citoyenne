@@ -10,6 +10,8 @@ $page_title = 'Catégories';
 $active_nav = 'categories';
 
 $db = Database::getInstance();
+$service_tables_ready = admin_db_has_table($db, 'services') && admin_db_has_table($db, 'service_category_map');
+$services = $service_tables_ready ? intervention_get_services($db) : [];
 
 $success = '';
 $error   = '';
@@ -24,6 +26,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $icon    = trim($_POST['icon']    ?? 'road');
         $color   = trim($_POST['color']   ?? '#1d4ed8');
         $service = trim($_POST['service'] ?? '');
+        $serviceId = $service_tables_ready ? (int)($_POST['service_id'] ?? 0) : 0;
+
+        if ($service_tables_ready && $serviceId > 0) {
+            $serviceRow = intervention_get_service_by_id($db, $serviceId);
+            $service = $serviceRow['name'] ?? '';
+        }
 
         if (strlen($name) < 2) {
             $error = 'Le nom doit contenir au moins 2 caractères.';
@@ -36,6 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $db->prepare(
                     'INSERT INTO categories (name, icon, color, service, is_active) VALUES (?, ?, ?, ?, 1)'
                 )->execute([$name, $icon, $color, $service]);
+                $categoryId = (int)$db->lastInsertId();
+                if ($service_tables_ready) {
+                    intervention_sync_category_default_service($db, $categoryId, $serviceId > 0 ? $serviceId : null);
+                }
                 $success = "Catégorie \"$name\" créée avec succès.";
             }
         }
@@ -48,11 +60,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $icon    = trim($_POST['icon']     ?? 'road');
         $color   = trim($_POST['color']    ?? '#1d4ed8');
         $service = trim($_POST['service']  ?? '');
+        $serviceId = $service_tables_ready ? (int)($_POST['service_id'] ?? 0) : 0;
+
+        if ($service_tables_ready && $serviceId > 0) {
+            $serviceRow = intervention_get_service_by_id($db, $serviceId);
+            $service = $serviceRow['name'] ?? '';
+        }
 
         if ($id && strlen($name) >= 2) {
             $db->prepare(
                 'UPDATE categories SET name = ?, icon = ?, color = ?, service = ? WHERE id = ?'
             )->execute([$name, $icon, $color, $service, $id]);
+            if ($service_tables_ready) {
+                intervention_sync_category_default_service($db, $id, $serviceId > 0 ? $serviceId : null);
+            }
             $success = "Catégorie mise à jour.";
         } else {
             $error = 'Données invalides.';
@@ -88,15 +109,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // --- Récupérer toutes les catégories avec stats ---
-$categories = $db->query("
-    SELECT c.*,
-           COUNT(i.id)                    AS incident_count,
-           COALESCE(SUM(i.votes_count),0) AS total_votes
-    FROM categories c
-    LEFT JOIN incidents i ON i.category_id = c.id
-    GROUP BY c.id
-    ORDER BY c.is_active DESC, c.name ASC
-")->fetchAll(PDO::FETCH_ASSOC);
+if ($service_tables_ready) {
+    $categories = $db->query("
+        SELECT c.*,
+               MAX(s.id) AS mapped_service_id,
+               MAX(s.name) AS mapped_service_name,
+               COUNT(i.id)                    AS incident_count,
+               COALESCE(SUM(i.votes_count),0) AS total_votes
+        FROM categories c
+        LEFT JOIN service_category_map scm ON scm.category_id = c.id AND scm.is_default = 1
+        LEFT JOIN services s ON s.id = scm.service_id
+        LEFT JOIN incidents i ON i.category_id = c.id
+        GROUP BY c.id
+        ORDER BY c.is_active DESC, c.name ASC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $categories = $db->query("
+        SELECT c.*,
+               NULL AS mapped_service_id,
+               NULL AS mapped_service_name,
+               COUNT(i.id)                    AS incident_count,
+               COALESCE(SUM(i.votes_count),0) AS total_votes
+        FROM categories c
+        LEFT JOIN incidents i ON i.category_id = c.id
+        GROUP BY c.id
+        ORDER BY c.is_active DESC, c.name ASC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+}
 
 // Catégorie en cours d'édition
 $edit_id  = isset($_GET['edit']) ? (int)$_GET['edit'] : 0;
@@ -111,6 +150,7 @@ $visual_catalog  = category_visuals_catalog();
 $selected_visual = category_visual_resolve($edit_cat['icon'] ?? 'road', $edit_cat['name'] ?? '');
 $default_icon    = $selected_visual['key'] ?? ($edit_cat['icon'] ?? 'road');
 $default_color   = $edit_cat['color'] ?? ($selected_visual['accent'] ?? '#1d4ed8');
+$default_service_id = (int)($edit_cat['mapped_service_id'] ?? 0);
 $default_scene_url = category_scene_visual_url($default_icon, $edit_cat['name'] ?? ($selected_visual['label'] ?? ''));
 
 require_once __DIR__ . '/../includes/layout.php';
@@ -155,7 +195,7 @@ require_once __DIR__ . '/../includes/layout.php';
             <td>
               <span style="font-weight:700;font-size:14px"><?= e($cat['name']) ?></span>
             </td>
-            <td class="text-muted text-small"><?= e($cat['service'] ?? '—') ?></td>
+            <td class="text-muted text-small"><?= e($cat['mapped_service_name'] ?? $cat['service'] ?? '—') ?></td>
             <td>
               <div style="display:flex;align-items:center;gap:6px">
                 <div style="width:22px;height:22px;border-radius:5px;background:<?= e($cat['color']) ?>;flex-shrink:0"></div>
@@ -366,9 +406,26 @@ require_once __DIR__ . '/../includes/layout.php';
 
       <div class="form-group">
         <label class="form-label">Service responsable</label>
-        <input type="text" name="service" class="form-control"
-               value="<?= e($edit_cat['service'] ?? '') ?>"
-               placeholder="Ex: Direction des routes, DEAL…" maxlength="150">
+        <?php if ($service_tables_ready): ?>
+          <select name="service_id" class="form-control">
+            <option value="">Aucun service rattache pour l instant</option>
+            <?php foreach ($services as $service_option): ?>
+              <option
+                value="<?= (int)$service_option['id'] ?>"
+                <?= $default_service_id === (int)$service_option['id'] ? 'selected' : '' ?>
+              >
+                <?= e($service_option['name']) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+          <div class="text-muted text-small" style="margin-top:6px">
+            Ce service deviendra le responsable par défaut des dossiers de cette catégorie.
+          </div>
+        <?php else: ?>
+          <input type="text" name="service" class="form-control"
+                 value="<?= e($edit_cat['service'] ?? '') ?>"
+                 placeholder="Ex: Direction des routes, DEAL…" maxlength="150">
+        <?php endif; ?>
       </div>
 
       <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px">

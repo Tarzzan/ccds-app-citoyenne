@@ -9,6 +9,8 @@ $page_title = 'Utilisateurs';
 $active_nav = 'users';
 $db         = Database::getInstance();
 $usersPasswordColumn = admin_db_has_column($db, 'users', 'password_hash') ? 'password_hash' : 'password';
+$serviceTablesReady = admin_db_has_table($db, 'services') && admin_db_has_table($db, 'user_service_memberships');
+$services = $serviceTablesReady ? intervention_get_services($db) : [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -18,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email    = trim($_POST['email'] ?? '');
         $password = trim($_POST['password'] ?? '');
         $role     = in_array($_POST['role'] ?? '', ['agent', 'admin'], true) ? $_POST['role'] : 'agent';
+        $serviceId = $serviceTablesReady ? (int)($_POST['service_id'] ?? 0) : 0;
 
         if (!$fullName || !$email || !$password) {
             $_SESSION['flash_error'] = 'Tous les champs sont obligatoires.';
@@ -34,6 +37,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     INSERT INTO users (full_name, email, {$usersPasswordColumn}, role, is_active, created_at)
                     VALUES (?, ?, ?, ?, 1, NOW())
                 ")->execute([$fullName, $email, password_hash($password, PASSWORD_DEFAULT), $role]);
+
+                $userId = (int)$db->lastInsertId();
+                if ($serviceTablesReady && $serviceId > 0) {
+                    intervention_upsert_user_membership(
+                        $db,
+                        $userId,
+                        $serviceId,
+                        $role === 'admin' ? 'manager' : 'agent',
+                        true
+                    );
+                }
                 $_SESSION['flash_success'] = "Compte de {$fullName} créé avec succès.";
             }
         }
@@ -68,11 +82,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: /admin/?page=users');
         exit;
     }
+
+    if ($action === 'save_service_membership' && $admin['role'] === 'admin' && $serviceTablesReady) {
+        $userId = (int)($_POST['user_id'] ?? 0);
+        $serviceId = (int)($_POST['service_id'] ?? 0);
+        $roleInService = in_array($_POST['role_in_service'] ?? '', ['manager', 'agent', 'viewer'], true)
+            ? $_POST['role_in_service']
+            : 'agent';
+        $isPrimary = !empty($_POST['is_primary']);
+
+        $userStmt = $db->prepare('SELECT id, role FROM users WHERE id = ? LIMIT 1');
+        $userStmt->execute([$userId]);
+        $membershipUser = $userStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$membershipUser || !in_array($membershipUser['role'], ['agent', 'admin'], true)) {
+            $_SESSION['flash_error'] = 'Seuls les agents et administrateurs peuvent etre rattaches a un service.';
+        } elseif (!$serviceId || !intervention_get_service_by_id($db, $serviceId)) {
+            $_SESSION['flash_error'] = 'Service invalide.';
+        } else {
+            intervention_upsert_user_membership($db, $userId, $serviceId, $roleInService, $isPrimary);
+            intervention_ensure_primary_membership($db, $userId);
+            $_SESSION['flash_success'] = 'Rattachement service enregistre.';
+        }
+
+        header('Location: /admin/?page=users&detail=' . $userId);
+        exit;
+    }
+
+    if ($action === 'remove_service_membership' && $admin['role'] === 'admin' && $serviceTablesReady) {
+        $userId = (int)($_POST['user_id'] ?? 0);
+        $serviceId = (int)($_POST['service_id'] ?? 0);
+
+        intervention_remove_user_membership($db, $userId, $serviceId);
+        $_SESSION['flash_success'] = 'Rattachement service retire.';
+
+        header('Location: /admin/?page=users&detail=' . $userId);
+        exit;
+    }
+
+    if ($action === 'set_primary_service' && $admin['role'] === 'admin' && $serviceTablesReady) {
+        $userId = (int)($_POST['user_id'] ?? 0);
+        $serviceId = (int)($_POST['service_id'] ?? 0);
+
+        $db->prepare('UPDATE user_service_memberships SET is_primary = 0 WHERE user_id = ?')->execute([$userId]);
+        $db->prepare('UPDATE user_service_memberships SET is_primary = 1 WHERE user_id = ? AND service_id = ?')
+            ->execute([$userId, $serviceId]);
+        intervention_ensure_primary_membership($db, $userId);
+        $_SESSION['flash_success'] = 'Service principal mis a jour.';
+
+        header('Location: /admin/?page=users&detail=' . $userId);
+        exit;
+    }
 }
 
 $detailUser    = null;
 $userIncidents = [];
 $userActivity  = [];
+$userMemberships = [];
 
 if (isset($_GET['detail'])) {
     $detailId = (int)$_GET['detail'];
@@ -95,6 +161,10 @@ if (isset($_GET['detail'])) {
     $detailUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($detailUser) {
+        if ($serviceTablesReady && in_array($detailUser['role'], ['agent', 'admin'], true)) {
+            $userMemberships = intervention_get_user_memberships($db, (int)$detailUser['id']);
+        }
+
         $stmtInc = $db->prepare("
             SELECT i.id, i.reference, i.title, i.status, i.votes_count, i.created_at,
                    cat.name AS category_name, cat.icon AS category_icon
@@ -168,10 +238,22 @@ $sortSql = match ($sort) {
     default           => 'u.created_at',
 };
 
+$primaryServiceSql = $serviceTablesReady
+    ? "(
+         SELECT s.name
+         FROM user_service_memberships usm
+         JOIN services s ON s.id = usm.service_id
+         WHERE usm.user_id = u.id
+         ORDER BY usm.is_primary DESC, s.name ASC
+         LIMIT 1
+       )"
+    : "NULL";
+
 $stmtUsers = $db->prepare("
     SELECT u.id, u.full_name, u.email, u.phone, u.role, u.is_active, u.created_at,
            COUNT(DISTINCT i.id) AS incidents_count,
-           COUNT(DISTINCT v.id) AS votes_count
+           COUNT(DISTINCT v.id) AS votes_count,
+           {$primaryServiceSql} AS primary_service_name
     FROM users u
     LEFT JOIN incidents i ON i.user_id = u.id
     LEFT JOIN votes v ON v.user_id = u.id
@@ -453,6 +535,37 @@ require_once __DIR__ . '/../includes/layout.php';
   border: 1px solid #ece4d5;
   box-shadow: 0 18px 38px rgba(14, 49, 39, .16);
 }
+.user-service-card {
+  background: rgba(255,253,248,.94);
+  border: 1px solid #ece4d5;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 10px 24px rgba(14, 49, 39, .06);
+}
+.user-service-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+.user-service-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #f8f3e8;
+  border: 1px solid #ece4d5;
+}
+.user-service-name {
+  font-weight: 800;
+  color: #183229;
+}
+.user-service-meta {
+  color: #5e6c67;
+  font-size: 12px;
+  margin-top: 4px;
+}
 @media (max-width: 768px) {
   .user-detail-grid {
     grid-template-columns: 1fr;
@@ -506,6 +619,80 @@ require_once __DIR__ . '/../includes/layout.php';
 
     <div class="user-detail-grid">
       <div>
+        <?php if ($serviceTablesReady && in_array($detailUser['role'], ['agent', 'admin'], true)): ?>
+          <div class="user-service-card" style="margin-bottom:18px">
+            <h3 style="margin-bottom:10px;color:#183229">Rattachement service</h3>
+            <p class="text-muted text-small" style="margin-bottom:12px">
+              Ce bloc fixe le service de rattachement de l agent et prepare la future chaine de prise en charge.
+            </p>
+
+            <?php if ($userMemberships): ?>
+              <div class="user-service-list">
+                <?php foreach ($userMemberships as $membership): ?>
+                  <div class="user-service-item">
+                    <div>
+                      <div class="user-service-name"><?= e($membership['service_name']) ?></div>
+                      <div class="user-service-meta">
+                        <?= e(ucfirst($membership['role_in_service'])) ?>
+                        <?= !empty($membership['is_primary']) ? ' · service principal' : '' ?>
+                      </div>
+                    </div>
+                    <?php if ($admin['role'] === 'admin'): ?>
+                      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+                        <?php if (empty($membership['is_primary'])): ?>
+                          <form method="POST">
+                            <input type="hidden" name="action" value="set_primary_service">
+                            <input type="hidden" name="user_id" value="<?= (int)$detailUser['id'] ?>">
+                            <input type="hidden" name="service_id" value="<?= (int)$membership['service_id'] ?>">
+                            <button type="submit" class="btn btn-outline btn-sm">Principal</button>
+                          </form>
+                        <?php endif; ?>
+                        <form method="POST" onsubmit="return confirm('Retirer ce rattachement service ?')">
+                          <input type="hidden" name="action" value="remove_service_membership">
+                          <input type="hidden" name="user_id" value="<?= (int)$detailUser['id'] ?>">
+                          <input type="hidden" name="service_id" value="<?= (int)$membership['service_id'] ?>">
+                          <button type="submit" class="btn btn-danger btn-sm">Retirer</button>
+                        </form>
+                      </div>
+                    <?php endif; ?>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            <?php else: ?>
+              <p class="text-muted">Aucun service rattache pour l instant.</p>
+            <?php endif; ?>
+
+            <?php if ($admin['role'] === 'admin'): ?>
+              <form method="POST" style="margin-top:14px">
+                <input type="hidden" name="action" value="save_service_membership">
+                <input type="hidden" name="user_id" value="<?= (int)$detailUser['id'] ?>">
+                <div class="form-group">
+                  <label class="form-label">Ajouter ou mettre a jour un service</label>
+                  <select name="service_id" class="form-control" required>
+                    <option value="">Choisir un service</option>
+                    <?php foreach ($services as $service): ?>
+                      <option value="<?= (int)$service['id'] ?>"><?= e($service['name']) ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Rôle dans le service</label>
+                  <select name="role_in_service" class="form-control">
+                    <option value="agent">Agent</option>
+                    <option value="manager">Responsable</option>
+                    <option value="viewer">Lecture seule</option>
+                  </select>
+                </div>
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;color:#355248">
+                  <input type="checkbox" name="is_primary" value="1">
+                  Définir comme service principal
+                </label>
+                <button type="submit" class="btn btn-primary">Enregistrer le rattachement</button>
+              </form>
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
+
         <h3 style="margin-bottom:10px;color:#183229">Derniers signalements</h3>
         <?php if ($userIncidents): ?>
           <table class="user-mini-table">
@@ -591,6 +778,7 @@ require_once __DIR__ . '/../includes/layout.php';
         <tr>
           <th><a href="<?= users_sort_url('full_name', $sort, $dir, $extra) ?>">Nom</a></th>
           <th><a href="<?= users_sort_url('email', $sort, $dir, $extra) ?>">Email</a></th>
+          <th>Service</th>
           <th>Rôle</th>
           <th>Statut</th>
           <th><a href="<?= users_sort_url('incidents_count', $sort, $dir, $extra) ?>">Signalements</a></th>
@@ -609,6 +797,7 @@ require_once __DIR__ . '/../includes/layout.php';
               <?php endif; ?>
             </td>
             <td><?= e($user['email']) ?></td>
+            <td class="text-muted text-small"><?= e($user['primary_service_name'] ?: '—') ?></td>
             <td><?= users_role_badge($user['role']) ?></td>
             <td><?= users_status_badge((bool)$user['is_active']) ?></td>
             <td class="text-center"><?= (int)$user['incidents_count'] ?></td>
@@ -632,7 +821,7 @@ require_once __DIR__ . '/../includes/layout.php';
           </tr>
         <?php endforeach; ?>
         <?php if (empty($users)): ?>
-          <tr><td colspan="8" class="text-center text-muted" style="padding:32px">Aucun utilisateur trouvé.</td></tr>
+          <tr><td colspan="9" class="text-center text-muted" style="padding:32px">Aucun utilisateur trouvé.</td></tr>
         <?php endif; ?>
       </tbody>
     </table>
@@ -675,6 +864,17 @@ require_once __DIR__ . '/../includes/layout.php';
               <option value="admin">Administrateur</option>
             </select>
           </div>
+          <?php if ($serviceTablesReady): ?>
+            <div class="form-group">
+              <label class="form-label">Service principal</label>
+              <select name="service_id" class="form-control">
+                <option value="">Aucun service pour l instant</option>
+                <?php foreach ($services as $service): ?>
+                  <option value="<?= (int)$service['id'] ?>"><?= e($service['name']) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          <?php endif; ?>
           <div style="display:flex;justify-content:flex-end;gap:8px">
             <button type="button" class="btn btn-outline" onclick="document.getElementById('users-create-modal').style.display='none'">Annuler</button>
             <button type="submit" class="btn btn-primary">Créer</button>

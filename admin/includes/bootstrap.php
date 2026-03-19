@@ -8,6 +8,7 @@
 require_once __DIR__ . '/../../backend/config/config.php';
 require_once __DIR__ . '/../../backend/config/Database.php';
 require_once __DIR__ . '/../../backend/config/helpers.php';
+require_once __DIR__ . '/../../backend/config/InterventionWorkflow.php';
 require_once __DIR__ . '/category_visuals.php';
 require_once __DIR__ . '/generated_visuals.php';
 require_once __DIR__ . '/../../backend/core/Security.php';
@@ -147,4 +148,25 @@ function admin_db_has_column(PDO $db, string $table, string $column): bool
     }
 
     return $cache[$key];
+}
+
+function admin_db_has_table(PDO $db, string $table): bool
+{
+    static $cache = [];
+
+    if (array_key_exists($table, $cache)) {
+        return $cache[$table];
+    }
+
+    try {
+        $stmt = $db->prepare(
+            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?'
+        );
+        $stmt->execute([$table]);
+        $cache[$table] = ((int)$stmt->fetchColumn()) > 0;
+    } catch (Throwable $e) {
+        $cache[$table] = false;
+    }
+
+    return $cache[$table];
 }
