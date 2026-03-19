@@ -1,5 +1,6 @@
 import { ImageSourcePropType } from 'react-native';
 import { resolveCategoryVisual } from './categoryVisuals';
+import { GENERATED_CATEGORY_SCENE_SOURCES } from './generatedVisualSources';
 
 export type CategorySceneAssetId =
   | 'ILL-01'
@@ -20,14 +21,14 @@ export type CategorySceneSlot = {
 // Les illustrations terrain resteront optionnelles tant qu'aucun drop valide
 // n'aura ete installe dans mobile/assets/generated-visuals.
 export const CATEGORY_SCENE_SLOTS: Record<string, CategorySceneSlot> = {
-  road: { assetId: 'ILL-01', label: 'Nid de poule apres pluie tropicale' },
-  lightbulb: { assetId: 'ILL-02', label: 'Lampadaire en panne au crepuscule' },
-  trash: { assetId: 'ILL-03', label: 'Depot sauvage en bord de voirie' },
-  droplets: { assetId: 'ILL-04', label: 'Bouche d egout bouchee' },
-  tree: { assetId: 'ILL-05', label: 'Vegetation envahissante sur passage' },
-  bench: { assetId: 'ILL-06', label: 'Mobilier urbain degrade' },
-  'triangle-alert': { assetId: 'ILL-07', label: 'Signalisation endommagee' },
-  'building-2': { assetId: 'ILL-08', label: 'Batiment communal degrade' },
+  road: { assetId: 'ILL-01', label: 'Nid de poule apres pluie tropicale', source: GENERATED_CATEGORY_SCENE_SOURCES.road },
+  lightbulb: { assetId: 'ILL-02', label: 'Lampadaire en panne au crepuscule', source: GENERATED_CATEGORY_SCENE_SOURCES.lightbulb },
+  trash: { assetId: 'ILL-03', label: 'Depot sauvage en bord de voirie', source: GENERATED_CATEGORY_SCENE_SOURCES.trash },
+  droplets: { assetId: 'ILL-04', label: 'Bouche d egout bouchee', source: GENERATED_CATEGORY_SCENE_SOURCES.droplets },
+  tree: { assetId: 'ILL-05', label: 'Vegetation envahissante sur passage', source: GENERATED_CATEGORY_SCENE_SOURCES.tree },
+  bench: { assetId: 'ILL-06', label: 'Mobilier urbain degrade', source: GENERATED_CATEGORY_SCENE_SOURCES.bench },
+  'triangle-alert': { assetId: 'ILL-07', label: 'Signalisation endommagee', source: GENERATED_CATEGORY_SCENE_SOURCES['triangle-alert'] },
+  'building-2': { assetId: 'ILL-08', label: 'Batiment communal degrade', source: GENERATED_CATEGORY_SCENE_SOURCES['building-2'] },
 };
 
 export function resolveCategorySceneSlot(icon?: string | null, name?: string | null): CategorySceneSlot | null {

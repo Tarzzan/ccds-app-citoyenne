@@ -14,6 +14,7 @@ Ce pipeline évite :
 
 Un dossier source contenant les fichiers générés avec les noms définis dans les batches :
 
+- `cat-01-road-badge-v2-1x1.png`
 - `char-01-mascot-m1-portrait-4x5.png`
 - `ill-01-road-pothole-rain-4x5.png`
 - `mom-01-welcome-duo-4x5.png`
@@ -29,13 +30,16 @@ python3 scripts/install_visual_asset_drop.py /chemin/vers/le/drop
 
 ### Mobile
 
+- `mobile/assets/generated-visuals/badges`
 - `mobile/assets/generated-visuals/characters`
 - `mobile/assets/generated-visuals/terrain`
 - `mobile/assets/generated-visuals/moments`
 - `mobile/assets/generated-visuals/hero`
+- `mobile/src/theme/generatedVisualSources.ts`
 
 ### Admin
 
+- `admin/assets/img/generated-visuals/badges`
 - `admin/assets/img/generated-visuals/characters`
 - `admin/assets/img/generated-visuals/terrain`
 - `admin/assets/img/generated-visuals/moments`
@@ -43,6 +47,7 @@ python3 scripts/install_visual_asset_drop.py /chemin/vers/le/drop
 
 ### Site
 
+- `site/assets/generated-visuals/badges`
 - `site/assets/generated-visuals/characters`
 - `site/assets/generated-visuals/terrain`
 - `site/assets/generated-visuals/moments`
@@ -63,6 +68,7 @@ bash scripts/check_installed_visual_assets.sh
 Ce contrôle vérifie :
 
 - que le manifeste d installation existe
+- que le registre mobile généré existe
 - que les cibles mobile, admin et site existent réellement
 - que le nombre d assets installés n est pas vide
 
@@ -74,8 +80,9 @@ Toujours :
 
 1. générer les visuels
 2. les installer via `install_visual_asset_drop.py`
-3. vérifier via `check_installed_visual_assets.sh`
-4. brancher seulement ensuite dans les écrans
+3. laisser le script régénérer `mobile/src/theme/generatedVisualSources.ts`
+4. vérifier via `check_installed_visual_assets.sh`
+5. brancher seulement ensuite dans les écrans si une surface manque encore
 
 ## État Actuel
 

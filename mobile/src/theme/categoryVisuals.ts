@@ -1,4 +1,5 @@
 import { ImageSourcePropType } from 'react-native';
+import { GENERATED_CATEGORY_BADGE_SOURCES } from './generatedVisualSources';
 
 type CategoryVisualJson = {
   key: string;
@@ -42,7 +43,7 @@ export const CATEGORY_VISUALS: CategoryVisual[] = CATEGORY_VISUAL_DATA.map((entr
   accent: entry.accent,
   glow: entry.glow,
   aliases: entry.aliases,
-  source: CATEGORY_ICON_SOURCES[entry.key],
+  source: GENERATED_CATEGORY_BADGE_SOURCES[entry.key] ?? CATEGORY_ICON_SOURCES[entry.key],
 }));
 
 const FALLBACK_VISUAL = CATEGORY_VISUALS[0];

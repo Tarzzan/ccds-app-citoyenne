@@ -15,6 +15,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 VISUAL_DIR = ROOT / "assets" / "visual-production"
 GENERATED_DIR = VISUAL_DIR / "generated"
+MOBILE_GENERATED_TS = ROOT / "mobile" / "src" / "theme" / "generatedVisualSources.ts"
+VISUAL_MANIFEST_PATH = VISUAL_DIR / "visual-production-manifest.json"
 
 BATCH_FILES = {
     "badge-batch-01.json": "badges",
@@ -34,6 +36,10 @@ TARGETS = {
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def to_posix_relative(path: Path, start: Path) -> str:
+    return path.relative_to(start).as_posix()
 
 
 def ensure_dirs() -> None:
@@ -108,6 +114,48 @@ def write_outputs(manifest: dict) -> None:
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def write_mobile_generated_sources(manifest: dict) -> None:
+    visual_manifest = load_json(VISUAL_MANIFEST_PATH)
+    mobile_sources: dict[str, str] = {}
+
+    for asset in manifest["assets"]:
+        mobile_rel = asset["targets"]["mobile"]
+        mobile_sources[asset["id"]] = "../../" + Path(mobile_rel).relative_to("mobile").as_posix()
+
+    category_badges: dict[str, str] = {}
+    category_scenes: dict[str, str] = {}
+    for category in visual_manifest.get("categories", []):
+        category_id = category.get("id")
+        badge_id = category.get("asset_badge_id")
+        scene_id = category.get("asset_scene_id")
+        if category_id and badge_id and badge_id in mobile_sources:
+            category_badges[category_id] = mobile_sources[badge_id]
+        if category_id and scene_id and scene_id in mobile_sources:
+            category_scenes[category_id] = mobile_sources[scene_id]
+
+    def format_require_map(name: str, mapping: dict[str, str]) -> str:
+        lines = [f"export const {name}: Record<string, ImageSourcePropType> = {{"]
+        for key in sorted(mapping):
+            lines.append(f"  {json.dumps(key)}: require({json.dumps(mapping[key])}),")
+        lines.append("};")
+        return "\n".join(lines)
+
+    content = "\n".join([
+        "import { ImageSourcePropType } from 'react-native';",
+        "",
+        "// Fichier genere automatiquement par scripts/install_visual_asset_drop.py.",
+        "// Ne pas editer manuellement : reinstaller le drop de visuels a la place.",
+        "",
+        format_require_map("GENERATED_VISUAL_SOURCES", mobile_sources),
+        "",
+        format_require_map("GENERATED_CATEGORY_BADGE_SOURCES", category_badges),
+        "",
+        format_require_map("GENERATED_CATEGORY_SCENE_SOURCES", category_scenes),
+        "",
+    ])
+    MOBILE_GENERATED_TS.write_text(content, encoding="utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Install generated visual asset drop into target folders.")
     parser.add_argument("source_dir", help="Directory containing generated asset files named as expected by the batches.")
@@ -119,9 +167,11 @@ def main() -> None:
 
     manifest = install_drop(source_dir)
     write_outputs(manifest)
+    write_mobile_generated_sources(manifest)
     print(f"installed_assets={manifest['assets_count']}")
     print(f"manifest={GENERATED_DIR / 'installed-visual-assets.json'}")
     print(f"report={GENERATED_DIR / 'installed-visual-assets.md'}")
+    print(f"mobile_bindings={MOBILE_GENERATED_TS}")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import { ImageSourcePropType } from 'react-native';
+import { GENERATED_VISUAL_SOURCES } from './generatedVisualSources';
 
 export type CompanionAssetId =
   | 'CHAR-01'
@@ -24,18 +25,18 @@ export type CompanionVisualSlot = {
 // Quand les assets seront valides et installes, chaque slot pourra recevoir un require(...)
 // vers mobile/assets/generated-visuals sans changer les ecrans.
 export const COMPANION_VISUAL_SLOTS: Record<string, CompanionVisualSlot> = {
-  login: { assetId: 'MOM-01', label: 'Accueil duo' },
-  register: { assetId: 'CHAR-05', label: 'Agente relation usager' },
-  serverConfig: { assetId: 'CHAR-05', label: 'Agente relation usager' },
-  onboarding: { assetId: 'MOM-01', label: 'Accueil duo' },
-  dashboard: { assetId: 'MOM-04', label: 'Dossier resolu' },
-  createIncident: { assetId: 'MOM-02', label: 'Remerciement apres signalement' },
-  incidentDetail: { assetId: 'MOM-03', label: 'Dossier en cours' },
-  notifications: { assetId: 'MOM-06', label: 'Aucune notification importante' },
-  impact: { assetId: 'MOM-04', label: 'Dossier resolu' },
-  profile: { assetId: 'CHAR-05', label: 'Agente relation usager' },
-  map: { assetId: 'CHAR-06', label: 'Duo hero' },
-  events: { assetId: 'MOM-01', label: 'Accueil duo' },
-  polls: { assetId: 'MOM-01', label: 'Accueil duo' },
-  twoFactor: { assetId: 'CHAR-05', label: 'Agente relation usager' },
+  login: { assetId: 'MOM-01', label: 'Accueil duo', source: GENERATED_VISUAL_SOURCES['MOM-01'] },
+  register: { assetId: 'CHAR-05', label: 'Agente relation usager', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
+  serverConfig: { assetId: 'CHAR-05', label: 'Agente relation usager', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
+  onboarding: { assetId: 'MOM-01', label: 'Accueil duo', source: GENERATED_VISUAL_SOURCES['MOM-01'] },
+  dashboard: { assetId: 'MOM-04', label: 'Dossier resolu', source: GENERATED_VISUAL_SOURCES['MOM-04'] },
+  createIncident: { assetId: 'MOM-02', label: 'Remerciement apres signalement', source: GENERATED_VISUAL_SOURCES['MOM-02'] },
+  incidentDetail: { assetId: 'MOM-03', label: 'Dossier en cours', source: GENERATED_VISUAL_SOURCES['MOM-03'] },
+  notifications: { assetId: 'MOM-06', label: 'Aucune notification importante', source: GENERATED_VISUAL_SOURCES['MOM-06'] },
+  impact: { assetId: 'MOM-04', label: 'Dossier resolu', source: GENERATED_VISUAL_SOURCES['MOM-04'] },
+  profile: { assetId: 'CHAR-05', label: 'Agente relation usager', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
+  map: { assetId: 'CHAR-06', label: 'Duo hero', source: GENERATED_VISUAL_SOURCES['CHAR-06'] },
+  events: { assetId: 'MOM-01', label: 'Accueil duo', source: GENERATED_VISUAL_SOURCES['MOM-01'] },
+  polls: { assetId: 'MOM-01', label: 'Accueil duo', source: GENERATED_VISUAL_SOURCES['MOM-01'] },
+  twoFactor: { assetId: 'CHAR-05', label: 'Agente relation usager', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
 };

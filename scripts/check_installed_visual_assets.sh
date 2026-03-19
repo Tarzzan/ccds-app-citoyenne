@@ -3,10 +3,17 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MANIFEST="$ROOT_DIR/assets/visual-production/generated/installed-visual-assets.json"
+MOBILE_BINDINGS="$ROOT_DIR/mobile/src/theme/generatedVisualSources.ts"
 
 if [[ ! -f "$MANIFEST" ]]; then
   echo "[installed-visual-assets] ABSENT"
   echo "- manifeste introuvable: $MANIFEST"
+  exit 1
+fi
+
+if [[ ! -f "$MOBILE_BINDINGS" ]]; then
+  echo "[installed-visual-assets] ECHEC"
+  echo "- bindings mobile introuvables: $MOBILE_BINDINGS"
   exit 1
 fi
 
