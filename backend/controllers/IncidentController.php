@@ -588,7 +588,30 @@ class IncidentController extends BaseController
             return strcmp((string)($a['created_at'] ?? ''), (string)($b['created_at'] ?? ''));
         });
 
-        return $timeline;
+        $deduped = [];
+        foreach ($timeline as $entry) {
+            $lastIndex = count($deduped) - 1;
+            $lastEntry = $lastIndex >= 0 ? $deduped[$lastIndex] : null;
+
+            if (
+                $lastEntry
+                && ($lastEntry['created_at'] ?? null) === ($entry['created_at'] ?? null)
+                && trim((string)($lastEntry['label'] ?? '')) === trim((string)($entry['label'] ?? ''))
+            ) {
+                $preferredDetail = trim((string)($entry['detail'] ?? ''));
+                if ($preferredDetail !== '') {
+                    $deduped[$lastIndex]['detail'] = $preferredDetail;
+                }
+                if (($lastEntry['type'] ?? '') !== 'service' && ($entry['type'] ?? '') === 'service') {
+                    $deduped[$lastIndex]['type'] = 'service';
+                }
+                continue;
+            }
+
+            $deduped[] = $entry;
+        }
+
+        return $deduped;
     }
 
     private function citizenLabelForStatus(string $status, ?string $serviceName): string

@@ -301,6 +301,16 @@ export default function IncidentDetailScreen() {
   const recommendedAction = getRecommendedStaffAction(incident, Boolean(assignToMe));
   const citizenCompanion = getCitizenStatusCompanion(incident);
   const statusIndex = STATUS_FLOW.indexOf(incident.status);
+  const currentPlanLabel = currentPlan
+    ? ({
+      scheduled: 'Intervention prevue',
+      rescheduled: 'Intervention replanifiee',
+      in_progress: 'Intervention en cours',
+      completed: 'Intervention terminee',
+      cancelled: 'Intervention annulee',
+      draft: 'Intervention a confirmer',
+    } as Record<string, string>)[currentPlan.status] ?? 'Intervention suivie'
+    : null;
 
   const applyRecommendedAction = () => {
     setStaffStatus(recommendedAction.status);
@@ -401,7 +411,7 @@ export default function IncidentDetailScreen() {
 
             {currentPlan ? (
               <View style={styles.planCard}>
-                <Text style={styles.planTitle}>Intervention planifiée</Text>
+                <Text style={styles.planTitle}>{currentPlanLabel}</Text>
                 <Text style={styles.planText}>
                   {formatServiceDate(currentPlan.scheduled_date)}
                   {currentPlan.time_window_start || currentPlan.time_window_end
@@ -418,7 +428,13 @@ export default function IncidentDetailScreen() {
                   <Text style={styles.planCitizenMessage}>{currentPlan.citizen_message}</Text>
                 ) : (
                   <Text style={styles.planMeta}>
-                    Cette planification reste interne pour l instant. Le prochain cran utile est d exposer un message citoyen plus explicite.
+                    {currentPlan.status === 'in_progress'
+                      ? 'L equipe a signale un passage en cours sur le terrain.'
+                      : currentPlan.status === 'completed'
+                        ? 'La commune a signale cette intervention comme terminee.'
+                        : currentPlan.status === 'cancelled'
+                          ? 'Cette intervention a ete annulee. Une nouvelle planification pourra suivre.'
+                          : 'Cette planification reste interne pour l instant. Le prochain cran utile est d exposer un message citoyen plus explicite.'}
                   </Text>
                 )}
               </View>
