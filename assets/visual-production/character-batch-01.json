@@ -1,0 +1,63 @@
+{
+  "version": "2026-03-18",
+  "batch_id": "character-batch-01",
+  "description": "Premier lot de generation personnages pour Ma Commune",
+  "style_block": "semi-realistic premium civic illustration, warm tropical light, cinematic composition, strong silhouette, French Guiana setting, lush vegetation, humid atmosphere, natural textures, polished details, mobile-friendly readability, emotionally engaging, not childish, not flat clipart, no text in image",
+  "negative_prompt": "text, watermark, logo, flat emoji style, childish cartoon, low detail, clipart, distorted hands, extra limbs, blurry face, over-saturated neon colors, generic corporate background, photorealistic photo look",
+  "assets": [
+    {
+      "id": "CHAR-01",
+      "track": "M1",
+      "label": "Mascotte M1 portrait",
+      "ratio": "4:5",
+      "filename": "char-01-mascot-m1-portrait-4x5.png",
+      "surface_target": ["validation_style", "avatar", "guidance_cards"],
+      "prompt": "Premium civic mascot for a local public service mobile app in French Guiana, a small tropical sentinel bird, semi-realistic, expressive and intelligent eyes, warm and trustworthy, elegant silhouette, cinematic tropical light, deep green and laterite palette, friendly but not childish, premium polished rendering, simple detachable background, bust portrait three-quarter view, subtle hints of humid tropical atmosphere, no text"
+    },
+    {
+      "id": "CHAR-02",
+      "track": "M2",
+      "label": "Mascotte M2 portrait",
+      "ratio": "4:5",
+      "filename": "char-02-mascot-m2-portrait-4x5.png",
+      "surface_target": ["validation_style", "landing_hero"],
+      "prompt": "Premium territorial mascot for a civic mobile app in French Guiana, symbolic guardian creature, elegant and memorable, semi-realistic, warm but dignified, cinematic portrait composition, humid tropical atmosphere, refined palette inspired by forest, river and laterite, premium rendering, noble but approachable posture, no text"
+    },
+    {
+      "id": "CHAR-03",
+      "track": "M3",
+      "label": "Mascotte M3 portrait",
+      "ratio": "4:5",
+      "filename": "char-03-mascot-m3-portrait-4x5.png",
+      "surface_target": ["validation_style", "welcome_states"],
+      "prompt": "Premium tropical companion mascot for a civic mobile app in French Guiana, stylized tropical urban animal, semi-realistic, highly expressive, warm and memorable, strong silhouette, cinematic soft tropical light, polished premium rendering, detachable background, gentle energetic emotion, very readable face, no text"
+    },
+    {
+      "id": "CHAR-04",
+      "track": "A1",
+      "label": "Agent A1 buste",
+      "ratio": "4:5",
+      "filename": "char-04-agent-a1-bust-4x5.png",
+      "surface_target": ["validation_style", "incident_detail", "admin_guidance"],
+      "prompt": "Premium municipal field agent for a civic mobile app in French Guiana, semi-realistic human character, calm and trustworthy, municipal workwear kept elegant and simple, warm tropical light, natural textures, cinematic bust framing, service-oriented attitude, credible public service presence, premium rendering, no text"
+    },
+    {
+      "id": "CHAR-05",
+      "track": "A2",
+      "label": "Agent A2 buste",
+      "ratio": "4:5",
+      "filename": "char-05-agent-a2-bust-4x5.png",
+      "surface_target": ["validation_style", "login", "onboarding", "notifications"],
+      "prompt": "Premium municipal citizen-relations agent for a civic mobile app in French Guiana, semi-realistic human character, warm, pedagogical and reassuring, simple municipal attire, expressive face, cinematic tropical light, polished premium rendering, credible public service presence, welcoming explanatory posture, no text"
+    },
+    {
+      "id": "CHAR-06",
+      "track": "M1+A2",
+      "label": "Duo hero M1 + A2",
+      "ratio": "16:9",
+      "filename": "char-06-duo-m1-a2-hero-16x9.png",
+      "surface_target": ["landing", "login_hero", "brand_reference"],
+      "prompt": "Premium civic duo for a mobile public service app in French Guiana, a small tropical sentinel bird mascot and a warm municipal citizen-relations agent, semi-realistic, cinematic, emotionally engaging, trustworthy, elegant, tropical humid atmosphere, lush vegetation hints, polished premium rendering, strong readable silhouettes, medium shot hero composition, no text"
+    }
+  ]
+}
