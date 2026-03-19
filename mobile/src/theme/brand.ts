@@ -6,9 +6,9 @@ export const BRAND = {
   civicPromise: 'Veiller sur nos rues, nos quartiers et nos services communs.',
   missionLabel: 'Service public local',
   companion: {
-    name: 'Awa',
-    role: 'Relais communal',
-    signature: 'Je vous aide a comprendre ce qui se passe, a chaque etape utile.',
+    name: 'Relais communal',
+    role: 'Accompagnement citoyen',
+    signature: 'Nous vous aidons a comprendre ce qui se passe, a chaque etape utile.',
   },
   displayFont: Platform.select({
     ios: 'Georgia',
@@ -53,7 +53,7 @@ export const BRAND = {
     impactTitle: 'Ma part dans la vie communale',
     incidentTitle: 'Je veille sur mon quartier',
     companionOnboarding:
-      'Awa vous accompagne pour remercier, expliquer la prochaine etape et rendre le suivi plus humain.',
+      'Le relais communal vous accompagne pour remercier, expliquer la prochaine etape et rendre le suivi plus humain.',
   },
 };
 

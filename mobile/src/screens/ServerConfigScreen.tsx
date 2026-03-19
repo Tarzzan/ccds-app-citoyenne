@@ -132,7 +132,7 @@ export default function ServerConfigScreen({ onConfigured, isFirstLaunch = true 
 
         <View style={styles.stageWrap}>
           <CivicCompanionStage
-            eyebrow="Awa · Connexion territoire"
+            eyebrow="Relais communal · Connexion territoire"
             title="Verifier d abord la bonne porte d entree."
             body="Une URL API juste suffit a rendre l application pleinement utile. L objectif ici est de connecter la commune, pas de perdre du temps dans des reglages techniques."
             aside="La bonne adresse doit toujours se terminer par /api."

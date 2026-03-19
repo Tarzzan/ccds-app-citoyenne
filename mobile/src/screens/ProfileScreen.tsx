@@ -165,7 +165,7 @@ export default function ProfileScreen() {
     return (
       <ScreenLoadingState
         title="Votre espace personnel se remet en place"
-        body="Awa rassemble vos coordonnees, vos preferences et vos reperes de securite avant de vous laisser modifier la suite."
+        body="Le relais communal rassemble vos coordonnees, vos preferences et vos reperes de securite avant de vous laisser modifier la suite."
       />
     );
   }

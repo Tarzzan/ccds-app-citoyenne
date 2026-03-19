@@ -281,7 +281,7 @@ export default function IncidentDetailScreen() {
     return (
       <ScreenLoadingState
         title="Le dossier se remet en contexte"
-        body="Awa rassemble l historique, les commentaires et le statut pour vous rendre une lecture utile des l ouverture."
+        body="Le relais communal rassemble l historique, les commentaires et le statut pour vous rendre une lecture utile des l ouverture."
       />
     );
   }

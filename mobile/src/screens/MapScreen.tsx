@@ -134,7 +134,7 @@ export default function MapScreen() {
     return (
       <ScreenLoadingState
         title="La carte citoyenne se prepare"
-        body="Awa rassemble d abord les reperes utiles du territoire pour que la lecture reste simple des l ouverture."
+        body="Le relais communal rassemble d abord les reperes utiles du territoire pour que la lecture reste simple des l ouverture."
       />
     );
   }
@@ -164,7 +164,7 @@ export default function MapScreen() {
 
         <View style={styles.stageWrap}>
           <CivicCompanionStage
-            eyebrow="Awa · Lecture territoire"
+            eyebrow="Relais communal · Lecture territoire"
             title="Voir ou la vigilance doit produire une reponse."
             body="La carte ne sert pas a collectionner des points. Elle sert a rendre visibles les zones a surveiller, les dossiers encore ouverts et les signaux deja traites."
             aside="Commencez par le point mis en avant, puis descendez vers les autres reperes."

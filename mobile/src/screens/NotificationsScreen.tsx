@@ -239,7 +239,7 @@ export const NotificationsScreen: React.FC = () => {
     return (
       <ScreenLoadingState
         title="Vos alertes se remettent en ordre"
-        body="Awa trie d abord les mises a jour utiles pour vous laisser relire ce qui compte vraiment."
+        body="Le relais communal trie d abord les mises a jour utiles pour vous laisser relire ce qui compte vraiment."
       />
     );
   }

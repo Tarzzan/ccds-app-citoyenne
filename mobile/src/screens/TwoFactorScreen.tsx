@@ -118,7 +118,7 @@ export default function TwoFactorScreen() {
     return (
       <ScreenLoadingState
         title="La securite de votre compte se prepare"
-        body="Awa verifie d abord l etat actuel de la double authentification avant de vous proposer la bonne suite."
+        body="Le relais communal verifie d abord l etat actuel de la double authentification avant de vous proposer la bonne suite."
       />
     );
   }
@@ -137,7 +137,7 @@ export default function TwoFactorScreen() {
 
         <View style={styles.stageWrap}>
           <CivicCompanionStage
-            eyebrow="Awa · Protection du compte"
+            eyebrow="Relais communal · Protection du compte"
             title="La securite doit rester simple a comprendre."
             body="Activez une verification supplementaire pour proteger vos dossiers, vos echanges et vos informations personnelles sans alourdir le reste de l experience."
             aside="Vous pourrez revenir ici a tout moment pour verifier ou ajuster ce niveau de protection."
@@ -180,7 +180,7 @@ export default function TwoFactorScreen() {
       <ScrollView style={styles.container}>
         <View style={styles.stageWrap}>
           <CivicCompanionStage
-            eyebrow="Awa · Mise en place"
+            eyebrow="Relais communal · Mise en place"
             title="Associez une application d authentification en quelques etapes."
             body="Scannez le QR code, saisissez le code temporaire, puis gardez vos codes de secours dans un endroit sur."
           />

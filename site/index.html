@@ -250,6 +250,41 @@
       font-size: 14px;
       text-align: center;
     }
+    .badge-preview-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .badge-preview {
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      padding: 14px 12px;
+      border-radius: 18px;
+      background: rgba(15,76,42,.04);
+      border: 1px solid rgba(15,76,42,.08);
+      text-align: center;
+    }
+    .badge-preview img {
+      width: 62px;
+      height: 62px;
+      border-radius: 18px;
+      object-fit: cover;
+      background: rgba(255,255,255,.96);
+      box-shadow: 0 12px 24px rgba(15,76,42,.12);
+    }
+    .badge-preview strong {
+      display: block;
+      font-size: 13px;
+      color: var(--canopy-deep);
+    }
+    .badge-preview span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
     .value-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -368,6 +403,9 @@
         flex-direction: column;
         align-items: flex-start;
       }
+      .badge-preview-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
   </style>
 </head>
@@ -468,13 +506,14 @@
           <div class="companion-mark" id="companionMark" aria-hidden="true"></div>
           <img class="companion-visual" id="companionVisual" alt="Compagnon Ma Commune" loading="lazy">
           <div>
-            <h4>Awa, relais communal</h4>
+            <h4>Le relais communal</h4>
             <p>
-              Awa donne une voix plus humaine au produit. Elle remercie, explique la prochaine etape
-              et rend le suivi plus lisible sans infantiliser l experience.
+              Cette passe UX assume une presence agent plus concrete. Le produit remercie,
+              explique la prochaine etape et rend le suivi plus lisible sans infantiliser l experience.
             </p>
           </div>
         </div>
+        <div class="badge-preview-grid" id="badgePreviewGrid"></div>
       </article>
     </section>
 
@@ -509,6 +548,30 @@
         probe.src = url;
       }
 
+      function applyBadges(badges) {
+        var grid = document.getElementById('badgePreviewGrid');
+        if (!grid || !badges) return;
+
+        var entries = [
+          ['road', 'Voirie', 'Nids-de-poule et chaussee'],
+          ['lightbulb', 'Eclairage', 'Lampadaires et points noirs'],
+          ['trash', 'Proprete', 'Depots et salubrite'],
+          ['droplets', 'Reseaux', 'Drainage et ruissellement'],
+        ];
+
+        grid.innerHTML = entries
+          .filter(function (entry) { return badges[entry[0]]; })
+          .map(function (entry) {
+            return (
+              '<div class="badge-preview">' +
+              '<img src="' + badges[entry[0]] + '" alt="' + entry[1] + '">' +
+              '<div><strong>' + entry[1] + '</strong><span>' + entry[2] + '</span></div>' +
+              '</div>'
+            );
+          })
+          .join('');
+      }
+
       fetch('/assets/generated-visuals/registry.json', { cache: 'no-store' })
         .then(function (response) {
           if (!response.ok) {
@@ -522,6 +585,7 @@
             (registry && registry.companion && registry.companion.agent_relations) ||
             (registry && registry.companion && registry.companion.welcome_duo)
           );
+          applyBadges(registry && registry.categories && registry.categories.badges);
         })
         .catch(function () {
           // Aucun registre installe : la landing garde ses fallbacks actuels.

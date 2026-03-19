@@ -315,7 +315,7 @@ export default function DashboardScreen() {
     return (
       <ScreenLoadingState
         title="Votre tableau de bord prend forme"
-        body="Awa rassemble vos reperes utiles pour afficher un bilan lisible, sans vous noyer dans les chiffres."
+        body="Le relais communal rassemble vos reperes utiles pour afficher un bilan lisible, sans vous noyer dans les chiffres."
       />
     );
   }

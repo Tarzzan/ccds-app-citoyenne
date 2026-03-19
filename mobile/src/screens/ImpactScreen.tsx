@@ -170,7 +170,7 @@ export default function ImpactScreen() {
     return (
       <ScreenLoadingState
         title="Votre bilan citoyen se construit"
-        body="Awa relit vos dossiers, vos statuts et vos reperes d engagement pour rendre votre impact plus concret."
+        body="Le relais communal relit vos dossiers, vos statuts et vos reperes d engagement pour rendre votre impact plus concret."
       />
     );
   }

@@ -194,7 +194,7 @@ export default function EventsScreen() {
     return (
       <ScreenLoadingState
         title="L agenda communal se met en place"
-        body="Awa rassemble les rendez-vous utiles pour que vous retrouviez d abord les temps les plus proches et les plus concrets."
+        body="Le relais communal rassemble les rendez-vous utiles pour que vous retrouviez d abord les temps les plus proches et les plus concrets."
       />
     );
   }
@@ -224,7 +224,7 @@ export default function EventsScreen() {
 
             <View style={styles.stageWrap}>
               <CivicCompanionStage
-                eyebrow="Awa · Agenda communal"
+                eyebrow="Relais communal · Agenda communal"
                 title="Un rendez-vous doit donner envie de venir, pas seulement afficher une date."
                 body="Retrouvez ici les rencontres utiles du quartier, confirmez votre presence ou gardez un repere simple pour y revenir plus tard."
                 aside="La commune doit rendre ses rendez-vous lisibles, concrets et faciles a rejoindre."

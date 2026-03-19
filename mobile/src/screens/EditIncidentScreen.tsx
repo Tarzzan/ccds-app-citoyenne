@@ -102,7 +102,7 @@ export default function EditIncidentScreen() {
     return (
       <ScreenLoadingState
         title="Le dossier est en cours de relecture"
-        body="Awa rassemble les informations modifiables pour vous laisser corriger le dossier sans perdre le contexte."
+        body="Le relais communal rassemble les informations modifiables pour vous laisser corriger le dossier sans perdre le contexte."
       />
     );
   }
