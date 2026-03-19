@@ -1,0 +1,121 @@
+{
+  "version": "2026-03-18",
+  "product": "Ma Commune",
+  "art_direction_doc": "docs/DIRECTION_ARTISTIQUE_COMPAGNON_ET_IMAGERIE_TERRAIN_MA_COMMUNE_2026-03-18.md",
+  "character_bible_doc": "docs/BIBLE_PERSONNAGES_MA_COMMUNE_2026-03-18.md",
+  "prompt_pack_doc": "docs/PROMPTS_PRODUCTION_VISUELS_MA_COMMUNE_2026-03-18.md",
+  "integration_doc": "docs/INTEGRATION_VISUELS_PRODUIT_MA_COMMUNE_2026-03-18.md",
+  "categories": [
+    {
+      "id": "road",
+      "asset_badge_id": "CAT-01",
+      "asset_scene_id": "ILL-01",
+      "label": "Voirie & Chaussee"
+    },
+    {
+      "id": "lightbulb",
+      "asset_badge_id": "CAT-02",
+      "asset_scene_id": "ILL-02",
+      "label": "Eclairage Public"
+    },
+    {
+      "id": "tree",
+      "asset_badge_id": "CAT-03",
+      "asset_scene_id": "ILL-05",
+      "label": "Espaces Verts"
+    },
+    {
+      "id": "trash",
+      "asset_badge_id": "CAT-04",
+      "asset_scene_id": "ILL-03",
+      "label": "Proprete & Dechets"
+    },
+    {
+      "id": "bench",
+      "asset_badge_id": "CAT-05",
+      "asset_scene_id": "ILL-06",
+      "label": "Mobilier Urbain"
+    },
+    {
+      "id": "droplets",
+      "asset_badge_id": "CAT-06",
+      "asset_scene_id": "ILL-04",
+      "label": "Reseaux & Inondations"
+    },
+    {
+      "id": "triangle-alert",
+      "asset_badge_id": "CAT-07",
+      "asset_scene_id": "ILL-07",
+      "label": "Signalisation"
+    },
+    {
+      "id": "building-2",
+      "asset_badge_id": "CAT-08",
+      "asset_scene_id": "ILL-08",
+      "label": "Batiments Communaux"
+    }
+  ],
+  "character_tracks": [
+    {
+      "id": "M1",
+      "type": "mascot",
+      "label": "Oiseau Vigie Tropical"
+    },
+    {
+      "id": "M2",
+      "type": "mascot",
+      "label": "Gardienne Du Territoire"
+    },
+    {
+      "id": "M3",
+      "type": "mascot",
+      "label": "Compagnon Urbain Tropical"
+    },
+    {
+      "id": "A1",
+      "type": "agent",
+      "label": "Agent Voirie De Proximite"
+    },
+    {
+      "id": "A2",
+      "type": "agent",
+      "label": "Agente Relation Usager"
+    }
+  ],
+  "recommended_duo": {
+    "mascot": "M1",
+    "agent": "A2"
+  },
+  "asset_order": [
+    "CHAR-01",
+    "CHAR-02",
+    "CHAR-03",
+    "CHAR-04",
+    "CHAR-05",
+    "CHAR-06",
+    "CAT-01",
+    "CAT-02",
+    "CAT-03",
+    "CAT-04",
+    "CAT-05",
+    "CAT-06",
+    "CAT-07",
+    "CAT-08",
+    "ILL-01",
+    "ILL-02",
+    "ILL-03",
+    "ILL-04",
+    "ILL-05",
+    "ILL-06",
+    "ILL-07",
+    "ILL-08",
+    "MOM-01",
+    "MOM-02",
+    "MOM-03",
+    "MOM-04",
+    "MOM-05",
+    "MOM-06",
+    "HERO-01",
+    "HERO-02"
+  ]
+}

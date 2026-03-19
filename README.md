@@ -32,6 +32,7 @@ Voir les documents de cadrage actifs :
 - `docs/PISTES_PERSONNAGES_MA_COMMUNE_2026-03-18.md`
 - `docs/MATRICE_PRODUCTION_VISUELS_MA_COMMUNE_2026-03-18.md`
 - `docs/PROMPTS_PRODUCTION_VISUELS_MA_COMMUNE_2026-03-18.md`
+- `docs/INTEGRATION_VISUELS_PRODUIT_MA_COMMUNE_2026-03-18.md`
 
 ## Documentation Active Vs Archive
 
@@ -54,6 +55,7 @@ Documents actifs a privilegier pour comprendre l'etat reel du produit :
 - `docs/PISTES_PERSONNAGES_MA_COMMUNE_2026-03-18.md`
 - `docs/MATRICE_PRODUCTION_VISUELS_MA_COMMUNE_2026-03-18.md`
 - `docs/PROMPTS_PRODUCTION_VISUELS_MA_COMMUNE_2026-03-18.md`
+- `docs/INTEGRATION_VISUELS_PRODUIT_MA_COMMUNE_2026-03-18.md`
 
 Documents historiques a lire comme archives ou matiere de reprise :
 
@@ -158,6 +160,7 @@ Le bon positionnement est :
 - `scripts/generate_category_icons.py` : regenere la collection d icones categories Guyane pour mobile et admin
 - `scripts/check_category_visuals.sh` : controle que le catalogue categories, les PNG generes et le mapping mobile restent alignes
 - `assets/category-visuals/index.html` : apercu HTML de la collection visuelle des categories
+- `assets/visual-production/visual-production-manifest.json` : manifeste machine lisible des pistes personnages, categories et ordre de production visuelle
 
 ## Commandes Utiles
 
