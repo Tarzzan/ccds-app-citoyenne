@@ -8,6 +8,7 @@ import {
   StyleSheet, TextInputProps, ViewStyle, TextStyle,
 } from 'react-native';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
+import { resolveCategoryVisual } from '../theme/categoryVisuals';
 import { CategoryMark } from './CategoryMark';
 
 // ----------------------------------------------------------------
@@ -163,6 +164,7 @@ export function IncidentCard({
 }: IncidentCardProps) {
   const priorityColor = priority ? (PRIORITY_COLORS[priority] ?? COLORS.gray) : null;
   const priorityLabel = priority ? (PRIORITY_LABELS[priority] ?? priority) : null;
+  const categoryVisual = resolveCategoryVisual(categoryIcon, categoryName);
   const planStateStyles = {
     blue: styles.planStateBlue,
     green: styles.planStateGreen,
@@ -175,7 +177,12 @@ export function IncidentCard({
       <View style={styles.cardHeader}>
         <View style={styles.categoryHeader}>
           <CategoryMark icon={categoryIcon} name={categoryName} color={categoryColor} size={38} />
-          <Text style={styles.categoryLabel}>{categoryName}</Text>
+          <View style={styles.categoryCopy}>
+            <Text style={styles.categoryLabel}>{categoryName}</Text>
+            {categoryVisual.description ? (
+              <Text style={styles.categoryHint} numberOfLines={2}>{categoryVisual.description}</Text>
+            ) : null}
+          </View>
         </View>
         <StatusBadge status={status} />
       </View>
@@ -290,16 +297,25 @@ const styles = StyleSheet.create({
   },
   categoryHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 10,
     flex: 1,
     marginRight: 12,
   },
+  categoryCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
   categoryLabel: {
     fontSize: 13,
+    color: BRAND.colors.canopyDeep,
+    fontWeight: '800',
+  },
+  categoryHint: {
+    fontSize: 11.5,
     color: COLORS.gray,
-    fontWeight: '600',
-    flexShrink: 1,
+    lineHeight: 16,
   },
   cardRef: {
     fontSize: 12,
