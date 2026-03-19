@@ -299,6 +299,7 @@ function incident_plan_summary(array $incident): ?string
 $active_filters = array_filter([$f_status, $f_cat, $f_service, $f_plan, $f_executor, $f_search, $f_priority, $f_date_from, $f_date_to]);
 $open_count = 0;
 $resolved_count = 0;
+$categoryHighlights = [];
 foreach ($incidents as $inc) {
     if (in_array($inc['status'], ['submitted', 'acknowledged', 'in_progress'], true)) {
         $open_count++;
@@ -306,7 +307,26 @@ foreach ($incidents as $inc) {
     if ($inc['status'] === 'resolved') {
         $resolved_count++;
     }
+
+    $visual = category_visual_resolve($inc['cat_icon'] ?? 'road', $inc['cat_name'] ?? null);
+    $key = ($visual['key'] ?? 'road') . '::' . ($inc['cat_name'] ?? '');
+    if (!isset($categoryHighlights[$key])) {
+        $categoryHighlights[$key] = [
+            'key' => $visual['key'] ?? 'road',
+            'name' => $inc['cat_name'] ?? ($visual['label'] ?? 'Categorie'),
+            'short_label' => $visual['short_label'] ?? ($visual['label'] ?? 'Categorie'),
+            'description' => $visual['description'] ?? '',
+            'accent' => $visual['accent'] ?? ($inc['cat_color'] ?? '#174b3a'),
+            'icon' => $inc['cat_icon'] ?? 'road',
+            'count' => 0,
+        ];
+    }
+    $categoryHighlights[$key]['count']++;
 }
+uasort($categoryHighlights, static function (array $a, array $b): int {
+    return $b['count'] <=> $a['count'];
+});
+$categoryHighlights = array_slice(array_values($categoryHighlights), 0, 4);
 ?>
 
 <div class="page-hero">
@@ -422,6 +442,21 @@ foreach ($incidents as $inc) {
   </div>
 </div>
 
+<?php if (!empty($categoryHighlights)): ?>
+  <div class="admin-category-strip">
+    <?php foreach ($categoryHighlights as $highlight): ?>
+      <div class="admin-category-pill" style="--category-accent:<?= e($highlight['accent']) ?>;">
+        <?= category_visual_html($highlight['icon'], $highlight['name'], 'md', $highlight['accent']) ?>
+        <div class="admin-category-pill-copy">
+          <strong><?= e($highlight['short_label']) ?></strong>
+          <span><?= e($highlight['description']) ?></span>
+        </div>
+        <span class="admin-category-pill-count"><?= (int)$highlight['count'] ?></span>
+      </div>
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+
 <!-- Tableau -->
 <div class="card">
   <div class="card-header">
@@ -475,9 +510,13 @@ foreach ($incidents as $inc) {
           <td>
             <div style="display:flex;align-items:center;gap:10px;">
               <?= category_visual_html($inc['cat_icon'] ?? 'road', $inc['cat_name'], 'sm', $inc['cat_color'] ?? null) ?>
-              <span class="badge" style="background:<?= e($inc['cat_color']) ?>22;color:<?= e($inc['cat_color']) ?>">
-                <?= e($inc['cat_name']) ?>
-              </span>
+              <div class="admin-category-cell-copy">
+                <span class="badge" style="background:<?= e($inc['cat_color']) ?>22;color:<?= e($inc['cat_color']) ?>">
+                  <?= e($inc['cat_name']) ?>
+                </span>
+                <?php $visual = category_visual_resolve($inc['cat_icon'] ?? 'road', $inc['cat_name'] ?? null); ?>
+                <div class="text-muted text-small"><?= e($visual['description'] ?? '') ?></div>
+              </div>
             </div>
           </td>
           <td class="text-muted text-small"><?= e($inc['service_name'] ?: '—') ?></td>

@@ -205,7 +205,11 @@ require_once __DIR__ . '/../includes/layout.php';
           <tr style="<?= !(bool)$cat['is_active'] ? 'opacity:.45' : '' ?>">
             <td style="text-align:center"><?= category_visual_html($cat['icon'] ?? 'road', $cat['name'], 'md', $cat['color'] ?? null) ?></td>
             <td>
-              <span style="font-weight:700;font-size:14px"><?= e($cat['name']) ?></span>
+              <?php $categoryVisual = category_visual_resolve($cat['icon'] ?? 'road', $cat['name'] ?? null); ?>
+              <div class="admin-category-cell-copy">
+                <span style="font-weight:700;font-size:14px"><?= e($cat['name']) ?></span>
+                <div class="text-muted text-small"><?= e($categoryVisual['description'] ?? '') ?></div>
+              </div>
             </td>
             <td class="text-muted text-small"><?= e($cat['mapped_service_name'] ?? $cat['service'] ?? '—') ?></td>
             <td>
