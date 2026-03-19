@@ -585,7 +585,7 @@ $active_nav = 'incidents';
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
-<div class="page-hero">
+<div class="page-hero <?= $incidentVisualUrl ? 'page-hero--with-visual' : '' ?>">
   <div class="page-hero-copy">
     <div class="page-hero-kicker">Dossier terrain</div>
     <h2 class="page-hero-title"><?= $inc['title'] ? e($inc['title']) : 'Signalement citoyen sans titre' ?></h2>
@@ -607,6 +607,17 @@ require_once __DIR__ . '/../includes/layout.php';
       <span class="hero-chip-label">prochaine action utile</span>
     </div>
   </div>
+  <?php if ($incidentVisualUrl): ?>
+    <div class="page-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero">
+        <?= generated_visual_html($incidentVisualAsset, ['class' => 'generated-visual generated-visual--cover generated-visual--scene', 'label' => 'Scene du dossier']) ?>
+        <div class="generated-visual-caption">
+          <strong>Contexte terrain</strong>
+          <span>Le dossier doit relier le signal, la categorie et la prochaine action utile en un seul regard.</span>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
 </div>
 
 <div class="admin-guidance-grid">

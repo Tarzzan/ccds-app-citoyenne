@@ -313,12 +313,19 @@ require_once __DIR__ . '/../includes/layout.php';
 ?>
 <style>
 .services-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
   background: linear-gradient(135deg, #0e3127 0%, #174b3a 56%, #2d6f86 100%);
   color: #fff;
   border-radius: 28px;
   padding: 28px;
   margin-bottom: 24px;
   box-shadow: 0 18px 38px rgba(14,49,39,.16);
+}
+.services-hero--with-visual {
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  align-items: center;
 }
 .services-kicker {
   font-size: 11px;
@@ -338,6 +345,13 @@ require_once __DIR__ . '/../includes/layout.php';
 .services-text {
   color: rgba(255,255,255,.84);
   max-width: 720px;
+}
+.services-hero-copy {
+  min-width: 0;
+}
+.services-hero-visual {
+  justify-self: end;
+  width: 100%;
 }
 .services-grid {
   display: grid;
@@ -544,6 +558,9 @@ require_once __DIR__ . '/../includes/layout.php';
   color: #5e6c67;
 }
 @media (max-width: 960px) {
+  .services-hero--with-visual {
+    grid-template-columns: 1fr;
+  }
   .services-layout,
   .services-detail-grid {
     grid-template-columns: 1fr;
@@ -555,12 +572,27 @@ require_once __DIR__ . '/../includes/layout.php';
 }
 </style>
 
-<div class="services-hero">
-  <div class="services-kicker">Chaîne d intervention</div>
-  <div class="services-title">Relier les catégories, les agents et les opérations planifiées.</div>
-  <div class="services-text">
-    Cette page donne enfin une lecture exploitable du dispositif métier : qui porte quoi, quelle charge est ouverte et quels services structurent la réponse communale.
+<?php $servicesHeroVisual = generated_visual_url('CHAR-04'); ?>
+
+<div class="services-hero <?= $servicesHeroVisual ? 'services-hero--with-visual' : '' ?>">
+  <div class="services-hero-copy">
+    <div class="services-kicker">Chaîne d intervention</div>
+    <div class="services-title">Relier les catégories, les agents et les opérations planifiées.</div>
+    <div class="services-text">
+      Cette page donne enfin une lecture exploitable du dispositif métier : qui porte quoi, quelle charge est ouverte et quels services structurent la réponse communale.
+    </div>
   </div>
+  <?php if ($servicesHeroVisual): ?>
+    <div class="services-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero">
+        <?= generated_visual_html('CHAR-04', ['class' => 'generated-visual generated-visual--portrait', 'label' => 'Services communaux']) ?>
+        <div class="generated-visual-caption">
+          <strong>Services relies</strong>
+          <span>Categories, agents et interventions doivent raconter une meme chaine de prise en charge.</span>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
 </div>
 
 <?php if ($scope_notice): ?>

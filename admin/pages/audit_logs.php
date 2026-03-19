@@ -119,12 +119,19 @@ require_once __DIR__ . '/../includes/layout.php';
 ?>
 <style>
 .audit-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
   background: linear-gradient(135deg, #0e3127 0%, #174b3a 52%, #2d6f86 100%);
   color: #fff;
   border-radius: 28px;
   padding: 28px;
   margin-bottom: 24px;
   box-shadow: 0 18px 38px rgba(14, 49, 39, .16);
+}
+.audit-hero--with-visual {
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  align-items: center;
 }
 .audit-kicker {
   font-size: 11px;
@@ -144,6 +151,13 @@ require_once __DIR__ . '/../includes/layout.php';
 .audit-text {
   color: rgba(255,255,255,.82);
   max-width: 640px;
+}
+.audit-hero-copy {
+  min-width: 0;
+}
+.audit-hero-visual {
+  justify-self: end;
+  width: 100%;
 }
 .audit-stats {
   display: grid;
@@ -285,18 +299,36 @@ require_once __DIR__ . '/../includes/layout.php';
   font-size: 12px;
 }
 @media (max-width: 768px) {
+  .audit-hero--with-visual {
+    grid-template-columns: 1fr;
+  }
   .audit-modal-grid {
     grid-template-columns: 1fr;
   }
 }
 </style>
 
-<div class="audit-hero">
-  <div class="audit-kicker">Traçabilité</div>
-  <div class="audit-title">Suivre les actions sensibles du back-office</div>
-  <div class="audit-text">
-    Les logs d’audit permettent d’identifier qui a agi, sur quelle ressource, et à quel moment, afin de fiabiliser la gouvernance du service.
+<?php $auditHeroVisual = generated_visual_url('CHAR-05'); ?>
+
+<div class="audit-hero <?= $auditHeroVisual ? 'audit-hero--with-visual' : '' ?>">
+  <div class="audit-hero-copy">
+    <div class="audit-kicker">Traçabilité</div>
+    <div class="audit-title">Suivre les actions sensibles du back-office</div>
+    <div class="audit-text">
+      Les logs d’audit permettent d’identifier qui a agi, sur quelle ressource, et à quel moment, afin de fiabiliser la gouvernance du service.
+    </div>
   </div>
+  <?php if ($auditHeroVisual): ?>
+    <div class="audit-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero">
+        <?= generated_visual_html('CHAR-05', ['class' => 'generated-visual generated-visual--portrait', 'label' => 'Traçabilité du back-office']) ?>
+        <div class="generated-visual-caption">
+          <strong>Gouvernance lisible</strong>
+          <span>Les traces sensibles doivent rester consultables sans alourdir la lecture du controle interne.</span>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
 </div>
 
 <div class="audit-stats">

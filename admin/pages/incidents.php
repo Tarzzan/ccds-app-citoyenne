@@ -327,9 +327,10 @@ uasort($categoryHighlights, static function (array $a, array $b): int {
     return $b['count'] <=> $a['count'];
 });
 $categoryHighlights = array_slice(array_values($categoryHighlights), 0, 4);
+$incidentsHeroVisual = generated_visual_url('HERO-01');
 ?>
 
-<div class="page-hero">
+<div class="page-hero <?= $incidentsHeroVisual ? 'page-hero--with-visual' : '' ?>">
   <div class="page-hero-copy">
     <div class="page-hero-kicker">File de traitement</div>
     <h2 class="page-hero-title">Lire vite la pression terrain et ouvrir les bons dossiers.</h2>
@@ -351,6 +352,17 @@ $categoryHighlights = array_slice(array_values($categoryHighlights), 0, 4);
       <span class="hero-chip-label">filtre(s) actifs</span>
     </div>
   </div>
+  <?php if ($incidentsHeroVisual): ?>
+    <div class="page-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero">
+        <?= generated_visual_html('HERO-01', ['class' => 'generated-visual generated-visual--contain', 'label' => 'File de traitement']) ?>
+        <div class="generated-visual-caption">
+          <strong>Pression terrain lisible</strong>
+          <span>La file doit aider a isoler les urgences et a ouvrir le bon dossier sans bruit parasite.</span>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
 </div>
 
 <!-- Filtres avancés v1.2 -->
