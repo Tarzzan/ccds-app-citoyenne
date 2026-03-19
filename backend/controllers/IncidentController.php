@@ -588,8 +588,26 @@ class IncidentController extends BaseController
             return strcmp((string)($a['created_at'] ?? ''), (string)($b['created_at'] ?? ''));
         });
 
+        $latestServiceTimelineKeys = [];
+        foreach ($timeline as $entry) {
+            if (($entry['type'] ?? '') !== 'service') {
+                continue;
+            }
+
+            $signature = trim((string)($entry['label'] ?? '')) . '|' . trim((string)($entry['detail'] ?? ''));
+            $latestServiceTimelineKeys[$signature] = (string)($entry['created_at'] ?? '');
+        }
+
         $deduped = [];
         foreach ($timeline as $entry) {
+            if (($entry['type'] ?? '') === 'service') {
+                $signature = trim((string)($entry['label'] ?? '')) . '|' . trim((string)($entry['detail'] ?? ''));
+                $isLatestServiceOccurrence = ($latestServiceTimelineKeys[$signature] ?? null) === (string)($entry['created_at'] ?? '');
+                if (!$isLatestServiceOccurrence) {
+                    continue;
+                }
+            }
+
             $lastIndex = count($deduped) - 1;
             $lastEntry = $lastIndex >= 0 ? $deduped[$lastIndex] : null;
 
