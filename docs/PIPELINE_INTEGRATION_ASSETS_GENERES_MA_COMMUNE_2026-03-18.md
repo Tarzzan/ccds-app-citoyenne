@@ -26,6 +26,21 @@ Un dossier source contenant les fichiers générés avec les noms définis dans 
 python3 scripts/install_visual_asset_drop.py /chemin/vers/le/drop
 ```
 
+## Commande De Revue Avant Installation
+
+```bash
+python3 scripts/review_visual_asset_drop.py /chemin/vers/le/drop
+```
+
+Ce contrôle vérifie avant installation :
+
+- que tous les fichiers attendus du batch sont présents
+- qu aucun fichier parasite ne s est glissé dans le drop
+- que chaque image PNG est lisible
+- que son ratio correspond bien au batch attendu
+
+Le rapport est écrit sous `assets/visual-production/generated/`.
+
 ## Cibles Alimentées
 
 ### Mobile
@@ -86,10 +101,11 @@ Ne pas brancher les futurs visuels directement depuis un dossier externe.
 Toujours :
 
 1. générer les visuels
-2. les installer via `install_visual_asset_drop.py`
-3. laisser le script régénérer `mobile/src/theme/generatedVisualSources.ts`
-4. vérifier via `check_installed_visual_assets.sh`
-5. brancher seulement ensuite dans les écrans si une surface manque encore
+2. vérifier le drop via `review_visual_asset_drop.py`
+3. les installer via `install_visual_asset_drop.py`
+4. laisser le script régénérer `mobile/src/theme/generatedVisualSources.ts`
+5. vérifier via `check_installed_visual_assets.sh`
+6. brancher seulement ensuite dans les écrans si une surface manque encore
 
 ## État Actuel
 

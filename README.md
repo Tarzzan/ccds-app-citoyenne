@@ -175,6 +175,7 @@ Le bon positionnement est :
 - `scripts/publish_latest_visual_generation_aliases.sh` : publie les alias stables du dernier handoff visuel généré
 - `scripts/verify_latest_visual_generation_aliases.sh` : controle que les alias latest du handoff visuel pointent bien vers un lot cohérent et complet
 - `scripts/show_latest_visual_generation_status.sh` : affiche l’état du dernier handoff visuel prêt à produire
+- `scripts/review_visual_asset_drop.py` : verifie un drop d images generees avant installation (fichiers attendus, PNG lisibles, ratios conformes)
 - `scripts/check_visual_production_batches.sh` : controle la coherence des batches visuels, des IDs d assets et du manifeste de production
 - `scripts/install_visual_asset_drop.py` : installe un drop de visuels générés dans les cibles mobile, admin, site et la trace locale de référence
 - `scripts/check_installed_visual_assets.sh` : controle qu un lot de visuels installés est bien présent sur les trois surfaces et tracé dans le manifeste généré

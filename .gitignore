@@ -29,6 +29,8 @@ assets/visual-production/generated/visual-generation-handoff-latest.md
 assets/visual-production/generated/visual-generation-first-drop-latest.json
 assets/visual-production/generated/visual-generation-first-drop-latest.csv
 assets/visual-production/generated/visual-generation-first-drop-latest.md
+assets/visual-production/generated/visual-drop-review-*.json
+assets/visual-production/generated/visual-drop-review-*.md
 
 # ==============================
 # IDE / Éditeurs
