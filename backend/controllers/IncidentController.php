@@ -578,7 +578,7 @@ class IncidentController extends BaseController
                 $timeline[] = [
                     'type'       => 'service',
                     'label'      => $entry['citizen_label'],
-                    'detail'     => $entry['event_label'] ?? null,
+                    'detail'     => $this->buildCitizenServiceTimelineDetail($entry),
                     'created_at' => $entry['created_at'] ?? null,
                 ];
             }
@@ -612,6 +612,64 @@ class IncidentController extends BaseController
         }
 
         return $deduped;
+    }
+
+    private function buildCitizenServiceTimelineDetail(array $entry): ?string
+    {
+        $parts = [];
+        $payload = [];
+
+        if (!empty($entry['payload_json'])) {
+            $decoded = json_decode((string)$entry['payload_json'], true);
+            if (is_array($decoded)) {
+                $payload = $decoded;
+            }
+        }
+
+        $scheduledDate = trim((string)($payload['scheduled_date'] ?? ''));
+        if ($scheduledDate !== '') {
+            $parts[] = $this->formatCitizenTimelineDate($scheduledDate);
+        }
+
+        $timeWindow = trim((string)($payload['time_window'] ?? ''));
+        if ($timeWindow !== '') {
+            $parts[] = $timeWindow;
+        }
+
+        $providerName = trim((string)($payload['provider_name'] ?? ''));
+        $sourceType = trim((string)($payload['source_type'] ?? ''));
+        if ($providerName !== '') {
+            $parts[] = 'Prestataire ' . $providerName;
+        } elseif ($sourceType === 'internal') {
+            $parts[] = 'Equipe interne';
+        }
+
+        if (!empty($entry['service_name'])) {
+            array_unshift($parts, 'Service ' . trim((string)$entry['service_name']));
+        }
+
+        $eventLabel = trim((string)($entry['event_label'] ?? ''));
+        $citizenLabel = trim((string)($entry['citizen_label'] ?? ''));
+
+        if (!empty($parts)) {
+            return implode(' · ', $parts);
+        }
+
+        if ($eventLabel !== '' && $eventLabel !== $citizenLabel) {
+            return $eventLabel;
+        }
+
+        return null;
+    }
+
+    private function formatCitizenTimelineDate(string $date): string
+    {
+        try {
+            $dt = new DateTimeImmutable($date);
+            return $dt->format('d/m/Y');
+        } catch (Throwable $e) {
+            return $date;
+        }
     }
 
     private function citizenLabelForStatus(string $status, ?string $serviceName): string
