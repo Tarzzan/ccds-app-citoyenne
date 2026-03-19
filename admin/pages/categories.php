@@ -10,6 +10,7 @@ $page_title = 'Catégories';
 $active_nav = 'categories';
 
 $db = Database::getInstance();
+$isAdmin = ($admin['role'] ?? '') === 'admin';
 $service_tables_ready = admin_db_has_table($db, 'services') && admin_db_has_table($db, 'service_category_map');
 $services = $service_tables_ready ? intervention_get_services($db) : [];
 
@@ -20,8 +21,14 @@ $error   = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
+    if (!$isAdmin) {
+        $_SESSION['flash_error'] = 'Cette page est en lecture seule pour votre role. Les modifications de categories sont reservees aux administrateurs.';
+        header('Location: /admin/?page=categories');
+        exit;
+    }
+
     // Créer une catégorie
-    if ($action === 'create') {
+    if ($action === 'create' && $isAdmin) {
         $name    = trim($_POST['name']    ?? '');
         $icon    = trim($_POST['icon']    ?? 'road');
         $color   = trim($_POST['color']   ?? '#1d4ed8');
@@ -54,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Mettre à jour une catégorie
-    elseif ($action === 'update') {
+    elseif ($action === 'update' && $isAdmin) {
         $id      = (int)($_POST['id']      ?? 0);
         $name    = trim($_POST['name']     ?? '');
         $icon    = trim($_POST['icon']     ?? 'road');
@@ -81,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Activer / Désactiver
-    elseif ($action === 'toggle') {
+    elseif ($action === 'toggle' && $isAdmin) {
         $id = (int)($_POST['id'] ?? 0);
         if ($id) {
             $db->prepare('UPDATE categories SET is_active = NOT is_active WHERE id = ?')->execute([$id]);
@@ -91,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Supprimer
-    elseif ($action === 'delete') {
+    elseif ($action === 'delete' && $isAdmin) {
         $id = (int)($_POST['id'] ?? 0);
         if ($id) {
             $count = $db->prepare('SELECT COUNT(*) FROM incidents WHERE category_id = ?');
@@ -166,6 +173,11 @@ require_once __DIR__ . '/../includes/layout.php';
     ❌ <?= e($error) ?>
   </div>
 <?php endif; ?>
+<?php if (!$isAdmin): ?>
+  <div class="alert alert-warning" style="margin-bottom:16px;padding:12px 16px;background:#fef3c7;border-radius:8px;color:#92400e;border:1px solid #fcd34d">
+    Cette page est en lecture seule pour votre rôle. La création et la modification des catégories sont réservées aux administrateurs.
+  </div>
+<?php endif; ?>
 
 <div style="display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start;">
 
@@ -226,27 +238,31 @@ require_once __DIR__ . '/../includes/layout.php';
             </td>
             <td>
               <div style="display:flex;gap:4px;flex-wrap:nowrap">
-                <a href="/admin/?page=categories&edit=<?= $cat['id'] ?>"
-                   class="btn btn-outline btn-sm" title="Modifier">✏️</a>
+                <?php if ($isAdmin): ?>
+                  <a href="/admin/?page=categories&edit=<?= $cat['id'] ?>"
+                     class="btn btn-outline btn-sm" title="Modifier">✏️</a>
 
-                <form method="POST" action="" style="display:inline">
-                  <input type="hidden" name="action" value="toggle">
-                  <input type="hidden" name="id" value="<?= $cat['id'] ?>">
-                  <button type="submit" class="btn btn-outline btn-sm"
-                          title="<?= $cat['is_active'] ? 'Désactiver' : 'Activer' ?>">
-                    <?= $cat['is_active'] ? '⏸️' : '▶️' ?>
-                  </button>
-                </form>
+                  <form method="POST" action="" style="display:inline">
+                    <input type="hidden" name="action" value="toggle">
+                    <input type="hidden" name="id" value="<?= $cat['id'] ?>">
+                    <button type="submit" class="btn btn-outline btn-sm"
+                            title="<?= $cat['is_active'] ? 'Désactiver' : 'Activer' ?>">
+                      <?= $cat['is_active'] ? '⏸️' : '▶️' ?>
+                    </button>
+                  </form>
 
-                <?php if ($cat['incident_count'] == 0): ?>
-                <form method="POST" action="" style="display:inline"
-                      onsubmit="return confirm('Supprimer la catégorie « <?= e($cat['name']) ?> » ? Cette action est irréversible.')">
-                  <input type="hidden" name="action" value="delete">
-                  <input type="hidden" name="id" value="<?= $cat['id'] ?>">
-                  <button type="submit" class="btn btn-danger btn-sm" title="Supprimer">🗑️</button>
-                </form>
+                  <?php if ($cat['incident_count'] == 0): ?>
+                  <form method="POST" action="" style="display:inline"
+                        onsubmit="return confirm('Supprimer la catégorie « <?= e($cat['name']) ?> » ? Cette action est irréversible.')">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="id" value="<?= $cat['id'] ?>">
+                    <button type="submit" class="btn btn-danger btn-sm" title="Supprimer">🗑️</button>
+                  </form>
+                  <?php else: ?>
+                    <button class="btn btn-outline btn-sm" disabled title="Impossible : des signalements utilisent cette catégorie" style="opacity:.3">🗑️</button>
+                  <?php endif; ?>
                 <?php else: ?>
-                  <button class="btn btn-outline btn-sm" disabled title="Impossible : des signalements utilisent cette catégorie" style="opacity:.3">🗑️</button>
+                  <span class="text-muted text-small">Lecture seule</span>
                 <?php endif; ?>
               </div>
             </td>
@@ -263,11 +279,12 @@ require_once __DIR__ . '/../includes/layout.php';
   <!-- Formulaire création / édition -->
   <div class="card" style="position:sticky;top:80px">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
-      <span class="card-title"><?= $edit_cat ? '✏️ Modifier la catégorie' : '➕ Nouvelle catégorie' ?></span>
-      <?php if ($edit_cat): ?>
+      <span class="card-title"><?= $isAdmin ? ($edit_cat ? '✏️ Modifier la catégorie' : '➕ Nouvelle catégorie') : '📚 Catalogue des catégories' ?></span>
+      <?php if ($edit_cat && $isAdmin): ?>
         <a href="/admin/?page=categories" class="btn btn-outline btn-sm">✕ Annuler</a>
       <?php endif; ?>
     </div>
+    <?php if ($isAdmin): ?>
     <form method="POST" action="" style="padding:0 4px 4px">
       <input type="hidden" name="action" value="<?= $edit_cat ? 'update' : 'create' ?>">
       <?php if ($edit_cat): ?>
@@ -432,6 +449,16 @@ require_once __DIR__ . '/../includes/layout.php';
         <?= $edit_cat ? '💾 Enregistrer les modifications' : '➕ Créer la catégorie premium' ?>
       </button>
     </form>
+    <?php else: ?>
+      <div style="padding:16px 4px 4px">
+        <p class="text-muted" style="margin:0 0 12px">Les catégories structurent tout le territoire. Leur création et leur modification restent réservées aux administrateurs.</p>
+        <ul class="text-small text-muted" style="margin:0;padding-left:18px;line-height:1.7">
+          <li>consulter la liste et les services rattachés</li>
+          <li>ouvrir la file des dossiers liés à une catégorie</li>
+          <li>remonter à un administrateur si un changement de catalogue est nécessaire</li>
+        </ul>
+      </div>
+    <?php endif; ?>
   </div>
 
 </div>

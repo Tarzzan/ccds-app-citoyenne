@@ -8,6 +8,8 @@
 
 $admin = current_admin();
 $is_admin_role = ($admin['role'] ?? null) === 'admin';
+$agent_is_scoped = !$is_admin_role && admin_is_service_scoped_agent($admin ?? []);
+$agent_service_scope_ids = $agent_is_scoped ? admin_allowed_service_ids($admin ?? []) : [];
 $page_title  = $page_title  ?? (defined('APP_NAME') ? APP_NAME . ' Admin' : 'Ma Commune Admin');
 $active_nav  = $active_nav  ?? '';
 
@@ -15,14 +17,31 @@ $active_nav  = $active_nav  ?? '';
 $db = Database::getInstance();
 $pending_count = 0;
 try {
-    $stmt = $db->query("SELECT COUNT(*) FROM incidents WHERE status = 'submitted'");
-    $pending_count = (int)$stmt->fetchColumn();
+    if ($agent_is_scoped && !empty($agent_service_scope_ids)) {
+        $safeServiceIds = implode(',', array_map('intval', $agent_service_scope_ids));
+        $stmt = $db->query("
+            SELECT COUNT(*)
+            FROM incidents i
+            JOIN categories c ON c.id = i.category_id
+            JOIN service_category_map scm ON scm.category_id = c.id AND scm.is_default = 1
+            WHERE i.status = 'submitted'
+              AND scm.service_id IN ($safeServiceIds)
+        ");
+        $pending_count = (int)$stmt->fetchColumn();
+    } elseif ($agent_is_scoped) {
+        $pending_count = 0;
+    } else {
+        $stmt = $db->query("SELECT COUNT(*) FROM incidents WHERE status = 'submitted'");
+        $pending_count = (int)$stmt->fetchColumn();
+    }
 } catch (Exception $e) {}
 
 // Compter les notifications non lues (v1.1)
 $unread_notifs_count = 0;
 try {
-    $unread_notifs_count = (int)$db->query("SELECT COUNT(*) FROM notifications WHERE is_read = 0")->fetchColumn();
+    $unread_notifs_count = $is_admin_role
+        ? (int)$db->query("SELECT COUNT(*) FROM notifications WHERE is_read = 0")->fetchColumn()
+        : 0;
 } catch (Exception $e) {}
 ?>
 <!DOCTYPE html>
@@ -102,18 +121,20 @@ try {
         <span>Recherche globale</span>
       </a>
 
-      <div class="nav-section-title" style="margin-top:8px">Modération</div>
+      <?php if ($is_admin_role): ?>
+        <div class="nav-section-title" style="margin-top:8px">Modération</div>
 
-      <a href="/admin/?page=moderation" class="nav-item <?= $active_nav === 'moderation' ? 'active' : '' ?>">
-        <span class="nav-icon">🚩</span>
-        <span>Commentaires signalés</span>
-        <?php
-        $flagged_count = 0;
-        try { $flagged_count = (int)$db->query("SELECT COUNT(*) FROM comments WHERE is_flagged = 1")->fetchColumn(); } catch (Exception $e) {}
-        if ($flagged_count > 0): ?>
-          <span class="nav-badge" style="background:#E53935"><?= $flagged_count ?></span>
-        <?php endif; ?>
-      </a>
+        <a href="/admin/?page=moderation" class="nav-item <?= $active_nav === 'moderation' ? 'active' : '' ?>">
+          <span class="nav-icon">🚩</span>
+          <span>Commentaires signalés</span>
+          <?php
+          $flagged_count = 0;
+          try { $flagged_count = (int)$db->query("SELECT COUNT(*) FROM comments WHERE is_flagged = 1")->fetchColumn(); } catch (Exception $e) {}
+          if ($flagged_count > 0): ?>
+            <span class="nav-badge" style="background:#E53935"><?= $flagged_count ?></span>
+          <?php endif; ?>
+        </a>
+      <?php endif; ?>
 
       <?php if ($is_admin_role): ?>
         <a href="/admin/?page=audit_logs" class="nav-item <?= $active_nav === 'audit_logs' ? 'active' : '' ?>">
