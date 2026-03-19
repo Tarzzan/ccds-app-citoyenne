@@ -18,6 +18,8 @@ import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { ScreenLoadingState } from '../components/ScreenStatePanel';
 import { AppStackParamList } from '../navigation/RootNavigator';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
+import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
+import { GENERATED_VISUAL_SOURCES } from '../theme/generatedVisualSources';
 
 type NavProp = NativeStackNavigationProp<AppStackParamList>;
 
@@ -118,6 +120,24 @@ function buildIncidentPlanState(incident: Incident): { label: string; variant: '
     default:
       return { label: 'A confirmer', variant: 'yellow' };
   }
+}
+
+function getIncidentListCompanionVisual(incidents: Incident[], isStaff: boolean, query: string) {
+  const defaultVisual = isStaff ? COMPANION_VISUAL_SLOTS.dashboard.source : COMPANION_VISUAL_SLOTS.profile.source;
+
+  if (!incidents.length && !query.trim()) {
+    return GENERATED_VISUAL_SOURCES['MOM-05'] ?? defaultVisual;
+  }
+
+  if (incidents.some((incident) => incident.current_plan?.status === 'in_progress')) {
+    return GENERATED_VISUAL_SOURCES['MOM-03'] ?? defaultVisual;
+  }
+
+  if (incidents.length > 0 && incidents.every((incident) => incident.status === 'resolved')) {
+    return GENERATED_VISUAL_SOURCES['MOM-04'] ?? defaultVisual;
+  }
+
+  return defaultVisual;
 }
 
 export default function MyIncidentsScreen() {
@@ -242,6 +262,7 @@ export default function MyIncidentsScreen() {
       body: 'Cette vue ne sert pas seulement a stocker des dossiers. Elle doit vous aider a voir ce qui attend, ce qui avance et ce qui est deja resolu.',
       bullets: ['utiliser les filtres pour reduire le bruit', 'ouvrir d abord les dossiers encore actifs'],
     };
+  const companionVisualSource = getIncidentListCompanionVisual(incidents, isStaff, debouncedQuery);
 
   const renderHeader = () => (
     <View>
@@ -270,6 +291,8 @@ export default function MyIncidentsScreen() {
           title={companionMessage.title}
           body={companionMessage.body}
           bullets={companionMessage.bullets}
+          visualSource={companionVisualSource}
+          visualBadgeLabel={isStaff ? 'Terrain' : 'Suivi'}
         />
       </View>
 

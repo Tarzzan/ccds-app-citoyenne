@@ -16,6 +16,7 @@ import { ScreenFeedbackState, ScreenLoadingState } from '../components/ScreenSta
 import { useAuth } from '../services/AuthContext';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
+import { GENERATED_VISUAL_SOURCES } from '../theme/generatedVisualSources';
 
 const STATUS_COLORS: Record<string, string> = {
   submitted:    '#F59E0B',
@@ -240,6 +241,26 @@ function getCitizenServiceNarrative(stats: UserStats): { title: string; body: st
   };
 }
 
+function getDashboardMomentVisual(stats: UserStats, nextIntervention: DashboardNextIntervention | null) {
+  if (nextIntervention?.plan_status === 'in_progress') {
+    return GENERATED_VISUAL_SOURCES['MOM-03'] ?? COMPANION_VISUAL_SLOTS.dashboard.source;
+  }
+
+  if (nextIntervention) {
+    return COMPANION_VISUAL_SLOTS.dashboard.source;
+  }
+
+  if ((stats.resolved_count ?? 0) > 0 && (stats.pending_count ?? 0) === 0 && (stats.in_progress_count ?? 0) === 0) {
+    return GENERATED_VISUAL_SOURCES['MOM-04'] ?? COMPANION_VISUAL_SLOTS.dashboard.source;
+  }
+
+  if ((stats.incidents_count ?? 0) === 0) {
+    return GENERATED_VISUAL_SOURCES['MOM-05'] ?? COMPANION_VISUAL_SLOTS.dashboard.source;
+  }
+
+  return COMPANION_VISUAL_SLOTS.dashboard.source;
+}
+
 type StaffQueueSummary = {
   openTotal: number;
   criticalTotal: number;
@@ -350,6 +371,7 @@ export default function DashboardScreen() {
   const interventionFocus = !isStaff
     ? buildDashboardInterventionFocus(stats.next_intervention, stats)
     : null;
+  const dashboardMomentVisual = getDashboardMomentVisual(stats, stats.next_intervention);
   const impactButtonLabel = stats.badges.length > 0 || stats.points > 0
     ? 'Voir les repères détaillés →'
     : 'Ouvrir le suivi d’impact →';
@@ -516,9 +538,16 @@ export default function DashboardScreen() {
               navigation.navigate('MyIncidents');
             }}
           >
-            <Text style={styles.interventionFocusEyebrow}>Transparence d intervention</Text>
-            <Text style={styles.interventionFocusTitle}>{interventionFocus.title}</Text>
-            <Text style={styles.interventionFocusBody}>{interventionFocus.body}</Text>
+            <View style={styles.interventionFocusTopRow}>
+              <View style={styles.interventionFocusCopy}>
+                <Text style={styles.interventionFocusEyebrow}>Transparence d intervention</Text>
+                <Text style={styles.interventionFocusTitle}>{interventionFocus.title}</Text>
+                <Text style={styles.interventionFocusBody}>{interventionFocus.body}</Text>
+              </View>
+              {dashboardMomentVisual ? (
+                <Image source={dashboardMomentVisual} style={styles.interventionFocusVisual} resizeMode="cover" />
+              ) : null}
+            </View>
             <View style={styles.interventionFocusMetrics}>
               <View style={styles.interventionFocusMetric}>
                 <Text style={styles.interventionFocusMetricValue}>{stats.intervention_overview.unplanned_count}</Text>
@@ -543,7 +572,8 @@ export default function DashboardScreen() {
             tone={companionMessage.tone}
             title={companionMessage.title}
             body={companionMessage.body}
-            visualSource={COMPANION_VISUAL_SLOTS.dashboard.source}
+            visualSource={dashboardMomentVisual}
+            visualBadgeLabel="Suivi"
             bullets={companionMessage.bullets}
             ctaLabel={companionMessage.ctaLabel}
             onPress={companionMessage.onPress}
@@ -792,6 +822,9 @@ const styles = StyleSheet.create({
   proofMetricLabel: { color: BRAND.colors.slate, fontSize: 11, marginTop: 4 },
   proofHint:      { marginTop: 12, color: BRAND.colors.slate, fontSize: 12, lineHeight: 18 },
   interventionFocusCard: { backgroundColor: '#E8F0E8', margin: 16, marginTop: 0, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: '#C9D9C9', ...BRAND_SHADOW },
+  interventionFocusTopRow: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
+  interventionFocusCopy: { flex: 1 },
+  interventionFocusVisual: { width: 88, height: 110, borderRadius: 18, backgroundColor: '#D7E8E4' },
   interventionFocusEyebrow: { color: BRAND.colors.canopy, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
   interventionFocusTitle: { color: BRAND.colors.canopyDeep, fontSize: 20, fontWeight: '800', marginTop: 6, fontFamily: BRAND.displayFont },
   interventionFocusBody: { color: BRAND.colors.slate, lineHeight: 21, marginTop: 8 },

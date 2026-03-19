@@ -11,6 +11,7 @@ import { ScreenFeedbackState, ScreenLoadingState } from '../components/ScreenSta
 import { COLORS } from '../components/ui';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
+import { GENERATED_VISUAL_SOURCES } from '../theme/generatedVisualSources';
 
 const TYPE_ICONS: Record<string, string> = {
   status_change:   '🔄',
@@ -121,6 +122,26 @@ function getNotificationsCompanion(
       'ouvrir un dossier si un doute revient',
     ],
   };
+}
+
+function getNotificationsCompanionVisual(notifications: Notification[], unreadCount: number) {
+  const unreadNotifications = notifications.filter((notification) => !notification.is_read);
+  const latestPlan = unreadNotifications.find((notification) => notification.type === 'intervention_plan');
+  const latestInterventionUpdate = unreadNotifications.find((notification) => notification.type === 'intervention_update');
+
+  if (!notifications.length) {
+    return GENERATED_VISUAL_SOURCES['MOM-06'] ?? COMPANION_VISUAL_SLOTS.notifications.source;
+  }
+
+  if (latestInterventionUpdate || latestPlan) {
+    return GENERATED_VISUAL_SOURCES['MOM-03'] ?? COMPANION_VISUAL_SLOTS.notifications.source;
+  }
+
+  if (unreadCount > 0) {
+    return GENERATED_VISUAL_SOURCES['MOM-02'] ?? COMPANION_VISUAL_SLOTS.notifications.source;
+  }
+
+  return GENERATED_VISUAL_SOURCES['MOM-06'] ?? COMPANION_VISUAL_SLOTS.notifications.source;
 }
 
 const formatDate = (iso: string): string => {
@@ -245,6 +266,7 @@ export const NotificationsScreen: React.FC = () => {
   }
 
   const companion = getNotificationsCompanion(notifications, unreadCount);
+  const companionVisualSource = getNotificationsCompanionVisual(notifications, unreadCount);
 
   return (
     <View style={styles.container}>
@@ -272,7 +294,8 @@ export const NotificationsScreen: React.FC = () => {
           tone={companion.tone}
           title={companion.title}
           body={companion.body}
-          visualSource={COMPANION_VISUAL_SLOTS.notifications.source}
+          visualSource={companionVisualSource}
+          visualBadgeLabel="Infos"
           bullets={companion.bullets}
           compact
         />
