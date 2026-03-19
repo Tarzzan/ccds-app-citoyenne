@@ -18,6 +18,15 @@ $db         = Database::getInstance();
 $tablesReady = admin_db_has_table($db, 'services')
     && admin_db_has_table($db, 'service_category_map')
     && admin_db_has_table($db, 'user_service_memberships');
+$latestPlansSql = "
+    SELECT latest_plan.*
+    FROM intervention_plans latest_plan
+    INNER JOIN (
+        SELECT incident_id, MAX(id) AS latest_id
+        FROM intervention_plans
+        GROUP BY incident_id
+    ) latest_lookup ON latest_lookup.latest_id = latest_plan.id
+";
 $agent_service_scope_ids = admin_allowed_service_ids($admin);
 $agent_is_scoped = admin_is_service_scoped_agent($admin);
 $scope_notice = null;
@@ -105,24 +114,24 @@ $services = $db->query("
         COUNT(DISTINCT scm.category_id) AS categories_count,
         COUNT(DISTINCT usm.user_id) AS members_count,
         COUNT(DISTINCT CASE WHEN resolved_incident.status IN ('submitted', 'acknowledged', 'in_progress') THEN resolved_incident.id END) AS open_incidents_count,
-        COUNT(DISTINCT CASE WHEN p.status IN ('scheduled', 'rescheduled', 'in_progress') THEN p.id END) AS active_plans_count,
+        COUNT(DISTINCT CASE WHEN current_plan.status IN ('scheduled', 'rescheduled', 'in_progress') THEN current_plan.id END) AS active_plans_count,
         COUNT(DISTINCT CASE
-            WHEN p.status IN ('scheduled', 'rescheduled', 'in_progress')
-             AND (p.source_type = 'internal' OR p.source_type IS NULL)
-            THEN p.id END) AS active_internal_plans_count,
+            WHEN current_plan.status IN ('scheduled', 'rescheduled', 'in_progress')
+             AND (current_plan.source_type = 'internal' OR current_plan.source_type IS NULL)
+            THEN current_plan.id END) AS active_internal_plans_count,
         COUNT(DISTINCT CASE
-            WHEN p.status IN ('scheduled', 'rescheduled', 'in_progress')
-             AND p.source_type = 'provider'
-            THEN p.id END) AS active_provider_plans_count,
+            WHEN current_plan.status IN ('scheduled', 'rescheduled', 'in_progress')
+             AND current_plan.source_type = 'provider'
+            THEN current_plan.id END) AS active_provider_plans_count,
         COUNT(DISTINCT CASE
-            WHEN p.status IN ('scheduled', 'rescheduled', 'in_progress')
-             AND p.scheduled_date = CURDATE()
-            THEN p.id END) AS plans_today_count,
+            WHEN current_plan.status IN ('scheduled', 'rescheduled', 'in_progress')
+             AND current_plan.scheduled_date = CURDATE()
+            THEN current_plan.id END) AS plans_today_count,
         COUNT(DISTINCT CASE
-            WHEN p.status IN ('scheduled', 'rescheduled')
-             AND p.scheduled_date IS NOT NULL
-             AND p.scheduled_date < CURDATE()
-            THEN p.id END) AS overdue_plans_count,
+            WHEN current_plan.status IN ('scheduled', 'rescheduled')
+             AND current_plan.scheduled_date IS NOT NULL
+             AND current_plan.scheduled_date < CURDATE()
+            THEN current_plan.id END) AS overdue_plans_count,
         COUNT(DISTINCT CASE
             WHEN resolved_incident.status = 'submitted'
              AND planned_lookup.plan_id IS NULL
@@ -130,7 +139,7 @@ $services = $db->query("
     FROM services s
     LEFT JOIN service_category_map scm ON scm.service_id = s.id
     LEFT JOIN user_service_memberships usm ON usm.service_id = s.id
-    LEFT JOIN intervention_plans p ON p.service_id = s.id
+    LEFT JOIN ($latestPlansSql) current_plan ON current_plan.service_id = s.id
     LEFT JOIN categories resolved_category ON resolved_category.id = scm.category_id
     LEFT JOIN incidents resolved_incident ON resolved_incident.category_id = resolved_category.id
     LEFT JOIN (
@@ -217,7 +226,7 @@ if (isset($_GET['detail'])) {
                 i.title,
                 i.status AS incident_status,
                 assignee.full_name AS assigned_user_name
-            FROM intervention_plans p
+            FROM ($latestPlansSql) p
             JOIN incidents i ON i.id = p.incident_id
             LEFT JOIN users assignee ON assignee.id = p.assigned_user_id
             WHERE p.service_id = ?

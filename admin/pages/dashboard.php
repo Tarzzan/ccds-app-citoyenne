@@ -11,6 +11,15 @@ $db = Database::getInstance();
 $service_tables_ready = admin_db_has_table($db, 'services')
     && admin_db_has_table($db, 'service_category_map')
     && admin_db_has_table($db, 'intervention_plans');
+$latestPlansSql = "
+    SELECT latest_plan.*
+    FROM intervention_plans latest_plan
+    INNER JOIN (
+        SELECT incident_id, MAX(id) AS latest_id
+        FROM intervention_plans
+        GROUP BY incident_id
+    ) latest_lookup ON latest_lookup.latest_id = latest_plan.id
+";
 $agent_service_scope_ids = $service_tables_ready ? admin_allowed_service_ids($admin) : [];
 $agent_is_scoped = $service_tables_ready && admin_is_service_scoped_agent($admin);
 $scope_notice = null;
@@ -156,10 +165,10 @@ if ($service_tables_ready) {
         $serviceSignals = array_merge($serviceSignals, $db->query("
             SELECT
                 (SELECT COUNT(*) FROM services " . ($agent_is_scoped ? "WHERE id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ") AND is_active = 1" : "WHERE is_active = 1") . ") AS services_active,
-                (SELECT COUNT(*) FROM intervention_plans WHERE status IN ('scheduled', 'rescheduled', 'in_progress') AND scheduled_date = CURDATE() " . ($agent_is_scoped ? "AND service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . ") AS plans_today,
-                (SELECT COUNT(*) FROM intervention_plans WHERE status IN ('scheduled', 'rescheduled') AND scheduled_date IS NOT NULL AND scheduled_date < CURDATE() " . ($agent_is_scoped ? "AND service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . ") AS overdue_plans,
-                (SELECT COUNT(*) FROM intervention_plans WHERE status IN ('scheduled', 'rescheduled', 'in_progress') AND (source_type = 'internal' OR source_type IS NULL) " . ($agent_is_scoped ? "AND service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . ") AS internal_active_plans,
-                (SELECT COUNT(*) FROM intervention_plans WHERE status IN ('scheduled', 'rescheduled', 'in_progress') AND source_type = 'provider' " . ($agent_is_scoped ? "AND service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . ") AS provider_active_plans,
+                (SELECT COUNT(*) FROM ($latestPlansSql) current_plan WHERE current_plan.status IN ('scheduled', 'rescheduled', 'in_progress') AND current_plan.scheduled_date = CURDATE() " . ($agent_is_scoped ? "AND current_plan.service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . ") AS plans_today,
+                (SELECT COUNT(*) FROM ($latestPlansSql) current_plan WHERE current_plan.status IN ('scheduled', 'rescheduled') AND current_plan.scheduled_date IS NOT NULL AND current_plan.scheduled_date < CURDATE() " . ($agent_is_scoped ? "AND current_plan.service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . ") AS overdue_plans,
+                (SELECT COUNT(*) FROM ($latestPlansSql) current_plan WHERE current_plan.status IN ('scheduled', 'rescheduled', 'in_progress') AND (current_plan.source_type = 'internal' OR current_plan.source_type IS NULL) " . ($agent_is_scoped ? "AND current_plan.service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . ") AS internal_active_plans,
+                (SELECT COUNT(*) FROM ($latestPlansSql) current_plan WHERE current_plan.status IN ('scheduled', 'rescheduled', 'in_progress') AND current_plan.source_type = 'provider' " . ($agent_is_scoped ? "AND current_plan.service_id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . ") AS provider_active_plans,
                 (
                     SELECT COUNT(*)
                     FROM incidents i
@@ -181,15 +190,15 @@ if ($service_tables_ready) {
                 s.id,
                 s.name,
                 COUNT(DISTINCT CASE WHEN i.status IN ('submitted', 'acknowledged', 'in_progress') THEN i.id END) AS open_incidents_count,
-                COUNT(DISTINCT CASE WHEN p.status IN ('scheduled', 'rescheduled', 'in_progress') THEN p.id END) AS active_plans_count,
-                COUNT(DISTINCT CASE WHEN p.status IN ('scheduled', 'rescheduled', 'in_progress') AND (p.source_type = 'internal' OR p.source_type IS NULL) THEN p.id END) AS active_internal_plans_count,
-                COUNT(DISTINCT CASE WHEN p.status IN ('scheduled', 'rescheduled', 'in_progress') AND p.source_type = 'provider' THEN p.id END) AS active_provider_plans_count,
-                COUNT(DISTINCT CASE WHEN p.status IN ('scheduled', 'rescheduled') AND p.scheduled_date IS NOT NULL AND p.scheduled_date < CURDATE() THEN p.id END) AS overdue_plans_count
+                COUNT(DISTINCT CASE WHEN current_plan.status IN ('scheduled', 'rescheduled', 'in_progress') THEN current_plan.id END) AS active_plans_count,
+                COUNT(DISTINCT CASE WHEN current_plan.status IN ('scheduled', 'rescheduled', 'in_progress') AND (current_plan.source_type = 'internal' OR current_plan.source_type IS NULL) THEN current_plan.id END) AS active_internal_plans_count,
+                COUNT(DISTINCT CASE WHEN current_plan.status IN ('scheduled', 'rescheduled', 'in_progress') AND current_plan.source_type = 'provider' THEN current_plan.id END) AS active_provider_plans_count,
+                COUNT(DISTINCT CASE WHEN current_plan.status IN ('scheduled', 'rescheduled') AND current_plan.scheduled_date IS NOT NULL AND current_plan.scheduled_date < CURDATE() THEN current_plan.id END) AS overdue_plans_count
             FROM services s
             LEFT JOIN service_category_map scm ON scm.service_id = s.id
             LEFT JOIN categories c ON c.id = scm.category_id
             LEFT JOIN incidents i ON i.category_id = c.id
-            LEFT JOIN intervention_plans p ON p.service_id = s.id
+            LEFT JOIN ($latestPlansSql) current_plan ON current_plan.service_id = s.id
             WHERE s.is_active = 1
             " . ($agent_is_scoped ? "AND s.id IN (" . (!empty($agent_service_scope_ids) ? implode(',', array_map('intval', $agent_service_scope_ids)) : '0') . ")" : "") . "
             GROUP BY s.id
