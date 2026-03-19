@@ -563,13 +563,26 @@ class IncidentController extends BaseController
     private function buildCitizenTimeline(array $statusHistory, array $serviceHistory, ?string $serviceName): array
     {
         $timeline = [];
+        $latestReopenAt = $this->detectLatestCitizenReopenAt($statusHistory);
 
         foreach ($statusHistory as $entry) {
+            $newStatus = (string)($entry['new_status'] ?? '');
+            $changedAt = (string)($entry['changed_at'] ?? '');
+
+            if (
+                $latestReopenAt !== null
+                && in_array($newStatus, ['resolved', 'rejected'], true)
+                && $changedAt !== ''
+                && strcmp($changedAt, $latestReopenAt) < 0
+            ) {
+                continue;
+            }
+
             $timeline[] = [
                 'type'       => 'status',
-                'label'      => $this->citizenLabelForStatus($entry['new_status'] ?? '', $serviceName),
+                'label'      => $this->citizenLabelForStatus($newStatus, $serviceName),
                 'detail'     => $entry['note'] ?? null,
-                'created_at' => $entry['changed_at'] ?? null,
+                'created_at' => $changedAt !== '' ? $changedAt : null,
             ];
         }
 
@@ -630,6 +643,37 @@ class IncidentController extends BaseController
         }
 
         return $deduped;
+    }
+
+    private function detectLatestCitizenReopenAt(array $statusHistory): ?string
+    {
+        $entries = array_values(array_filter($statusHistory, static fn($entry): bool => is_array($entry)));
+        usort($entries, static function (array $a, array $b): int {
+            return strcmp((string)($a['changed_at'] ?? ''), (string)($b['changed_at'] ?? ''));
+        });
+
+        $sawTerminalState = false;
+        $latestReopenAt = null;
+
+        foreach ($entries as $entry) {
+            $newStatus = (string)($entry['new_status'] ?? '');
+            $changedAt = trim((string)($entry['changed_at'] ?? ''));
+
+            if ($changedAt === '') {
+                continue;
+            }
+
+            if (in_array($newStatus, ['resolved', 'rejected'], true)) {
+                $sawTerminalState = true;
+                continue;
+            }
+
+            if ($sawTerminalState && in_array($newStatus, ['acknowledged', 'in_progress'], true)) {
+                $latestReopenAt = $changedAt;
+            }
+        }
+
+        return $latestReopenAt;
     }
 
     private function buildCitizenServiceTimelineDetail(array $entry): ?string
