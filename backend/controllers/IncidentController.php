@@ -695,7 +695,7 @@ class IncidentController extends BaseController
 
         $timeWindow = trim((string)($payload['time_window'] ?? ''));
         if ($timeWindow !== '') {
-            $parts[] = $timeWindow;
+            $parts[] = $this->normalizeTimelineTimeWindow($timeWindow);
         }
 
         $providerName = trim((string)($payload['provider_name'] ?? ''));
@@ -746,6 +746,15 @@ class IncidentController extends BaseController
         }
 
         return $value;
+    }
+
+    private function normalizeTimelineTimeWindow(string $value): string
+    {
+        return (string)preg_replace_callback(
+            '/\b(\d{2}:\d{2})(:\d{2})?\b/',
+            static fn(array $matches): string => $matches[1],
+            $value
+        );
     }
 
     private function citizenLabelForStatus(string $status, ?string $serviceName): string
