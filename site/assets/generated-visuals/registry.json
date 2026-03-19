@@ -1,0 +1,34 @@
+{
+  "installed_at_utc": "2026-03-19T01:22:19.633667+00:00",
+  "hero": {
+    "landing": "/site/assets/generated-visuals/hero/hero-01-landing-ma-commune-16x9.png",
+    "store": "/site/assets/generated-visuals/hero/hero-02-store-ma-commune-9x16.png"
+  },
+  "companion": {
+    "agent_relations": "/site/assets/generated-visuals/characters/char-05-agent-a2-bust-4x5.png",
+    "duo_reference": "/site/assets/generated-visuals/characters/char-06-duo-m1-a2-hero-16x9.png",
+    "welcome_duo": "/site/assets/generated-visuals/moments/mom-01-welcome-duo-4x5.png"
+  },
+  "categories": {
+    "badges": {
+      "road": "/site/assets/generated-visuals/badges/cat-01-road-badge-v2-1x1.png",
+      "lightbulb": "/site/assets/generated-visuals/badges/cat-02-lighting-badge-v2-1x1.png",
+      "tree": "/site/assets/generated-visuals/badges/cat-03-greenery-badge-v2-1x1.png",
+      "trash": "/site/assets/generated-visuals/badges/cat-04-cleanliness-badge-v2-1x1.png",
+      "bench": "/site/assets/generated-visuals/badges/cat-05-furniture-badge-v2-1x1.png",
+      "droplets": "/site/assets/generated-visuals/badges/cat-06-networks-badge-v2-1x1.png",
+      "triangle-alert": "/site/assets/generated-visuals/badges/cat-07-signage-badge-v2-1x1.png",
+      "building-2": "/site/assets/generated-visuals/badges/cat-08-buildings-badge-v2-1x1.png"
+    },
+    "scenes": {
+      "road": "/site/assets/generated-visuals/terrain/ill-01-road-pothole-rain-4x5.png",
+      "lightbulb": "/site/assets/generated-visuals/terrain/ill-02-lighting-streetlight-dusk-4x5.png",
+      "tree": "/site/assets/generated-visuals/terrain/ill-05-greenery-overgrown-path-4x5.png",
+      "trash": "/site/assets/generated-visuals/terrain/ill-03-cleanliness-illegal-dumping-4x5.png",
+      "bench": "/site/assets/generated-visuals/terrain/ill-06-urban-furniture-damaged-4x5.png",
+      "droplets": "/site/assets/generated-visuals/terrain/ill-04-drain-runoff-clogged-4x5.png",
+      "triangle-alert": "/site/assets/generated-visuals/terrain/ill-07-signage-damaged-4x5.png",
+      "building-2": "/site/assets/generated-visuals/terrain/ill-08-municipal-building-degraded-4x5.png"
+    }
+  }
+}
