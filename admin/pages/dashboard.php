@@ -8,6 +8,9 @@ $page_title = 'Tableau de bord';
 $active_nav = 'dashboard';
 
 $db = Database::getInstance();
+$service_tables_ready = admin_db_has_table($db, 'services')
+    && admin_db_has_table($db, 'service_category_map')
+    && admin_db_has_table($db, 'intervention_plans');
 
 // --- KPIs globaux ---
 $kpis = $db->query("
@@ -64,6 +67,13 @@ $community = [
 $community_recent_polls = [];
 $community_upcoming_events = [];
 $dashboardHeroVisual = generated_visual_url('HERO-01');
+$serviceSignals = [
+    'services_active' => 0,
+    'plans_today' => 0,
+    'overdue_plans' => 0,
+    'unplanned_open' => 0,
+];
+$serviceWorkload = [];
 
 try {
     $community = array_merge($community, $db->query("
@@ -96,6 +106,56 @@ try {
 } catch (Throwable $e) {
     $community_recent_polls = [];
     $community_upcoming_events = [];
+}
+
+if ($service_tables_ready) {
+    try {
+        $serviceSignals = array_merge($serviceSignals, $db->query("
+            SELECT
+                (SELECT COUNT(*) FROM services WHERE is_active = 1) AS services_active,
+                (SELECT COUNT(*) FROM intervention_plans WHERE status IN ('scheduled', 'rescheduled', 'in_progress') AND scheduled_date = CURDATE()) AS plans_today,
+                (SELECT COUNT(*) FROM intervention_plans WHERE status IN ('scheduled', 'rescheduled') AND scheduled_date IS NOT NULL AND scheduled_date < CURDATE()) AS overdue_plans,
+                (
+                    SELECT COUNT(*)
+                    FROM incidents i
+                    JOIN categories c ON c.id = i.category_id
+                    JOIN service_category_map scm ON scm.category_id = c.id AND scm.is_default = 1
+                    LEFT JOIN (
+                        SELECT incident_id, MAX(id) AS plan_id
+                        FROM intervention_plans
+                        GROUP BY incident_id
+                    ) planned_lookup ON planned_lookup.incident_id = i.id
+                    WHERE i.status IN ('submitted', 'acknowledged', 'in_progress')
+                      AND planned_lookup.plan_id IS NULL
+                ) AS unplanned_open
+        ")->fetch(PDO::FETCH_ASSOC) ?: []);
+
+        $serviceWorkload = $db->query("
+            SELECT
+                s.id,
+                s.name,
+                COUNT(DISTINCT CASE WHEN i.status IN ('submitted', 'acknowledged', 'in_progress') THEN i.id END) AS open_incidents_count,
+                COUNT(DISTINCT CASE WHEN p.status IN ('scheduled', 'rescheduled', 'in_progress') THEN p.id END) AS active_plans_count,
+                COUNT(DISTINCT CASE WHEN p.status IN ('scheduled', 'rescheduled') AND p.scheduled_date IS NOT NULL AND p.scheduled_date < CURDATE() THEN p.id END) AS overdue_plans_count
+            FROM services s
+            LEFT JOIN service_category_map scm ON scm.service_id = s.id
+            LEFT JOIN categories c ON c.id = scm.category_id
+            LEFT JOIN incidents i ON i.category_id = c.id
+            LEFT JOIN intervention_plans p ON p.service_id = s.id
+            WHERE s.is_active = 1
+            GROUP BY s.id
+            ORDER BY overdue_plans_count DESC, open_incidents_count DESC, active_plans_count DESC, s.name ASC
+            LIMIT 4
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        $serviceSignals = [
+            'services_active' => 0,
+            'plans_today' => 0,
+            'overdue_plans' => 0,
+            'unplanned_open' => 0,
+        ];
+        $serviceWorkload = [];
+    }
 }
 
 require_once __DIR__ . '/../includes/layout.php';
@@ -157,6 +217,77 @@ require_once __DIR__ . '/../includes/layout.php';
     </div>
   </div>
 </div>
+
+<?php if ($service_tables_ready): ?>
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon canopy">🧭</div>
+    <div>
+      <div class="stat-value"><?= (int)$serviceSignals['services_active'] ?></div>
+      <div class="stat-label">Services actifs</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon awara">📅</div>
+    <div>
+      <div class="stat-value"><?= (int)$serviceSignals['plans_today'] ?></div>
+      <div class="stat-label">Interventions prévues aujourd'hui</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon laterite">⏳</div>
+    <div>
+      <div class="stat-value"><?= (int)$serviceSignals['overdue_plans'] ?></div>
+      <div class="stat-label">Plans possiblement en retard</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon river">🗂️</div>
+    <div>
+      <div class="stat-value"><?= (int)$serviceSignals['unplanned_open'] ?></div>
+      <div class="stat-label">Dossiers ouverts sans plan</div>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-header">
+    <span class="card-title">🧭 Charge par service</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="/admin/?page=services" class="btn btn-outline btn-sm">Voir les services</a>
+      <a href="/admin/?page=incidents" class="btn btn-outline btn-sm">Voir toute la file</a>
+    </div>
+  </div>
+  <?php if (empty($serviceWorkload)): ?>
+    <p class="text-muted" style="padding:8px 4px 4px;">Aucune charge service visible pour l instant.</p>
+  <?php else: ?>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+      <?php foreach ($serviceWorkload as $service): ?>
+        <div style="padding:16px;border:1px solid #ece4d5;border-radius:18px;background:#fffdf8;">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+            <div>
+              <div style="font-weight:800;color:#183229;"><?= e($service['name']) ?></div>
+              <div class="text-small text-muted" style="margin-top:6px;">
+                <?= (int)$service['open_incidents_count'] ?> dossier(s) ouverts
+              </div>
+            </div>
+            <?php if ((int)$service['overdue_plans_count'] > 0): ?>
+              <span class="badge badge-red"><?= (int)$service['overdue_plans_count'] ?> retard</span>
+            <?php else: ?>
+              <span class="badge badge-green"><?= (int)$service['active_plans_count'] ?> plan(s)</span>
+            <?php endif; ?>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+            <span class="badge badge-gray"><?= (int)$service['active_plans_count'] ?> plan(s) actif(s)</span>
+            <a href="/admin/?page=services&detail=<?= (int)$service['id'] ?>" class="btn btn-outline btn-sm">Piloter</a>
+            <a href="/admin/?page=incidents&service=<?= (int)$service['id'] ?>" class="btn btn-outline btn-sm">Ouvrir la file</a>
+          </div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+</div>
+<?php endif; ?>
 
 <!-- KPIs -->
 <div class="stats-grid">
