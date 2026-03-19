@@ -567,11 +567,31 @@ class IncidentController extends BaseController
         $isStaff = in_array($auth['role'] ?? '', ['agent', 'admin'], true);
         $isOwner = !empty($auth['sub']) && (int)$auth['sub'] === (int)($incident['user_id'] ?? 0);
 
+        if (!$isStaff) {
+            $incident['assigned_to_name'] = null;
+
+            if (!empty($incident['current_plan']) && is_array($incident['current_plan'])) {
+                $incident['current_plan']['planned_by_user_id'] = null;
+                $incident['current_plan']['planned_by_name'] = null;
+                $incident['current_plan']['assigned_user_id'] = null;
+                $incident['current_plan']['assigned_user_name'] = null;
+                $incident['current_plan']['internal_note'] = null;
+            }
+
+            $incident['service_history'] = [];
+
+            if ($isDetail && !empty($incident['status_history']) && is_array($incident['status_history'])) {
+                $incident['status_history'] = array_map(static function (array $entry): array {
+                    $entry['changed_by'] = 'Commune';
+                    return $entry;
+                }, $incident['status_history']);
+            }
+        }
+
         if (!$isStaff && !$isOwner) {
             $incident['reporter_name'] = 'Un habitant du territoire';
             $incident['reporter_email'] = null;
             $incident['reporter_phone'] = null;
-            $incident['assigned_to_name'] = null;
 
             if ($isDetail) {
                 $incident['status_history'] = [];
