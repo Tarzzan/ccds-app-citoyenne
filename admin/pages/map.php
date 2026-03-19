@@ -14,22 +14,23 @@ $service_tables_ready = admin_db_has_table($db, 'services')
 $agent_service_scope_ids = $service_tables_ready ? admin_allowed_service_ids($admin) : [];
 $agent_is_scoped = $service_tables_ready && admin_is_service_scoped_agent($admin);
 $scope_notice = null;
-$service_scope_join = '';
 $service_scope_where = '';
+$service_join_sql = $service_tables_ready ? "
+    LEFT JOIN service_category_map scm ON scm.category_id = c.id AND scm.is_default = 1
+    LEFT JOIN services mapped_service ON mapped_service.id = scm.service_id
+    LEFT JOIN intervention_plans latest_plan ON latest_plan.id = (
+        SELECT p2.id
+        FROM intervention_plans p2
+        WHERE p2.incident_id = i.id
+        ORDER BY p2.created_at DESC, p2.id DESC
+        LIMIT 1
+    )
+    LEFT JOIN services plan_service ON plan_service.id = latest_plan.service_id
+" : '';
 
 if ($agent_is_scoped) {
     if (!empty($agent_service_scope_ids)) {
         $safeServiceIds = implode(',', array_map('intval', $agent_service_scope_ids));
-        $service_scope_join = "
-            LEFT JOIN service_category_map scm ON scm.category_id = c.id AND scm.is_default = 1
-            LEFT JOIN intervention_plans latest_plan ON latest_plan.id = (
-                SELECT p2.id
-                FROM intervention_plans p2
-                WHERE p2.incident_id = i.id
-                ORDER BY p2.created_at DESC, p2.id DESC
-                LIMIT 1
-            )
-        ";
         $service_scope_where = " AND COALESCE(latest_plan.service_id, scm.service_id) IN ($safeServiceIds)";
         $scope_notice = $admin['primary_service_name']
             ? 'La carte est limitee au service ' . $admin['primary_service_name'] . '.'
@@ -45,19 +46,38 @@ $incidents = $db->query("
     SELECT i.id, i.reference, i.description, i.status, i.latitude, i.longitude,
            i.address, i.created_at,
            c.name AS cat_name, c.color AS cat_color, c.icon AS cat_icon,
-           u.full_name AS reporter
+           u.full_name AS reporter,
+           " . ($service_tables_ready ? "
+           COALESCE(plan_service.name, mapped_service.name) AS service_name,
+           latest_plan.status AS current_plan_status,
+           latest_plan.scheduled_date AS current_plan_date,
+           latest_plan.time_window_start AS current_plan_time_start,
+           latest_plan.time_window_end AS current_plan_time_end,
+           latest_plan.source_type AS current_plan_source_type,
+           latest_plan.provider_name AS current_plan_provider_name
+           " : "
+           NULL AS service_name,
+           NULL AS current_plan_status,
+           NULL AS current_plan_date,
+           NULL AS current_plan_time_start,
+           NULL AS current_plan_time_end,
+           NULL AS current_plan_source_type,
+           NULL AS current_plan_provider_name
+           ") . "
     FROM incidents i
     JOIN categories c ON c.id = i.category_id
     JOIN users u ON u.id = i.user_id
-    $service_scope_join
+    $service_join_sql
     WHERE i.latitude IS NOT NULL AND i.longitude IS NOT NULL
     $service_scope_where
     ORDER BY i.created_at DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 foreach ($incidents as &$incident) {
+    $visual = category_visual_resolve($incident['cat_icon'] ?? null, $incident['cat_name'] ?? null);
     $incident['cat_badge_url'] = category_visual_asset_url($incident['cat_icon'] ?? null, $incident['cat_name'] ?? null);
     $incident['cat_scene_url'] = category_scene_visual_url($incident['cat_icon'] ?? null, $incident['cat_name'] ?? null);
+    $incident['cat_description'] = $visual['description'] ?? '';
 }
 unset($incident);
 
@@ -84,6 +104,13 @@ const statusLabels = {
   submitted:'Soumis', acknowledged:'Pris en charge',
   in_progress:'En cours', resolved:'Résolu', rejected:'Rejeté'
 };
+const planLabels = {
+  scheduled: 'Prévue',
+  rescheduled: 'Reprogrammée',
+  in_progress: 'En intervention',
+  completed: 'Terminée',
+  cancelled: 'Annulée'
+};
 
 const KOUROU_CENTER = [5.1597, -52.6498];
 const map = L.map('admin-map').setView(KOUROU_CENTER, 13);
@@ -93,6 +120,11 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 incidents.forEach(inc => {
   const color = statusColors[inc.status] || '#94a3b8';
+  const planLabel = inc.current_plan_status ? (planLabels[inc.current_plan_status] || inc.current_plan_status) : 'Pas encore planifiée';
+  const timeWindow = [inc.current_plan_time_start, inc.current_plan_time_end].filter(Boolean).join(' - ');
+  const executionLabel = inc.current_plan_source_type === 'provider'
+    ? `Prestataire missionné${inc.current_plan_provider_name ? ` · ${inc.current_plan_provider_name}` : ''}`
+    : (inc.current_plan_status ? 'Équipe interne' : 'Sans mode d exécution défini');
   const marker = L.circleMarker([inc.latitude, inc.longitude], {
     radius: 9, fillColor: color, color: '#fff',
     weight: 2, opacity: 1, fillOpacity: 0.9
@@ -107,14 +139,28 @@ incidents.forEach(inc => {
         <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:${inc.cat_color}18;border:1px solid ${inc.cat_color}33;overflow:hidden">
           <img src="${inc.cat_badge_url}" alt="${inc.cat_name}" style="width:100%;height:100%;object-fit:contain">
         </span>
-        <span style="background:${inc.cat_color}22;color:${inc.cat_color};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${inc.cat_name}</span>
+        <div style="display:grid;gap:2px">
+          <span style="background:${inc.cat_color}22;color:${inc.cat_color};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;width:max-content">${inc.cat_name}</span>
+          ${inc.cat_description ? `<span style="font-size:11px;color:#64748b">${inc.cat_description}</span>` : ''}
+        </div>
       </div>
       ${inc.cat_scene_url ? `
         <div style="margin:8px 0;border-radius:12px;overflow:hidden;border:1px solid rgba(15,76,42,.08);background:#f8f5ed">
           <img src="${inc.cat_scene_url}" alt="${inc.cat_name}" style="display:block;width:100%;aspect-ratio:4/3;object-fit:cover">
         </div>
       ` : ''}
-      <span style="background:${color}22;color:${color};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;margin-left:4px">${statusLabels[inc.status]||inc.status}</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+        <span style="background:${color}22;color:${color};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${statusLabels[inc.status]||inc.status}</span>
+        <span style="background:#eef3f1;color:#355248;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${planLabel}</span>
+      </div>
+      <div style="font-size:11px;color:#475569;margin-top:8px">
+        🧭 ${inc.service_name || 'Service à confirmer'}
+      </div>
+      <div style="font-size:11px;color:#64748b;margin-top:4px">
+        ${executionLabel}
+        ${inc.current_plan_date ? ` · ${inc.current_plan_date}` : ''}
+        ${timeWindow ? ` · ${timeWindow}` : ''}
+      </div>
       <div style="font-size:11px;color:#94a3b8;margin-top:6px">👤 ${inc.reporter} · 📅 ${date}</div>
       <a href="/admin/?page=incident_detail&id=${inc.id}"
          style="display:block;margin-top:10px;background:#1d4ed8;color:#fff;padding:6px 12px;border-radius:6px;text-align:center;font-size:12px;font-weight:600;text-decoration:none">
