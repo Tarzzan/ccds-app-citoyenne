@@ -297,24 +297,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $incident_sets[] = 'assigned_to = ?';
                 $incident_params[] = $assigned_user_id;
             }
+            $status_transition_note = null;
             if ($inc['status'] === 'submitted') {
                 $incident_sets[] = 'status = ?';
                 $incident_params[] = 'acknowledged';
+                $status_transition_note = 'Dossier pris en charge et intervention planifiee.';
+            } elseif (in_array((string)$inc['status'], ['resolved', 'rejected'], true)) {
+                $incident_sets[] = 'status = ?';
+                $incident_params[] = 'acknowledged';
+                $status_transition_note = 'Dossier reouvert suite a une nouvelle intervention planifiee.';
             }
             $incident_params[] = $id;
             $db->prepare('UPDATE incidents SET ' . implode(', ', $incident_sets) . ' WHERE id = ?')
                ->execute($incident_params);
 
-            if ($inc['status'] === 'submitted') {
+            if ($status_transition_note !== null) {
                 $db->prepare("
                     INSERT INTO status_history (incident_id, old_status, new_status, user_id, note, changed_at)
                     VALUES (?, ?, ?, ?, ?, NOW())
                 ")->execute([
                     $id,
-                    'submitted',
+                    $inc['status'],
                     'acknowledged',
                     $admin['id'],
-                    'Dossier pris en charge et intervention planifiee.',
+                    $status_transition_note,
                 ]);
             }
 

@@ -80,10 +80,15 @@ function buildIncidentPlanSummary(incident: Incident): string | null {
     month: 'long',
   });
   const timeWindow = [plan.time_window_start, plan.time_window_end].filter(Boolean).join(' - ');
+  const providerLabel = plan.source_type === 'provider' && plan.provider_name
+    ? ` · Prestataire ${plan.provider_name}`
+    : plan.source_type === 'internal'
+      ? ' · Equipe interne'
+      : '';
 
   return timeWindow
-    ? `Intervention prévue le ${dateLabel} · ${timeWindow}`
-    : `Intervention prévue le ${dateLabel}`;
+    ? `Intervention prévue le ${dateLabel} · ${timeWindow}${providerLabel}`
+    : `Intervention prévue le ${dateLabel}${providerLabel}`;
 }
 
 function buildIncidentPlanState(incident: Incident): { label: string; variant: 'blue' | 'green' | 'yellow' | 'gray' } | null {

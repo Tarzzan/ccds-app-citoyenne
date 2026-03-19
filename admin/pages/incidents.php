@@ -24,6 +24,7 @@ $f_status   = $_GET['status']    ?? '';
 $f_cat      = $_GET['cat']       ?? '';
 $f_service  = $_GET['service']   ?? '';
 $f_plan     = $_GET['plan']      ?? '';
+$f_executor = $_GET['executor']  ?? '';
 $f_search   = trim($_GET['q']    ?? '');
 $f_priority = $_GET['priority']  ?? '';
 $f_date_from= trim($_GET['date_from'] ?? '');
@@ -53,6 +54,13 @@ if ($f_plan && $planning_tables_ready) {
         $where[] = "latest_plan.status = 'in_progress'";
     } elseif ($f_plan === 'completed') {
         $where[] = "(latest_plan.status = 'completed' OR i.status = 'resolved')";
+    }
+}
+if ($f_executor && $planning_tables_ready) {
+    if ($f_executor === 'internal') {
+        $where[] = "(latest_plan.source_type = 'internal' OR latest_plan.source_type IS NULL)";
+    } elseif ($f_executor === 'provider') {
+        $where[] = "latest_plan.source_type = 'provider'";
     }
 }
 if ($f_priority)  { $where[] = 'i.priority = ?';                                  $params[] = $f_priority; }
@@ -127,6 +135,8 @@ $sql = "
            latest_plan.time_window_start AS current_plan_time_start,
            latest_plan.time_window_end AS current_plan_time_end,
            latest_plan.citizen_message AS current_plan_message,
+           latest_plan.source_type AS current_plan_source_type,
+           latest_plan.provider_name AS current_plan_provider_name,
            plan_assignee.full_name AS current_plan_assignee
            " : "
            NULL AS current_plan_id,
@@ -135,6 +145,8 @@ $sql = "
            NULL AS current_plan_time_start,
            NULL AS current_plan_time_end,
            NULL AS current_plan_message,
+           NULL AS current_plan_source_type,
+           NULL AS current_plan_provider_name,
            NULL AS current_plan_assignee
            ") . ",
            (SELECT COUNT(*) FROM photos ph WHERE ph.incident_id = i.id) AS photo_count,
@@ -191,6 +203,7 @@ $base_params = array_filter([
     'cat'       => $f_cat,
     'service'   => $f_service,
     'plan'      => $f_plan,
+    'executor'  => $f_executor,
     'priority'  => $f_priority,
     'q'         => $f_search,
     'date_from' => $f_date_from,
@@ -267,6 +280,13 @@ function incident_plan_summary(array $incident): ?string
     if ($assignee !== '') {
         $parts[] = $assignee;
     }
+    $providerName = trim((string)($incident['current_plan_provider_name'] ?? ''));
+    $sourceType = trim((string)($incident['current_plan_source_type'] ?? ''));
+    if ($sourceType === 'provider' && $providerName !== '') {
+        $parts[] = 'Prestataire : ' . $providerName;
+    } elseif ($sourceType === 'internal') {
+        $parts[] = 'Equipe interne';
+    }
 
     if (!empty($parts)) {
         return implode(' · ', $parts);
@@ -276,7 +296,7 @@ function incident_plan_summary(array $incident): ?string
     return $message !== '' ? $message : null;
 }
 
-$active_filters = array_filter([$f_status, $f_cat, $f_service, $f_plan, $f_search, $f_priority, $f_date_from, $f_date_to]);
+$active_filters = array_filter([$f_status, $f_cat, $f_service, $f_plan, $f_executor, $f_search, $f_priority, $f_date_from, $f_date_to]);
 $open_count = 0;
 $resolved_count = 0;
 foreach ($incidents as $inc) {
@@ -357,6 +377,11 @@ foreach ($incidents as $inc) {
           <option value="in_progress" <?= $f_plan === 'in_progress' ? 'selected' : '' ?>>En intervention</option>
           <option value="completed" <?= $f_plan === 'completed' ? 'selected' : '' ?>>Terminees</option>
         </select>
+        <select name="executor" class="form-control">
+          <option value="">Tous les intervenants</option>
+          <option value="internal" <?= $f_executor === 'internal' ? 'selected' : '' ?>>Equipe interne</option>
+          <option value="provider" <?= $f_executor === 'provider' ? 'selected' : '' ?>>Prestataire missionne</option>
+        </select>
       <?php endif; ?>
     </div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
@@ -402,7 +427,7 @@ foreach ($incidents as $inc) {
   <div class="card-header">
     <span class="card-title">
       <?= $total ?> signalement<?= $total > 1 ? 's' : '' ?>
-      <?php if ($f_status || $f_cat || $f_service || $f_search || $f_priority || $f_date_from || $f_date_to): ?>
+      <?php if ($f_status || $f_cat || $f_service || $f_plan || $f_executor || $f_search || $f_priority || $f_date_from || $f_date_to): ?>
         <span class="badge badge-blue" style="margin-left:8px">Filtré</span>
       <?php endif; ?>
     </span>
@@ -461,6 +486,11 @@ foreach ($incidents as $inc) {
             <?php if ($planSummary): ?>
               <div class="text-muted text-small" style="margin-top:4px;max-width:180px">
                 <?= e($planSummary) ?>
+              </div>
+            <?php endif; ?>
+            <?php if (($inc['current_plan_source_type'] ?? '') === 'provider' && !empty($inc['current_plan_provider_name'])): ?>
+              <div class="text-small" style="margin-top:4px;color:#7c3aed;font-weight:700;max-width:180px">
+                Prestataire missionne
               </div>
             <?php endif; ?>
           </td>
