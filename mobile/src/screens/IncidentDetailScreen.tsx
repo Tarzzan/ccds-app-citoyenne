@@ -311,6 +311,29 @@ export default function IncidentDetailScreen() {
       draft: 'Intervention a confirmer',
     } as Record<string, string>)[currentPlan.status] ?? 'Intervention suivie'
     : null;
+  const currentPlanExecutorLabel = currentPlan
+    ? currentPlan.source_type === 'provider'
+      ? currentPlan.provider_name
+        ? `Prestataire · ${currentPlan.provider_name}`
+        : 'Prestataire missionne'
+      : 'Equipe interne'
+    : null;
+  const currentPlanExecutorTone = currentPlan?.source_type === 'provider' ? 'provider' : 'internal';
+  const currentPlanDefaultCitizenMessage = currentPlan
+    ? currentPlan.status === 'in_progress'
+      ? currentPlan.source_type === 'provider' && currentPlan.provider_name
+        ? `Le prestataire ${currentPlan.provider_name} a signale un passage en cours sur le terrain.`
+        : 'L equipe interne a signale un passage en cours sur le terrain.'
+      : currentPlan.status === 'completed'
+        ? currentPlan.source_type === 'provider' && currentPlan.provider_name
+          ? `Le prestataire ${currentPlan.provider_name} a signale cette intervention comme terminee.`
+          : 'La commune a signale cette intervention comme terminee.'
+        : currentPlan.status === 'cancelled'
+          ? 'Cette intervention a ete annulee. Une nouvelle planification pourra suivre.'
+          : currentPlan.source_type === 'provider' && currentPlan.provider_name
+            ? `Cette intervention est actuellement confiee au prestataire ${currentPlan.provider_name}.`
+            : 'Cette intervention est actuellement suivie par l equipe interne de la commune.'
+    : null;
 
   const applyRecommendedAction = () => {
     setStaffStatus(recommendedAction.status);
@@ -418,23 +441,37 @@ export default function IncidentDetailScreen() {
                     ? ` · ${[currentPlan.time_window_start, currentPlan.time_window_end].filter(Boolean).join(' - ')}`
                     : ''}
                 </Text>
+                {currentPlanExecutorLabel ? (
+                  <View style={styles.planExecutorRow}>
+                    <View
+                      style={[
+                        styles.planExecutorChip,
+                        currentPlanExecutorTone === 'provider'
+                          ? styles.planExecutorChipProvider
+                          : styles.planExecutorChipInternal,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.planExecutorChipText,
+                          currentPlanExecutorTone === 'provider'
+                            ? styles.planExecutorChipTextProvider
+                            : styles.planExecutorChipTextInternal,
+                        ]}
+                      >
+                        {currentPlanExecutorLabel}
+                      </Text>
+                    </View>
+                  </View>
+                ) : null}
                 {currentPlan.assigned_user_name ? (
                   <Text style={styles.planMeta}>Référent prévu : {currentPlan.assigned_user_name}</Text>
-                ) : null}
-                {currentPlan.source_type === 'provider' && currentPlan.provider_name ? (
-                  <Text style={styles.planMeta}>Prestataire missionné : {currentPlan.provider_name}</Text>
                 ) : null}
                 {currentPlan.citizen_message ? (
                   <Text style={styles.planCitizenMessage}>{currentPlan.citizen_message}</Text>
                 ) : (
                   <Text style={styles.planMeta}>
-                    {currentPlan.status === 'in_progress'
-                      ? 'L equipe a signale un passage en cours sur le terrain.'
-                      : currentPlan.status === 'completed'
-                        ? 'La commune a signale cette intervention comme terminee.'
-                        : currentPlan.status === 'cancelled'
-                          ? 'Cette intervention a ete annulee. Une nouvelle planification pourra suivre.'
-                          : 'Cette planification reste interne pour l instant. Le prochain cran utile est d exposer un message citoyen plus explicite.'}
+                    {currentPlanDefaultCitizenMessage}
                   </Text>
                 )}
               </View>
@@ -963,6 +1000,36 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     lineHeight: 18,
     color: BRAND.colors.slate,
+  },
+  planExecutorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+  planExecutorChip: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+  },
+  planExecutorChipInternal: {
+    backgroundColor: '#EFF5EF',
+    borderColor: '#C7DDCA',
+  },
+  planExecutorChipProvider: {
+    backgroundColor: '#F8EEE7',
+    borderColor: '#E3CFC3',
+  },
+  planExecutorChipText: {
+    fontSize: 12.5,
+    fontWeight: '800',
+  },
+  planExecutorChipTextInternal: {
+    color: BRAND.colors.canopyDeep,
+  },
+  planExecutorChipTextProvider: {
+    color: '#8D3F23',
   },
   planCitizenMessage: {
     marginTop: 8,
