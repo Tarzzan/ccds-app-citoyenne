@@ -59,16 +59,22 @@ function buildIncidentPlanSummary(incident: Incident): string | null {
       : null;
   }
 
+  const executorLabel = plan.source_type === 'provider' && plan.provider_name
+    ? `Prestataire ${plan.provider_name}`
+    : plan.source_type === 'internal'
+      ? 'Equipe interne'
+      : 'La commune';
+
   if (plan.status === 'in_progress') {
-    return 'Intervention en cours sur le terrain.';
+    return `${executorLabel} en cours sur le terrain.`;
   }
 
   if (plan.status === 'completed') {
-    return 'Intervention marquee terminee par la commune.';
+    return `${executorLabel} a marque cette intervention terminee.`;
   }
 
   if (plan.status === 'cancelled') {
-    return 'Intervention annulee. Une nouvelle planification pourra etre proposee.';
+    return `${executorLabel} a annule cette intervention. Une nouvelle planification pourra etre proposee.`;
   }
 
   if (!plan.scheduled_date) {
