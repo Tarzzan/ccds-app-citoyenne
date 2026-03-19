@@ -16,6 +16,7 @@ import { ScreenFeedbackState, ScreenLoadingState } from '../components/ScreenSta
 import { useTheme } from '../theme/ThemeContext';
 import { BRAND } from '../theme/brand';
 import { AppStackParamList } from '../navigation/RootNavigator';
+import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
 
 type NavProp = NativeStackNavigationProp<AppStackParamList>;
 
@@ -251,6 +252,7 @@ export default function ImpactScreen() {
           tone="status"
           title={`${BRAND.companion.name} lit votre impact avec vous`}
           body={companionBody}
+          visualSource={COMPANION_VISUAL_SLOTS.impact.source}
           bullets={[
             'prioriser les dossiers encore ouverts',
             'verifier les derniers commentaires et statuts',

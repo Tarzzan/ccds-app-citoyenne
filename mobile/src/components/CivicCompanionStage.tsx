@@ -1,30 +1,28 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
+import { CompanionVisual } from './CompanionVisual';
 
 type Props = {
   eyebrow: string;
   title: string;
   body: string;
   aside?: string;
+  visualSource?: ImageSourcePropType;
+  visualBadgeLabel?: string;
 };
 
-export function CivicCompanionStage({ eyebrow, title, body, aside }: Props) {
+export function CivicCompanionStage({ eyebrow, title, body, aside, visualSource, visualBadgeLabel }: Props) {
   return (
     <View style={styles.stage}>
       <View style={styles.avatarCluster}>
-        <View style={styles.avatarHalo} />
-        <View style={styles.avatarFace}>
-          <View style={styles.avatarEyes}>
-            <View style={styles.avatarEye} />
-            <View style={styles.avatarEye} />
-          </View>
-          <View style={styles.avatarSmile} />
-        </View>
-        <View style={styles.avatarLeaf} />
-        <View style={styles.avatarTag}>
-          <Text style={styles.avatarTagText}>{BRAND.companion.name}</Text>
-        </View>
+        <CompanionVisual
+          accent={BRAND.colors.canopy}
+          halo="#F8E3B7"
+          imageSource={visualSource}
+          badgeLabel={visualBadgeLabel ?? BRAND.companion.name}
+          variant="stage"
+        />
       </View>
 
       <View style={styles.copy}>
@@ -53,67 +51,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-  },
-  avatarHalo: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
-    backgroundColor: '#F8E3B7',
-  },
-  avatarFace: {
-    position: 'absolute',
-    top: 10,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: BRAND.colors.canopy,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarEyes: {
-    flexDirection: 'row',
-    gap: 14,
-    marginBottom: 10,
-  },
-  avatarEye: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#FFFFFF',
-  },
-  avatarSmile: {
-    width: 18,
-    height: 8,
-    borderBottomWidth: 3,
-    borderBottomColor: '#FFFFFF',
-    borderRadius: 10,
-  },
-  avatarLeaf: {
-    position: 'absolute',
-    top: 4,
-    right: 6,
-    width: 20,
-    height: 20,
-    borderRadius: 20,
-    backgroundColor: BRAND.colors.awara,
-    transform: [{ rotate: '-24deg' }],
-  },
-  avatarTag: {
-    position: 'absolute',
-    bottom: 2,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: '#FFFFFFE8',
-    borderWidth: 1,
-    borderColor: '#E8D3AB',
-  },
-  avatarTagText: {
-    color: BRAND.colors.canopyDeep,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
   },
   copy: {
     flex: 1,

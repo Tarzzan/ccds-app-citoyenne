@@ -15,6 +15,7 @@ import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { ScreenFeedbackState, ScreenLoadingState } from '../components/ScreenStatePanel';
 import { useAuth } from '../services/AuthContext';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
+import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
 
 const STATUS_COLORS: Record<string, string> = {
   submitted:    '#F59E0B',
@@ -365,6 +366,7 @@ export default function DashboardScreen() {
             tone={companionMessage.tone}
             title={companionMessage.title}
             body={companionMessage.body}
+            visualSource={COMPANION_VISUAL_SLOTS.dashboard.source}
             bullets={companionMessage.bullets}
             ctaLabel={companionMessage.ctaLabel}
             onPress={companionMessage.onPress}

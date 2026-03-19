@@ -13,6 +13,7 @@ import { CivicCompanionStage } from '../components/CivicCompanionStage';
 import { Button, Input, COLORS } from '../components/ui';
 import { AuthStackParamList } from '../navigation/RootNavigator';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
+import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
 
 type Props = { navigation: NativeStackNavigationProp<AuthStackParamList, 'Register'> };
 
@@ -74,6 +75,7 @@ export default function RegisterScreen({ navigation }: Props) {
             title="Creer un compte pour agir sans perdre le fil."
             body="Votre compte sert a signaler, suivre, voter et relire les reponses utiles de la commune dans un seul espace."
             aside="Le but n est pas seulement de declarer un probleme, mais de garder une preuve claire de sa prise en charge."
+            visualSource={COMPANION_VISUAL_SLOTS.register.source}
           />
         </View>
 

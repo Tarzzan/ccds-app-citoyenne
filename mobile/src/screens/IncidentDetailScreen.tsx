@@ -20,6 +20,7 @@ import { VoteButton } from '../components/VoteButton';
 import { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../services/AuthContext';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
+import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
 
 type RouteType = RouteProp<AppStackParamList, 'IncidentDetail'>;
 type StaffStatus = 'acknowledged' | 'in_progress' | 'resolved' | 'rejected';
@@ -331,6 +332,7 @@ export default function IncidentDetailScreen() {
               tone={citizenCompanion.tone}
               title={citizenCompanion.title}
               body={citizenCompanion.body}
+              visualSource={COMPANION_VISUAL_SLOTS.incidentDetail.source}
               bullets={citizenCompanion.bullets}
               compact
             />

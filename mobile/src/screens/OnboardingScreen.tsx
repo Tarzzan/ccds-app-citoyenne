@@ -11,6 +11,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
+import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
 
 const { width, height } = Dimensions.get('window');
 const ONBOARDING_KEY = 'ma_commune_onboarding_done';
@@ -106,6 +107,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
                 tone="thanks"
                 title={`${BRAND.companion.name} vous accompagne dans la suite.`}
                 body={BRAND.copy.companionOnboarding}
+                visualSource={COMPANION_VISUAL_SLOTS.onboarding.source}
                 bullets={[
                   'remercier apres un signalement utile',
                   'traduire la prochaine etape en langage simple',

@@ -10,6 +10,7 @@ import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { ScreenFeedbackState, ScreenLoadingState } from '../components/ScreenStatePanel';
 import { COLORS } from '../components/ui';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
+import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
 
 const TYPE_ICONS: Record<string, string> = {
   status_change:   '🔄',
@@ -195,6 +196,7 @@ export const NotificationsScreen: React.FC = () => {
           tone={companion.tone}
           title={companion.title}
           body={companion.body}
+          visualSource={COMPANION_VISUAL_SLOTS.notifications.source}
           bullets={companion.bullets}
           compact
         />

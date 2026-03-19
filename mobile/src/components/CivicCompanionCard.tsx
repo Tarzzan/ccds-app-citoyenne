@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
+import { CompanionVisual } from './CompanionVisual';
 
 type CivicCompanionTone = 'guide' | 'thanks' | 'status' | 'uplift';
 
@@ -13,6 +14,8 @@ type Props = {
   ctaLabel?: string;
   onPress?: () => void;
   compact?: boolean;
+  visualSource?: ImageSourcePropType;
+  visualBadgeLabel?: string;
 };
 
 const TONES: Record<CivicCompanionTone, { card: string; border: string; accent: string; halo: string }> = {
@@ -42,25 +45,6 @@ const TONES: Record<CivicCompanionTone, { card: string; border: string; accent: 
   },
 };
 
-function CompanionAvatar({ accent, halo, compact }: { accent: string; halo: string; compact?: boolean }) {
-  return (
-    <View style={[styles.avatarWrap, compact && styles.avatarWrapCompact]}>
-      <View style={[styles.avatarHalo, { backgroundColor: halo }]} />
-      <View style={[styles.avatarFace, { backgroundColor: accent }]}>
-        <View style={styles.avatarEyes}>
-          <View style={styles.avatarEye} />
-          <View style={styles.avatarEye} />
-        </View>
-        <View style={styles.avatarSmile} />
-      </View>
-      <View style={[styles.avatarLeaf, { backgroundColor: BRAND.colors.awara }]} />
-      <View style={[styles.avatarBadge, { backgroundColor: '#FFFFFFE8', borderColor: `${accent}33` }]}>
-        <Text style={[styles.avatarBadgeText, { color: accent }]}>MC</Text>
-      </View>
-    </View>
-  );
-}
-
 export function CivicCompanionCard({
   eyebrow,
   title,
@@ -70,6 +54,8 @@ export function CivicCompanionCard({
   ctaLabel,
   onPress,
   compact = false,
+  visualSource,
+  visualBadgeLabel,
 }: Props) {
   const palette = TONES[tone];
 
@@ -82,7 +68,16 @@ export function CivicCompanionCard({
       ]}
     >
       <View style={styles.topRow}>
-        <CompanionAvatar accent={palette.accent} halo={palette.halo} compact={compact} />
+        <View style={[styles.avatarWrap, compact && styles.avatarWrapCompact]}>
+          <CompanionVisual
+            accent={palette.accent}
+            halo={palette.halo}
+            compact={compact}
+            imageSource={visualSource}
+            badgeLabel={visualBadgeLabel ?? 'MC'}
+            variant="card"
+          />
+        </View>
         <View style={styles.copy}>
           <Text style={[styles.eyebrow, { color: palette.accent }]}>
             {eyebrow ?? `${BRAND.companion.name} · ${BRAND.companion.role}`}
@@ -140,60 +135,6 @@ const styles = StyleSheet.create({
   },
   avatarWrapCompact: {
     width: 58,
-  },
-  avatarHalo: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-  },
-  avatarFace: {
-    position: 'absolute',
-    top: 8,
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarEyes: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 8,
-  },
-  avatarEye: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#FFFFFF',
-  },
-  avatarSmile: {
-    width: 14,
-    height: 7,
-    borderBottomWidth: 2,
-    borderBottomColor: '#FFFFFF',
-    borderRadius: 10,
-  },
-  avatarLeaf: {
-    position: 'absolute',
-    top: 2,
-    right: 6,
-    width: 16,
-    height: 16,
-    borderRadius: 16,
-    transform: [{ rotate: '-22deg' }],
-  },
-  avatarBadge: {
-    position: 'absolute',
-    bottom: -2,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-  },
-  avatarBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.6,
   },
   copy: {
     flex: 1,
