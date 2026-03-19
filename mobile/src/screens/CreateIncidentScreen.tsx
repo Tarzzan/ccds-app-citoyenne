@@ -20,6 +20,7 @@ import { CategoryScenePanel }                     from '../components/CategorySc
 import { CivicCompanionCard }                     from '../components/CivicCompanionCard';
 import { OfflineQueue }                           from '../services/OfflineQueue';
 import { BRAND, BRAND_SHADOW }                    from '../theme/brand';
+import { GENERATED_VISUAL_SOURCES }               from '../theme/generatedVisualSources';
 import { resolveCategoryVisual }                  from '../theme/categoryVisuals';
 
 function StepSection({
@@ -49,6 +50,18 @@ function StepSection({
   );
 }
 
+function getCreateIncidentMomentVisual(readinessCount: number, hasCategory: boolean, hasPhoto: boolean) {
+  if (readinessCount >= 4) {
+    return GENERATED_VISUAL_SOURCES['MOM-02'];
+  }
+
+  if (hasCategory || hasPhoto) {
+    return GENERATED_VISUAL_SOURCES['MOM-03'] ?? GENERATED_VISUAL_SOURCES['MOM-02'];
+  }
+
+  return GENERATED_VISUAL_SOURCES['MOM-05'];
+}
+
 export default function CreateIncidentScreen() {
   const navigation = useNavigation();
 
@@ -69,6 +82,7 @@ export default function CreateIncidentScreen() {
   const [pendingCount, setPendingCount] = useState(0);
   const readinessCount = [Boolean(photo), Boolean(categoryId), Boolean(description.trim()), Boolean(coords)].filter(Boolean).length;
   const selectedCategory = categories.find((cat) => cat.id === categoryId) ?? null;
+  const momentVisual = getCreateIncidentMomentVisual(readinessCount, Boolean(categoryId), Boolean(photo));
 
   // Charger les catégories et surveiller la connectivité
   useEffect(() => {
@@ -307,6 +321,8 @@ export default function CreateIncidentScreen() {
             tone="guide"
             title={`${BRAND.companion.name} vous aide a faire un signalement utile`}
             body="Quelques details simples changent tout: une photo lisible, un lieu exact et une description courte mais concrete."
+            visualSource={momentVisual}
+            visualBadgeLabel="Depot"
             bullets={[
               'montrer clairement le probleme sur la photo',
               'verifier la position avant envoi',
@@ -400,7 +416,7 @@ export default function CreateIncidentScreen() {
             icon={selectedCategory?.icon}
             name={selectedCategory?.name}
             title={selectedCategory ? `${selectedCategory.name} sur le terrain` : undefined}
-            body={selectedCategory ? "Quand un visuel terrain valide sera installe, cette scene aidera a distinguer clairement la situation reelle du simple badge categorie." : undefined}
+            body={selectedCategory ? "Cette scene aide a replacer la categorie dans une situation concrete, pour distinguer le contexte reel du simple badge fonctionnel." : undefined}
           />
 
           <Input

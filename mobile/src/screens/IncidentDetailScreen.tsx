@@ -22,6 +22,7 @@ import { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../services/AuthContext';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
+import { GENERATED_VISUAL_SOURCES } from '../theme/generatedVisualSources';
 
 type RouteType = RouteProp<AppStackParamList, 'IncidentDetail'>;
 type StaffStatus = 'acknowledged' | 'in_progress' | 'resolved' | 'rejected';
@@ -185,6 +186,25 @@ function buildReporterLabel(reporterName: string) {
     : `Signalé par ${reporterName}`;
 }
 
+function getIncidentMomentVisual(incident: Incident | null) {
+  if (!incident) {
+    return GENERATED_VISUAL_SOURCES['MOM-05'];
+  }
+
+  switch (incident.status) {
+    case 'submitted':
+      return GENERATED_VISUAL_SOURCES['MOM-02'] ?? COMPANION_VISUAL_SLOTS.incidentDetail.source;
+    case 'acknowledged':
+      return COMPANION_VISUAL_SLOTS.incidentDetail.source;
+    case 'in_progress':
+      return GENERATED_VISUAL_SOURCES['MOM-03'] ?? COMPANION_VISUAL_SLOTS.incidentDetail.source;
+    case 'resolved':
+      return GENERATED_VISUAL_SOURCES['MOM-04'] ?? COMPANION_VISUAL_SLOTS.incidentDetail.source;
+    default:
+      return COMPANION_VISUAL_SLOTS.incidentDetail.source;
+  }
+}
+
 export default function IncidentDetailScreen() {
   const route = useRoute<RouteType>();
   const { id } = route.params;
@@ -282,6 +302,8 @@ export default function IncidentDetailScreen() {
       <ScreenLoadingState
         title="Le dossier se remet en contexte"
         body="Le relais communal rassemble l historique, les commentaires et le statut pour vous rendre une lecture utile des l ouverture."
+        visualSource={getIncidentMomentVisual(null)}
+        visualBadgeLabel="Dossier"
       />
     );
   }
@@ -293,6 +315,8 @@ export default function IncidentDetailScreen() {
         tone="warning"
         title="Ce dossier reste introuvable"
         body="Le signalement n a pas pu etre retrouve. Revenez a la liste puis rouvrez un dossier utile."
+        visualSource={GENERATED_VISUAL_SOURCES['MOM-06'] ?? COMPANION_VISUAL_SLOTS.incidentDetail.source}
+        visualBadgeLabel="Dossier"
       />
     );
   }
@@ -306,6 +330,7 @@ export default function IncidentDetailScreen() {
   const staffRoleLabel = user?.role === 'admin' ? 'Administrateur' : 'Agent municipal';
   const recommendedAction = getRecommendedStaffAction(incident, Boolean(assignToMe));
   const citizenCompanion = getCitizenStatusCompanion(incident);
+  const incidentMomentVisual = getIncidentMomentVisual(incident);
   const statusIndex = STATUS_FLOW.indexOf(incident.status);
   const currentPlanLabel = currentPlan
     ? ({
@@ -387,7 +412,8 @@ export default function IncidentDetailScreen() {
               tone={citizenCompanion.tone}
               title={citizenCompanion.title}
               body={citizenCompanion.body}
-              visualSource={COMPANION_VISUAL_SLOTS.incidentDetail.source}
+              visualSource={incidentMomentVisual}
+              visualBadgeLabel="Dossier"
               bullets={citizenCompanion.bullets}
               compact
             />
@@ -534,7 +560,7 @@ export default function IncidentDetailScreen() {
             icon={incident.category_icon}
             name={incident.category_name}
             title={`${incident.category_name} dans son contexte`}
-            body="Quand les scenes terrain validees seront installees, cette fiche pourra raconter le contexte reel du dossier sans perdre la lisibilite fonctionnelle."
+            body="La scene terrain aide a lire tout de suite le type de situation traitee, sans confondre illustration contextuelle et badge categorie."
           />
 
           {incident.address && (
