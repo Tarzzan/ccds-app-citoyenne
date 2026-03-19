@@ -67,6 +67,46 @@ function category_visual_asset_url(?string $icon, ?string $name = null): string
     return '/admin/assets/img/category-icons/' . rawurlencode($entry['key']) . '.png';
 }
 
+function category_scene_asset_id(?string $icon, ?string $name = null): ?string
+{
+    $entry = category_visual_resolve($icon, $name);
+    $key = $entry['key'] ?? 'road';
+
+    return [
+        'road' => 'ILL-01',
+        'lightbulb' => 'ILL-02',
+        'trash' => 'ILL-03',
+        'droplets' => 'ILL-04',
+        'tree' => 'ILL-05',
+        'bench' => 'ILL-06',
+        'triangle-alert' => 'ILL-07',
+        'building-2' => 'ILL-08',
+    ][$key] ?? null;
+}
+
+function category_scene_visual_url(?string $icon, ?string $name = null): ?string
+{
+    $assetId = category_scene_asset_id($icon, $name);
+    if (!$assetId) {
+        return null;
+    }
+
+    return generated_visual_url($assetId);
+}
+
+function category_scene_visual_html(?string $icon, ?string $name = null, array $options = []): string
+{
+    $assetId = category_scene_asset_id($icon, $name);
+    if (!$assetId) {
+        return '';
+    }
+
+    return generated_visual_html($assetId, $options + [
+        'label' => 'Scene terrain ' . ($name ?: ($icon ?: 'categorie')),
+        'class' => 'generated-visual generated-visual--cover generated-visual--scene',
+    ]);
+}
+
 function category_visual_html(?string $icon, ?string $name = null, string $size = 'md', ?string $color = null): string
 {
     $entry = category_visual_resolve($icon, $name);

@@ -111,6 +111,7 @@ $visual_catalog  = category_visuals_catalog();
 $selected_visual = category_visual_resolve($edit_cat['icon'] ?? 'road', $edit_cat['name'] ?? '');
 $default_icon    = $selected_visual['key'] ?? ($edit_cat['icon'] ?? 'road');
 $default_color   = $edit_cat['color'] ?? ($selected_visual['accent'] ?? '#1d4ed8');
+$default_scene_url = category_scene_visual_url($default_icon, $edit_cat['name'] ?? ($selected_visual['label'] ?? ''));
 
 require_once __DIR__ . '/../includes/layout.php';
 ?>
@@ -250,6 +251,8 @@ require_once __DIR__ . '/../includes/layout.php';
               class="category-preset<?= $is_selected ? ' is-selected' : '' ?>"
               data-category-key="<?= e($visual['key'] ?? '') ?>"
               data-category-color="<?= e($visual['accent'] ?? '#1d4ed8') ?>"
+              data-category-scene-url="<?= e((string)category_scene_visual_url($visual['key'] ?? 'road', $visual['label'] ?? '')) ?>"
+              data-category-scene-label="<?= e($visual['label'] ?? '') ?>"
             >
               <input type="radio" name="category_icon_preview" value="<?= e($visual['key'] ?? '') ?>" <?= $is_selected ? 'checked' : '' ?>>
               <div class="category-preset-top">
@@ -262,6 +265,13 @@ require_once __DIR__ . '/../includes/layout.php';
           <?php endforeach; ?>
         </div>
         <div class="text-muted text-small" style="margin-top:6px">Chaque catégorie dispose maintenant d’un pictogramme premium cohérent entre mobile, back-office et administration.</div>
+        <div class="category-scene-preview<?= $default_scene_url ? ' is-ready' : '' ?>" id="categoryScenePreview" data-default-label="<?= e($selected_visual['label'] ?? 'Categorie') ?>">
+          <img id="categoryScenePreviewImage" alt="Scene terrain categorie"<?= $default_scene_url ? ' src="' . e($default_scene_url) . '"' : '' ?>>
+          <div class="category-scene-preview-copy">
+            <strong id="categoryScenePreviewTitle"><?= e($selected_visual['label'] ?? 'Categorie') ?></strong>
+            <span id="categoryScenePreviewText">Les scenes terrain validées viendront ici clarifier la réalité du terrain sans remplacer l’icône fonctionnelle.</span>
+          </div>
+        </div>
       </div>
 
       <div class="form-group">
@@ -280,10 +290,32 @@ require_once __DIR__ . '/../includes/layout.php';
             const hexIn = document.getElementById('colorHexInput');
             const iconInput = document.getElementById('categoryIconInput');
             const presets = Array.from(document.querySelectorAll('.category-preset'));
+            const scenePreview = document.getElementById('categoryScenePreview');
+            const scenePreviewImage = document.getElementById('categoryScenePreviewImage');
+            const scenePreviewTitle = document.getElementById('categoryScenePreviewTitle');
 
             if (!picker || !hexIn || !iconInput) {
               return;
             }
+
+            const updateScenePreview = (preset) => {
+              if (!scenePreview || !scenePreviewImage || !scenePreviewTitle || !preset) {
+                return;
+              }
+
+              const sceneUrl = preset.getAttribute('data-category-scene-url') || '';
+              const sceneLabel = preset.getAttribute('data-category-scene-label') || scenePreview.dataset.defaultLabel || 'Categorie';
+              scenePreviewTitle.textContent = sceneLabel;
+
+              if (!sceneUrl) {
+                scenePreview.classList.remove('is-ready');
+                scenePreviewImage.removeAttribute('src');
+                return;
+              }
+
+              scenePreviewImage.src = sceneUrl;
+              scenePreview.classList.add('is-ready');
+            };
 
             const syncColorFieldNames = () => {
               picker.name = '';
@@ -320,9 +352,13 @@ require_once __DIR__ . '/../includes/layout.php';
                 if (radio) {
                   radio.checked = true;
                 }
+
+                updateScenePreview(preset);
               });
             });
 
+            const selectedPreset = presets.find((entry) => entry.classList.contains('is-selected')) || presets[0];
+            updateScenePreview(selectedPreset);
             syncColorFieldNames();
           })();
         </script>

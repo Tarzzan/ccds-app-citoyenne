@@ -22,6 +22,11 @@ $incidents = $db->query("
     ORDER BY i.created_at DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
+foreach ($incidents as &$incident) {
+    $incident['cat_scene_url'] = category_scene_visual_url($incident['cat_icon'] ?? null, $incident['cat_name'] ?? null);
+}
+unset($incident);
+
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
@@ -67,6 +72,11 @@ incidents.forEach(inc => {
         </span>
         <span style="background:${inc.cat_color}22;color:${inc.cat_color};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${inc.cat_name}</span>
       </div>
+      ${inc.cat_scene_url ? `
+        <div style="margin:8px 0;border-radius:12px;overflow:hidden;border:1px solid rgba(15,76,42,.08);background:#f8f5ed">
+          <img src="${inc.cat_scene_url}" alt="${inc.cat_name}" style="display:block;width:100%;aspect-ratio:4/3;object-fit:cover">
+        </div>
+      ` : ''}
       <span style="background:${color}22;color:${color};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;margin-left:4px">${statusLabels[inc.status]||inc.status}</span>
       <div style="font-size:11px;color:#94a3b8;margin-top:6px">👤 ${inc.reporter} · 📅 ${date}</div>
       <a href="/admin/?page=incident_detail&id=${inc.id}"
