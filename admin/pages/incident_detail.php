@@ -95,6 +95,43 @@ function incident_plan_status_pill(string $status): array
     };
 }
 
+function incident_plan_normalize_string(?string $value): ?string
+{
+    $value = trim((string)$value);
+    return $value === '' ? null : $value;
+}
+
+function incident_plan_normalize_time(?string $value): ?string
+{
+    $value = incident_plan_normalize_string($value);
+    if ($value === null) {
+        return null;
+    }
+
+    if (preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $value)) {
+        return substr($value, 0, 5);
+    }
+
+    return $value;
+}
+
+function incident_plan_matches_payload(?array $existingPlan, array $payload): bool
+{
+    if (!$existingPlan) {
+        return false;
+    }
+
+    return (int)($existingPlan['service_id'] ?? 0) === (int)($payload['service_id'] ?? 0)
+        && (int)($existingPlan['assigned_user_id'] ?? 0) === (int)($payload['assigned_user_id'] ?? 0)
+        && incident_plan_normalize_string($existingPlan['scheduled_date'] ?? null) === incident_plan_normalize_string($payload['scheduled_date'] ?? null)
+        && incident_plan_normalize_time($existingPlan['time_window_start'] ?? null) === incident_plan_normalize_time($payload['time_window_start'] ?? null)
+        && incident_plan_normalize_time($existingPlan['time_window_end'] ?? null) === incident_plan_normalize_time($payload['time_window_end'] ?? null)
+        && incident_plan_normalize_string($existingPlan['internal_note'] ?? null) === incident_plan_normalize_string($payload['internal_note'] ?? null)
+        && incident_plan_normalize_string($existingPlan['citizen_message'] ?? null) === incident_plan_normalize_string($payload['citizen_message'] ?? null)
+        && incident_plan_normalize_string($existingPlan['source_type'] ?? 'internal') === incident_plan_normalize_string($payload['source_type'] ?? 'internal')
+        && incident_plan_normalize_string($existingPlan['provider_name'] ?? null) === incident_plan_normalize_string($payload['provider_name'] ?? null);
+}
+
 // Charger les votants (v1.1) — si la table existe
 $voters = [];
 try {
@@ -262,6 +299,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $existing_plan = intervention_get_current_plan($db, $id);
+            if (
+                $existing_plan
+                && in_array((string)($existing_plan['status'] ?? ''), ['draft', 'scheduled', 'rescheduled', 'in_progress'], true)
+                && incident_plan_matches_payload($existing_plan, [
+                    'service_id' => $service_id,
+                    'assigned_user_id' => $assigned_user_id > 0 ? $assigned_user_id : null,
+                    'scheduled_date' => $scheduled_date,
+                    'time_window_start' => $time_window_start !== '' ? $time_window_start : null,
+                    'time_window_end' => $time_window_end !== '' ? $time_window_end : null,
+                    'internal_note' => $internal_note !== '' ? $internal_note : null,
+                    'citizen_message' => $citizen_message !== '' ? $citizen_message : null,
+                    'source_type' => $source_type,
+                    'provider_name' => $provider_name !== '' ? $provider_name : null,
+                ])
+            ) {
+                $db->rollBack();
+                $_SESSION['flash_success'] = 'Aucune modification detectee sur la planification courante.';
+                header("Location: /admin/?page=incident_detail&id=$id");
+                exit;
+            }
+
             $is_reschedule = !empty($existing_plan)
                 && in_array($existing_plan['status'], ['draft', 'scheduled', 'rescheduled', 'in_progress'], true);
 
