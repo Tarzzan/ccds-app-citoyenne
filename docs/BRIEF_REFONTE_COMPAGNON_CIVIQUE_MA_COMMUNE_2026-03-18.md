@@ -4,6 +4,11 @@
 
 Faire evoluer `Ma Commune` d un outil de signalement utile vers un compagnon civique plus humain, plus lisible et plus engageant.
 
+Ce brief de premiere passe reste utile comme point de depart UX, mais il ne suffit plus pour la cible voulue.
+La direction de reference a suivre desormais est :
+
+- `docs/DIRECTION_ARTISTIQUE_COMPAGNON_ET_IMAGERIE_TERRAIN_MA_COMMUNE_2026-03-18.md`
+
 L application ne doit plus seulement demander des informations. Elle doit :
 
 - remercier
@@ -11,14 +16,14 @@ L application ne doit plus seulement demander des informations. Elle doit :
 - rassurer
 - rendre visible la prochaine etape
 
-## Figure relationnelle
+## Figure relationnelle V1
 
 Nom retenu pour la V1 de refonte :
 
 - `Awa`
 - role : `Relais communal`
 
-`Awa` n est pas une mascotte infantile. C est une presence editoriale legere qui :
+`Awa` n est pas une mascotte infantile. C etait une presence editoriale legere de transition qui :
 
 - accueille les nouveaux usagers
 - aide a preparer un signalement utile
@@ -62,3 +67,13 @@ Cette couche doit aider `Ma Commune` a devenir un produit de service public mont
 - plus humain qu un portail de tickets
 - plus lisible qu une application administrative classique
 - plus engageant sans tomber dans la gamification vide
+
+## Limite De La V1
+
+La V1 ne couvre pas encore :
+
+- un vrai duo mascotte + agent communal
+- une imagerie terrain narrative
+- une separation nette entre icones fonctionnelles, badges categories et illustrations editoriales
+
+Ces sujets sont repris de maniere complete dans le brief de direction artistique V2.
