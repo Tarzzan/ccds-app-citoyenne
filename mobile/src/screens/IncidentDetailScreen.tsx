@@ -688,7 +688,7 @@ export default function IncidentDetailScreen() {
           </View>
         )}
 
-        {history.length > 0 && (
+        {isStaff && history.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Historique de traitement</Text>
             {history.map((h, i) => (
