@@ -244,14 +244,27 @@ class NotificationController extends BaseController
         $userId = (int)($auth['sub'] ?? 0);
         $this->requirePermission($auth, 'notification:mark_read');
 
-        $stmt = $this->db->prepare("
-            UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?
-        ");
-        $stmt->execute([$notifId, $userId]);
-
-        if ($stmt->rowCount() === 0) {
+        $notification = $this->findUserNotification($notifId, $userId);
+        if (!$notification) {
             $this->notFound('Notification introuvable.');
         }
+
+        $stmt = $this->db->prepare("
+            UPDATE notifications
+            SET is_read = 1
+            WHERE user_id = ?
+              AND type = ?
+              AND COALESCE(incident_id, 0) = COALESCE(?, 0)
+              AND title = ?
+              AND body = ?
+        ");
+        $stmt->execute([
+            $userId,
+            $notification['type'],
+            $notification['incident_id'] ?? null,
+            $notification['title'],
+            $notification['body'],
+        ]);
 
         $this->success(['updated' => true]);
     }
@@ -269,6 +282,20 @@ class NotificationController extends BaseController
                  ->execute([$userId]);
 
         $this->success(['updated' => true]);
+    }
+
+    private function findUserNotification(int $notifId, int $userId): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT id, user_id, incident_id, type, title, body, is_read, sent_at
+            FROM notifications
+            WHERE id = ? AND user_id = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$notifId, $userId]);
+        $notification = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        return $notification ?: null;
     }
 
     /**
