@@ -82,6 +82,19 @@ if (admin_is_service_scoped_agent($admin)) {
 $current_plan = $service_tables_ready ? intervention_get_current_plan($db, $id) : null;
 $service_history = $service_tables_ready ? intervention_get_history($db, $id, false) : [];
 
+function incident_plan_status_pill(string $status): array
+{
+    return match ($status) {
+        'scheduled' => ['label' => 'Prevue', 'class' => 'badge-green'],
+        'rescheduled' => ['label' => 'Replanifiee', 'class' => 'badge-blue'],
+        'in_progress' => ['label' => 'En intervention', 'class' => 'badge-blue'],
+        'completed' => ['label' => 'Terminee', 'class' => 'badge-green'],
+        'cancelled' => ['label' => 'Annulee', 'class' => 'badge-gray'],
+        'draft' => ['label' => 'Brouillon', 'class' => 'badge-yellow'],
+        default => ['label' => ucfirst(str_replace('_', ' ', $status)), 'class' => 'badge-gray'],
+    };
+}
+
 // Charger les votants (v1.1) — si la table existe
 $voters = [];
 try {
@@ -355,6 +368,150 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: /admin/?page=incident_detail&id=$id");
         exit;
     }
+
+    if ($action === 'update_plan_status') {
+        if (!$service_tables_ready) {
+            $_SESSION['flash_error'] = "Le socle services/interventions n'est pas encore disponible sur cet environnement.";
+            header("Location: /admin/?page=incident_detail&id=$id");
+            exit;
+        }
+
+        $target_status = $_POST['target_status'] ?? '';
+        $valid_targets = ['in_progress', 'completed', 'cancelled'];
+
+        if (!in_array($target_status, $valid_targets, true)) {
+            $_SESSION['flash_error'] = 'Transition de plan invalide.';
+            header("Location: /admin/?page=incident_detail&id=$id");
+            exit;
+        }
+
+        $current_plan = intervention_get_current_plan($db, $id);
+        if (!$current_plan || empty($current_plan['id'])) {
+            $_SESSION['flash_error'] = 'Aucune intervention en cours a mettre a jour.';
+            header("Location: /admin/?page=incident_detail&id=$id");
+            exit;
+        }
+
+        $plan_service_id = !empty($current_plan['service_id']) ? (int)$current_plan['service_id'] : null;
+        if (admin_is_service_scoped_agent($admin) && (!$plan_service_id || !admin_has_service_access($admin, $plan_service_id))) {
+            $_SESSION['flash_error'] = 'Vous ne pouvez mettre a jour que les interventions de votre perimetre.';
+            header("Location: /admin/?page=incident_detail&id=$id");
+            exit;
+        }
+
+        $allowed_transitions = [
+            'scheduled' => ['in_progress', 'completed', 'cancelled'],
+            'rescheduled' => ['in_progress', 'completed', 'cancelled'],
+            'in_progress' => ['completed', 'cancelled'],
+            'draft' => ['cancelled'],
+        ];
+        $current_status = (string)($current_plan['status'] ?? '');
+        if (!in_array($target_status, $allowed_transitions[$current_status] ?? [], true)) {
+            $_SESSION['flash_error'] = 'Cette transition n est pas autorisee depuis l etat actuel.';
+            header("Location: /admin/?page=incident_detail&id=$id");
+            exit;
+        }
+
+        try {
+            $db->beginTransaction();
+
+            $db->prepare('UPDATE intervention_plans SET status = ?, updated_at = NOW() WHERE id = ?')
+               ->execute([$target_status, (int)$current_plan['id']]);
+
+            $historyLabel = match ($target_status) {
+                'in_progress' => 'Intervention demarree pour le service ' . ($current_plan['service_name'] ?? 'communal'),
+                'completed' => 'Intervention marquee comme terminee pour le service ' . ($current_plan['service_name'] ?? 'communal'),
+                'cancelled' => 'Intervention annulee pour le service ' . ($current_plan['service_name'] ?? 'communal'),
+                default => 'Intervention mise a jour',
+            };
+            $citizenLabel = match ($target_status) {
+                'in_progress' => 'Intervention en cours',
+                'completed' => 'Intervention terminee',
+                'cancelled' => 'Intervention annulee',
+                default => null,
+            };
+
+            intervention_record_history($db, [
+                'incident_id'   => $id,
+                'service_id'    => $plan_service_id,
+                'plan_id'       => (int)$current_plan['id'],
+                'actor_user_id' => $admin['id'],
+                'event_type'    => 'plan_status_changed',
+                'event_label'   => $historyLabel,
+                'citizen_label' => $citizenLabel,
+                'payload'       => [
+                    'previous_status' => $current_status,
+                    'new_status' => $target_status,
+                    'scheduled_date' => $current_plan['scheduled_date'] ?? null,
+                    'time_window' => trim(implode(' - ', array_filter([
+                        $current_plan['time_window_start'] ?? null,
+                        $current_plan['time_window_end'] ?? null,
+                    ]))) ?: null,
+                    'provider_name' => $current_plan['provider_name'] ?? null,
+                ],
+            ]);
+
+            if ($target_status === 'in_progress' && $inc['status'] !== 'in_progress') {
+                $db->prepare('UPDATE incidents SET status = ?, updated_at = NOW() WHERE id = ?')
+                   ->execute(['in_progress', $id]);
+                $db->prepare("
+                    INSERT INTO status_history (incident_id, old_status, new_status, user_id, note, changed_at)
+                    VALUES (?, ?, ?, ?, ?, NOW())
+                ")->execute([
+                    $id,
+                    $inc['status'],
+                    'in_progress',
+                    $admin['id'],
+                    'Intervention demarree sur le terrain.',
+                ]);
+            }
+
+            if ($target_status === 'completed' && $inc['status'] !== 'resolved') {
+                $db->prepare('UPDATE incidents SET status = ?, resolved_at = NOW(), updated_at = NOW() WHERE id = ?')
+                   ->execute(['resolved', $id]);
+                $db->prepare("
+                    INSERT INTO status_history (incident_id, old_status, new_status, user_id, note, changed_at)
+                    VALUES (?, ?, ?, ?, ?, NOW())
+                ")->execute([
+                    $id,
+                    $inc['status'],
+                    'resolved',
+                    $admin['id'],
+                    'Intervention terminee et dossier resolu.',
+                ]);
+            }
+
+            $db->commit();
+
+            try {
+                (new PushNotificationService($db))->notifyInterventionUpdated($id, [
+                    'service_name' => $current_plan['service_name'] ?? null,
+                    'scheduled_date' => $current_plan['scheduled_date'] ?? null,
+                    'time_window_start' => $current_plan['time_window_start'] ?? null,
+                    'time_window_end' => $current_plan['time_window_end'] ?? null,
+                    'citizen_message' => $current_plan['citizen_message'] ?? null,
+                    'provider_name' => $current_plan['provider_name'] ?? null,
+                ], $target_status);
+            } catch (Throwable $notificationError) {
+                error_log('Intervention state notification failed for incident ' . $id . ': ' . $notificationError->getMessage());
+            }
+
+            $_SESSION['flash_success'] = match ($target_status) {
+                'in_progress' => 'Intervention passee en cours.',
+                'completed' => 'Intervention marquee comme terminee.',
+                'cancelled' => 'Intervention annulee.',
+                default => 'Intervention mise a jour.',
+            };
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            $_SESSION['flash_error'] = 'Echec de la mise a jour de l intervention : ' . $e->getMessage();
+        }
+
+        header("Location: /admin/?page=incident_detail&id=$id");
+        exit;
+    }
 }
 
 $page_title = 'Signalement ' . e($inc['reference']);
@@ -446,7 +603,8 @@ require_once __DIR__ . '/../includes/layout.php';
   </div>
   <div class="admin-guidance-card">
     <div class="admin-guidance-kicker">Intervention courante</div>
-    <h3><?= $current_plan ? e(ucfirst(str_replace('_', ' ', $current_plan['status']))) : 'Pas encore planifiee' ?></h3>
+    <?php $currentPlanPill = $current_plan ? incident_plan_status_pill((string)$current_plan['status']) : null; ?>
+    <h3><?= $current_plan ? e($currentPlanPill['label']) : 'Pas encore planifiee' ?></h3>
     <p>
       <?php if ($current_plan): ?>
         <?= e($current_plan['scheduled_date'] ?? 'Date non definie') ?>
@@ -457,6 +615,9 @@ require_once __DIR__ . '/../includes/layout.php';
         Le dossier est suivi, mais aucune fenetre d intervention n est encore visible pour le citoyen.
       <?php endif; ?>
     </p>
+    <?php if ($current_plan && !empty($current_plan['assigned_user_name'])): ?>
+      <p class="text-muted text-small">Intervenant : <?= e($current_plan['assigned_user_name']) ?></p>
+    <?php endif; ?>
   </div>
 </div>
 <?php endif; ?>
@@ -718,6 +879,40 @@ require_once __DIR__ . '/../includes/layout.php';
           <?= $current_plan ? 'Mettre a jour la planification' : 'Planifier l intervention' ?>
         </button>
       </form>
+
+      <?php if ($current_plan): ?>
+        <?php $planPill = incident_plan_status_pill((string)$current_plan['status']); ?>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+            <strong style="color:#183229">Avancement de l intervention</strong>
+            <span class="badge <?= e($planPill['class']) ?>"><?= e($planPill['label']) ?></span>
+          </div>
+          <p class="text-muted text-small" style="margin-bottom:12px">
+            Utilisez ces actions pour rendre visible le passage terrain sans reouvrir toute la planification.
+          </p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <?php if (in_array((string)$current_plan['status'], ['scheduled', 'rescheduled'], true)): ?>
+              <form method="POST" action="">
+                <input type="hidden" name="action" value="update_plan_status">
+                <input type="hidden" name="target_status" value="in_progress">
+                <button type="submit" class="btn btn-primary btn-sm">Demarrer l intervention</button>
+              </form>
+            <?php endif; ?>
+            <?php if (in_array((string)$current_plan['status'], ['scheduled', 'rescheduled', 'in_progress'], true)): ?>
+              <form method="POST" action="">
+                <input type="hidden" name="action" value="update_plan_status">
+                <input type="hidden" name="target_status" value="completed">
+                <button type="submit" class="btn btn-success btn-sm">Marquer terminee</button>
+              </form>
+              <form method="POST" action="" onsubmit="return confirm('Annuler cette intervention ?')">
+                <input type="hidden" name="action" value="update_plan_status">
+                <input type="hidden" name="target_status" value="cancelled">
+                <button type="submit" class="btn btn-outline btn-sm">Annuler</button>
+              </form>
+            <?php endif; ?>
+          </div>
+        </div>
+      <?php endif; ?>
     </div>
     <?php endif; ?>
 

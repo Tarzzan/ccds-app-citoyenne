@@ -166,6 +166,81 @@ class PushNotificationService
     }
 
     /**
+     * Notifier le citoyen qu'une intervention change d'etat.
+     */
+    public function notifyInterventionUpdated(int $incident_id, array $plan, string $state): void
+    {
+        $stmt = $this->db->prepare("
+            SELECT i.user_id, i.title, i.reference, u.full_name
+            FROM incidents i
+            JOIN users u ON i.user_id = u.id
+            WHERE i.id = ?
+        ");
+        $stmt->execute([$incident_id]);
+        $incident = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$incident) {
+            return;
+        }
+
+        $serviceName = trim((string)($plan['service_name'] ?? 'service communal'));
+        $providerName = trim((string)($plan['provider_name'] ?? ''));
+        $scheduledDate = $this->formatFrenchDate($plan['scheduled_date'] ?? null);
+        $timeWindow = $this->formatTimeWindow($plan['time_window_start'] ?? null, $plan['time_window_end'] ?? null);
+        $providerLabel = $providerName !== '' ? 'Prestataire missionne : ' . $providerName . '.' : null;
+
+        $title = match ($state) {
+            'in_progress' => 'Intervention en cours',
+            'completed' => 'Intervention terminee',
+            'cancelled' => 'Intervention annulee',
+            default => 'Mise a jour de l intervention',
+        };
+
+        $bodyParts = match ($state) {
+            'in_progress' => [
+                "Bonjour {$incident['full_name']},",
+                "le {$serviceName} est maintenant en intervention sur votre signalement \"{$incident['title']}\".",
+                $scheduledDate !== null
+                    ? ($timeWindow !== null ? "Creneau annonce : {$scheduledDate}, {$timeWindow}." : "Passage annonce : {$scheduledDate}.")
+                    : null,
+            ],
+            'completed' => [
+                "Bonjour {$incident['full_name']},",
+                "l intervention du {$serviceName} sur votre signalement \"{$incident['title']}\" est terminee.",
+                !empty($plan['citizen_message']) ? trim((string)$plan['citizen_message']) : null,
+            ],
+            'cancelled' => [
+                "Bonjour {$incident['full_name']},",
+                "l intervention prevue pour votre signalement \"{$incident['title']}\" a ete annulee par le {$serviceName}.",
+                "Une nouvelle planification pourra vous etre transmise si besoin.",
+            ],
+            default => [
+                "Bonjour {$incident['full_name']},",
+                "le {$serviceName} a mis a jour l intervention liee a votre signalement \"{$incident['title']}\".",
+            ],
+        };
+
+        if ($providerLabel !== null) {
+            $bodyParts[] = $providerLabel;
+        }
+
+        $body = implode(' ', array_filter($bodyParts));
+
+        $this->saveNotification($incident['user_id'], $incident_id, 'intervention_update', $title, $body);
+        $this->sendToUser($incident['user_id'], $title, $body, [
+            'type' => 'intervention_update',
+            'incident_id' => $incident_id,
+            'reference' => $incident['reference'],
+            'service_name' => $serviceName,
+            'plan_status' => $state,
+            'scheduled_date' => $plan['scheduled_date'] ?? null,
+            'time_window_start' => $plan['time_window_start'] ?? null,
+            'time_window_end' => $plan['time_window_end'] ?? null,
+            'provider_name' => $providerName !== '' ? $providerName : null,
+        ]);
+    }
+
+    /**
      * Envoyer un lot de notifications via l'API Expo
      */
     private function sendBatch(array $tokens, string $title, string $body, array $data = []): bool

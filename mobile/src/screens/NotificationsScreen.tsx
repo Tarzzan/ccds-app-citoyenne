@@ -19,6 +19,7 @@ const TYPE_ICONS: Record<string, string> = {
   system:          '📢',
   event:           '📅',
   intervention_plan: '🛠️',
+  intervention_update: '🚧',
 };
 
 function getNotificationsCompanion(
@@ -27,6 +28,7 @@ function getNotificationsCompanion(
 ): { tone: 'guide' | 'thanks' | 'status'; title: string; body: string; bullets: string[] } {
   const latest = notifications[0];
   const latestPlan = notifications.find((notification) => notification.type === 'intervention_plan');
+  const latestInterventionUpdate = notifications.find((notification) => notification.type === 'intervention_update');
 
   if (!latest) {
     return {
@@ -48,6 +50,20 @@ function getNotificationsCompanion(
       bullets: [
         latestPlan.incident_reference ? `ouvrir ${latestPlan.incident_reference} pour relire le passage prevu` : 'ouvrir la planification la plus recente',
         'verifier la fenetre annoncee et le message transmis par la commune',
+      ],
+    };
+  }
+
+  if (latestInterventionUpdate && unreadCount > 0) {
+    return {
+      tone: 'status',
+      title: `${BRAND.companion.name} suit l avancement de l intervention`,
+      body: 'Quand l equipe passe, termine ou reprogramme, cette vue doit vous dire clairement ce qui a change sur le terrain.',
+      bullets: [
+        latestInterventionUpdate.incident_reference
+          ? `ouvrir ${latestInterventionUpdate.incident_reference} pour relire l etape`
+          : 'ouvrir la derniere mise a jour intervention',
+        'verifier si une action ou une replanification est encore attendue',
       ],
     };
   }

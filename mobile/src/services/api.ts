@@ -269,7 +269,7 @@ export interface PaginatedIncidents {
 
 export interface Notification {
   id: number;
-  type: 'status_change' | 'new_comment' | 'vote_milestone' | 'system' | 'event' | 'intervention_plan';
+  type: 'status_change' | 'new_comment' | 'vote_milestone' | 'system' | 'event' | 'intervention_plan' | 'intervention_update';
   title: string;
   body: string;
   is_read: boolean;
