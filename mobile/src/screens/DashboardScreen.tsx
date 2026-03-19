@@ -74,8 +74,26 @@ function formatResolutionDelay(avgResolutionHours: number | null): string {
 
 function buildIncidentPlanSummary(incident: Incident): string | null {
   const plan = incident.current_plan;
-  if (!plan || !plan.scheduled_date) {
-    return null;
+  if (!plan) {
+    return incident.service_name && ['submitted', 'acknowledged', 'in_progress'].includes(incident.status)
+      ? 'Aucune intervention n est encore programmee.'
+      : null;
+  }
+
+  if (plan.status === 'in_progress') {
+    return 'Intervention en cours sur le terrain.';
+  }
+
+  if (plan.status === 'completed') {
+    return 'Intervention marquee terminee.';
+  }
+
+  if (plan.status === 'cancelled') {
+    return 'Intervention annulee, replanification possible.';
+  }
+
+  if (!plan.scheduled_date) {
+    return 'Plan d intervention en attente de date.';
   }
 
   const dateLabel = new Date(plan.scheduled_date).toLocaleDateString('fr-FR', {
@@ -87,6 +105,29 @@ function buildIncidentPlanSummary(incident: Incident): string | null {
   return timeWindow
     ? `Intervention prévue le ${dateLabel} · ${timeWindow}`
     : `Intervention prévue le ${dateLabel}`;
+}
+
+function buildIncidentPlanStateLabel(incident: Incident): string | null {
+  const plan = incident.current_plan;
+  if (!plan) {
+    return incident.service_name && ['submitted', 'acknowledged', 'in_progress'].includes(incident.status)
+      ? 'A planifier'
+      : null;
+  }
+
+  switch (plan.status) {
+    case 'scheduled':
+    case 'rescheduled':
+      return 'Prevue';
+    case 'in_progress':
+      return 'En cours';
+    case 'completed':
+      return 'Terminee';
+    case 'cancelled':
+      return 'Annulee';
+    default:
+      return 'A confirmer';
+  }
 }
 
 function getCitizenServiceNarrative(stats: UserStats): { title: string; body: string } {
@@ -495,6 +536,11 @@ export default function DashboardScreen() {
                         Service {incident.service_name}
                       </Text>
                     ) : null}
+                    {buildIncidentPlanStateLabel(incident) ? (
+                      <Text style={styles.incidentPlanState}>
+                        {buildIncidentPlanStateLabel(incident)}
+                      </Text>
+                    ) : null}
                     {buildIncidentPlanSummary(incident) ? (
                       <Text style={styles.incidentPlan} numberOfLines={2}>
                         {buildIncidentPlanSummary(incident)}
@@ -548,6 +594,11 @@ export default function DashboardScreen() {
                     {incident.service_name ? (
                       <Text style={styles.incidentService} numberOfLines={1}>
                         Service {incident.service_name}
+                      </Text>
+                    ) : null}
+                    {buildIncidentPlanStateLabel(incident) ? (
+                      <Text style={styles.incidentPlanState}>
+                        {buildIncidentPlanStateLabel(incident)}
                       </Text>
                     ) : null}
                     {buildIncidentPlanSummary(incident) ? (
@@ -662,6 +713,7 @@ const styles = StyleSheet.create({
   incidentTitle:  { fontSize: 14, fontWeight: '700', color: '#333' },
   incidentRef:    { fontSize: 11, color: BRAND.colors.slate, marginTop: 2 },
   incidentService:{ fontSize: 12, color: BRAND.colors.canopy, marginTop: 4, fontWeight: '700' },
+  incidentPlanState: { fontSize: 12, color: BRAND.colors.canopyDeep, marginTop: 4, fontWeight: '800' },
   incidentPlan:   { fontSize: 12, color: BRAND.colors.slate, marginTop: 4, lineHeight: 17 },
   incidentMeta:   { fontSize: 12, color: BRAND.colors.slate, marginTop: 3 },
   queueStatusWrap:{ alignItems: 'flex-end', gap: 6, marginLeft: 10 },

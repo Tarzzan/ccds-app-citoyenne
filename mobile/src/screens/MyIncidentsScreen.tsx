@@ -53,8 +53,26 @@ const PRIORITY_FILTERS = [
 
 function buildIncidentPlanSummary(incident: Incident): string | null {
   const plan = incident.current_plan;
-  if (!plan || !plan.scheduled_date) {
-    return null;
+  if (!plan) {
+    return incident.service_name && ['submitted', 'acknowledged', 'in_progress'].includes(incident.status)
+      ? 'Aucune intervention n est encore programmee pour ce dossier.'
+      : null;
+  }
+
+  if (plan.status === 'in_progress') {
+    return 'Intervention en cours sur le terrain.';
+  }
+
+  if (plan.status === 'completed') {
+    return 'Intervention marquee terminee par la commune.';
+  }
+
+  if (plan.status === 'cancelled') {
+    return 'Intervention annulee. Une nouvelle planification pourra etre proposee.';
+  }
+
+  if (!plan.scheduled_date) {
+    return 'Plan d intervention en attente de date confirmee.';
   }
 
   const dateLabel = new Date(plan.scheduled_date).toLocaleDateString('fr-FR', {
@@ -66,6 +84,29 @@ function buildIncidentPlanSummary(incident: Incident): string | null {
   return timeWindow
     ? `Intervention prévue le ${dateLabel} · ${timeWindow}`
     : `Intervention prévue le ${dateLabel}`;
+}
+
+function buildIncidentPlanState(incident: Incident): { label: string; variant: 'blue' | 'green' | 'yellow' | 'gray' } | null {
+  const plan = incident.current_plan;
+  if (!plan) {
+    return incident.service_name && ['submitted', 'acknowledged', 'in_progress'].includes(incident.status)
+      ? { label: 'A planifier', variant: 'yellow' }
+      : null;
+  }
+
+  switch (plan.status) {
+    case 'scheduled':
+    case 'rescheduled':
+      return { label: 'Prevue', variant: 'green' };
+    case 'in_progress':
+      return { label: 'En cours', variant: 'blue' };
+    case 'completed':
+      return { label: 'Terminee', variant: 'green' };
+    case 'cancelled':
+      return { label: 'Annulee', variant: 'gray' };
+    default:
+      return { label: 'A confirmer', variant: 'yellow' };
+  }
 }
 
 export default function MyIncidentsScreen() {
@@ -437,7 +478,9 @@ export default function MyIncidentsScreen() {
       contentContainerStyle={styles.listContent}
       data={incidents}
       keyExtractor={item => String(item.id)}
-      renderItem={({ item }) => (
+      renderItem={({ item }) => {
+        const planState = buildIncidentPlanState(item);
+        return (
         <IncidentCard
           reference={item.reference}
           title={item.title}
@@ -450,12 +493,15 @@ export default function MyIncidentsScreen() {
           priority={isStaff ? item.priority : undefined}
           assignedToName={isStaff ? item.assigned_to_name : undefined}
           serviceName={item.service_name ?? undefined}
+          planStateLabel={planState?.label}
+          planStateVariant={planState?.variant}
           planSummary={buildIncidentPlanSummary(item) ?? undefined}
           planCitizenMessage={item.current_plan?.citizen_message ?? undefined}
           address={item.address}
           onPress={() => navigation.navigate('IncidentDetail', { id: item.id })}
         />
-      )}
+        );
+      }}
       ListHeaderComponent={renderHeader}
       ListEmptyComponent={renderEmpty}
       ListFooterComponent={renderFooter}

@@ -150,6 +150,8 @@ interface IncidentCardProps {
   priority?: string;
   assignedToName?: string | null;
   serviceName?: string | null;
+  planStateLabel?: string | null;
+  planStateVariant?: 'blue' | 'green' | 'yellow' | 'gray';
   planSummary?: string | null;
   planCitizenMessage?: string | null;
   address?: string;
@@ -157,10 +159,16 @@ interface IncidentCardProps {
 }
 
 export function IncidentCard({
-  reference, title, description, status, categoryName, categoryIcon, categoryColor, date, priority, assignedToName, serviceName, planSummary, planCitizenMessage, address, onPress,
+  reference, title, description, status, categoryName, categoryIcon, categoryColor, date, priority, assignedToName, serviceName, planStateLabel, planStateVariant = 'gray', planSummary, planCitizenMessage, address, onPress,
 }: IncidentCardProps) {
   const priorityColor = priority ? (PRIORITY_COLORS[priority] ?? COLORS.gray) : null;
   const priorityLabel = priority ? (PRIORITY_LABELS[priority] ?? priority) : null;
+  const planStateStyles = {
+    blue: styles.planStateBlue,
+    green: styles.planStateGreen,
+    yellow: styles.planStateYellow,
+    gray: styles.planStateGray,
+  }[planStateVariant];
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
@@ -195,11 +203,16 @@ export function IncidentCard({
           ) : null}
         </View>
       ) : null}
-      {(serviceName || planSummary || planCitizenMessage) ? (
+      {(serviceName || planStateLabel || planSummary || planCitizenMessage) ? (
         <View style={styles.serviceWrap}>
           {serviceName ? (
             <View style={styles.servicePill}>
               <Text style={styles.servicePillText}>Service {serviceName}</Text>
+            </View>
+          ) : null}
+          {planStateLabel ? (
+            <View style={[styles.planStatePill, planStateStyles]}>
+              <Text style={styles.planStateText}>{planStateLabel}</Text>
             </View>
           ) : null}
           {planSummary ? <Text style={styles.serviceText}>{planSummary}</Text> : null}
@@ -344,6 +357,30 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   servicePillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: BRAND.colors.canopyDeep,
+  },
+  planStatePill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    marginBottom: 8,
+  },
+  planStateBlue: {
+    backgroundColor: '#DCE6F8',
+  },
+  planStateGreen: {
+    backgroundColor: '#DCEBDD',
+  },
+  planStateYellow: {
+    backgroundColor: '#F4E7C9',
+  },
+  planStateGray: {
+    backgroundColor: '#ECE7DB',
+  },
+  planStateText: {
     fontSize: 11,
     fontWeight: '800',
     color: BRAND.colors.canopyDeep,
