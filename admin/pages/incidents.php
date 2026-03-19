@@ -11,6 +11,7 @@ $active_nav = 'incidents';
 
 $db = Database::getInstance();
 $service_tables_ready = admin_db_has_table($db, 'services') && admin_db_has_table($db, 'service_category_map');
+$planning_tables_ready = $service_tables_ready && admin_db_has_table($db, 'intervention_plans');
 $agent_service_scope_ids = $service_tables_ready ? admin_allowed_service_ids($admin) : [];
 $agent_is_scoped = $service_tables_ready && admin_is_service_scoped_agent($admin);
 $scope_notice = null;
@@ -39,7 +40,7 @@ $where  = ['1=1'];
 $params = [];
 if ($f_status)    { $where[] = 'i.status = ?';                                    $params[] = $f_status; }
 if ($f_cat)       { $where[] = 'i.category_id = ?';                               $params[] = $f_cat; }
-if ($f_service && $service_tables_ready) { $where[] = 'resolved_service.id = ?';   $params[] = $f_service; }
+if ($f_service && $service_tables_ready) { $where[] = 'COALESCE(planned_service.id, resolved_service.id) = ?';   $params[] = $f_service; }
 if ($f_priority)  { $where[] = 'i.priority = ?';                                  $params[] = $f_priority; }
 if ($f_date_from) { $where[] = 'DATE(i.created_at) >= ?';                         $params[] = $f_date_from; }
 if ($f_date_to)   { $where[] = 'DATE(i.created_at) <= ?';                         $params[] = $f_date_to; }
@@ -51,7 +52,7 @@ if ($f_search)    {
 if ($agent_is_scoped) {
     if (!empty($agent_service_scope_ids)) {
         $placeholders = implode(',', array_fill(0, count($agent_service_scope_ids), '?'));
-        $where[] = "resolved_service.id IN ($placeholders)";
+        $where[] = "COALESCE(planned_service.id, resolved_service.id) IN ($placeholders)";
         foreach ($agent_service_scope_ids as $serviceId) {
             $params[] = $serviceId;
         }
@@ -69,7 +70,20 @@ $service_join_sql = $service_tables_ready
     ? "
     LEFT JOIN service_category_map scm ON scm.category_id = c.id AND scm.is_default = 1
     LEFT JOIN services resolved_service ON resolved_service.id = scm.service_id
-    "
+    " . ($planning_tables_ready ? "
+    LEFT JOIN intervention_plans latest_plan ON latest_plan.id = (
+        SELECT p2.id
+        FROM intervention_plans p2
+        WHERE p2.incident_id = i.id
+        ORDER BY p2.created_at DESC, p2.id DESC
+        LIMIT 1
+    )
+    LEFT JOIN services planned_service ON planned_service.id = latest_plan.service_id
+    LEFT JOIN users plan_assignee ON plan_assignee.id = latest_plan.assigned_user_id
+    " : "
+    LEFT JOIN services planned_service ON 1 = 0
+    LEFT JOIN users plan_assignee ON 1 = 0
+    ")
     : '';
 
 // Compter le total
@@ -90,8 +104,25 @@ $sql = "
     SELECT i.id, i.reference, i.title, i.description, i.status, i.priority,
            i.votes_count, i.created_at, i.updated_at,
            c.name AS cat_name, c.color AS cat_color, c.icon AS cat_icon,
-           COALESCE(resolved_service.name, c.service) AS service_name,
+           COALESCE(planned_service.name, resolved_service.name, c.service) AS service_name,
            u.full_name AS reporter, u.email AS reporter_email,
+           " . ($planning_tables_ready ? "
+           latest_plan.id AS current_plan_id,
+           latest_plan.status AS current_plan_status,
+           latest_plan.scheduled_date AS current_plan_date,
+           latest_plan.time_window_start AS current_plan_time_start,
+           latest_plan.time_window_end AS current_plan_time_end,
+           latest_plan.citizen_message AS current_plan_message,
+           plan_assignee.full_name AS current_plan_assignee
+           " : "
+           NULL AS current_plan_id,
+           NULL AS current_plan_status,
+           NULL AS current_plan_date,
+           NULL AS current_plan_time_start,
+           NULL AS current_plan_time_end,
+           NULL AS current_plan_message,
+           NULL AS current_plan_assignee
+           ") . ",
            (SELECT COUNT(*) FROM photos ph WHERE ph.incident_id = i.id) AS photo_count,
            (SELECT COUNT(*) FROM comments cm WHERE cm.incident_id = i.id AND cm.is_internal = 0) AS comment_count
     FROM incidents i
@@ -162,6 +193,72 @@ function sort_url(string $field, string $current_sort, string $current_dir, stri
 function sort_icon(string $field, string $current_sort, string $current_dir): string {
     if ($current_sort !== $field) return '<span style="opacity:.3">↕</span>';
     return $current_dir === 'DESC' ? '↓' : '↑';
+}
+
+function incident_plan_state(array $incident): array
+{
+    $status = (string)($incident['current_plan_status'] ?? '');
+    $date = trim((string)($incident['current_plan_date'] ?? ''));
+    $isOpenIncident = in_array((string)$incident['status'], ['submitted', 'acknowledged', 'in_progress'], true);
+    $today = date('Y-m-d');
+
+    if ($status === 'in_progress') {
+        return ['label' => 'En intervention', 'class' => 'badge-blue'];
+    }
+
+    if (in_array($status, ['scheduled', 'rescheduled'], true) && $date !== '') {
+        if ($date < $today) {
+            return ['label' => 'En retard', 'class' => 'badge-red'];
+        }
+
+        return ['label' => 'Prévue', 'class' => 'badge-green'];
+    }
+
+    if ($status === 'completed' || (string)$incident['status'] === 'resolved') {
+        return ['label' => 'Terminée', 'class' => 'badge-green'];
+    }
+
+    if ($status === 'cancelled') {
+        return ['label' => 'Annulee', 'class' => 'badge-gray'];
+    }
+
+    if ($isOpenIncident) {
+        return ['label' => 'A planifier', 'class' => 'badge-yellow'];
+    }
+
+    return ['label' => 'Sans plan', 'class' => 'badge-gray'];
+}
+
+function incident_plan_summary(array $incident): ?string
+{
+    $date = trim((string)($incident['current_plan_date'] ?? ''));
+    $timeWindow = trim(implode(' - ', array_filter([
+        $incident['current_plan_time_start'] ?? null,
+        $incident['current_plan_time_end'] ?? null,
+    ])));
+    $assignee = trim((string)($incident['current_plan_assignee'] ?? ''));
+
+    if ($date === '' && $assignee === '' && trim((string)($incident['current_plan_message'] ?? '')) === '') {
+        return null;
+    }
+
+    $parts = [];
+    if ($date !== '') {
+        $parts[] = format_date_short($date);
+    }
+    if ($timeWindow !== '') {
+        $parts[] = $timeWindow;
+    }
+    if ($assignee !== '') {
+        $parts[] = $assignee;
+    }
+
+    if (!empty($parts)) {
+        return implode(' · ', $parts);
+    }
+
+    $message = trim((string)($incident['current_plan_message'] ?? ''));
+    return $message !== '' ? $message : null;
 }
 
 $active_filters = array_filter([$f_status, $f_cat, $f_service, $f_search, $f_priority, $f_date_from, $f_date_to]);
@@ -299,6 +396,7 @@ foreach ($incidents as $inc) {
           <th>Titre / Description</th>
           <th>Catégorie</th>
           <th>Service</th>
+          <th>Intervention</th>
           <th>Statut</th>
           <th>Priorité</th>
           <th><a href="<?= sort_url('votes_count', $f_sort, $f_dir, $base_url) ?>" style="color:inherit;text-decoration:none">
@@ -311,6 +409,8 @@ foreach ($incidents as $inc) {
       </thead>
       <tbody>
         <?php foreach ($incidents as $inc): ?>
+        <?php $planState = incident_plan_state($inc); ?>
+        <?php $planSummary = incident_plan_summary($inc); ?>
         <tr>
           <td class="text-muted text-small" style="white-space:nowrap"><?= format_date_short($inc['created_at']) ?></td>
           <td><code style="font-size:11px"><?= e($inc['reference']) ?></code></td>
@@ -331,6 +431,14 @@ foreach ($incidents as $inc) {
             </div>
           </td>
           <td class="text-muted text-small"><?= e($inc['service_name'] ?: '—') ?></td>
+          <td>
+            <span class="badge <?= e($planState['class']) ?>"><?= e($planState['label']) ?></span>
+            <?php if ($planSummary): ?>
+              <div class="text-muted text-small" style="margin-top:4px;max-width:180px">
+                <?= e($planSummary) ?>
+              </div>
+            <?php endif; ?>
+          </td>
           <td><span class="badge <?= status_class($inc['status']) ?>"><?= status_label($inc['status']) ?></span></td>
           <td><span class="badge <?= priority_class($inc['priority'] ?? 'medium') ?>"><?= priority_label($inc['priority'] ?? 'medium') ?></span></td>
           <td class="text-center">
@@ -355,7 +463,7 @@ foreach ($incidents as $inc) {
         </tr>
         <?php endforeach; ?>
         <?php if (empty($incidents)): ?>
-        <tr><td colspan="11" class="text-center text-muted" style="padding:40px">
+        <tr><td colspan="12" class="text-center text-muted" style="padding:40px">
           <?= $f_search ? "Aucun résultat pour \"" . e($f_search) . "\"." : 'Aucun signalement trouvé.' ?>
         </td></tr>
         <?php endif; ?>
