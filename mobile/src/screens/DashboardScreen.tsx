@@ -337,6 +337,8 @@ export default function DashboardScreen() {
       <ScreenLoadingState
         title="Votre tableau de bord prend forme"
         body="Le relais communal rassemble vos reperes utiles pour afficher un bilan lisible, sans vous noyer dans les chiffres."
+        visualSource={GENERATED_VISUAL_SOURCES['MOM-05'] ?? COMPANION_VISUAL_SLOTS.dashboard.source}
+        visualBadgeLabel="Suivi"
       />
     );
   }
@@ -350,6 +352,8 @@ export default function DashboardScreen() {
         body={error}
         actionLabel="Relancer le chargement"
         onPress={() => loadStats()}
+        visualSource={GENERATED_VISUAL_SOURCES['MOM-06'] ?? COMPANION_VISUAL_SLOTS.dashboard.source}
+        visualBadgeLabel="Suivi"
       />
     );
   }

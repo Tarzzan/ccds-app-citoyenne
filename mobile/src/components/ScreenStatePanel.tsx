@@ -1,10 +1,13 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
+import { CompanionVisual } from './CompanionVisual';
 
 type LoadingProps = {
   title: string;
   body: string;
+  visualSource?: ImageSourcePropType;
+  visualBadgeLabel?: string;
 };
 
 type FeedbackProps = {
@@ -14,15 +17,29 @@ type FeedbackProps = {
   tone?: 'neutral' | 'warning';
   actionLabel?: string;
   onPress?: () => void;
+  visualSource?: ImageSourcePropType;
+  visualBadgeLabel?: string;
 };
 
-export function ScreenLoadingState({ title, body }: LoadingProps) {
+export function ScreenLoadingState({ title, body, visualSource, visualBadgeLabel }: LoadingProps) {
   return (
     <View style={styles.centered}>
       <View style={styles.panel}>
-        <View style={styles.loadingBadge}>
-          <ActivityIndicator size="small" color={BRAND.colors.canopy} />
-        </View>
+        {visualSource ? (
+          <View style={styles.visualWrap}>
+            <CompanionVisual
+              accent={BRAND.colors.canopy}
+              halo="#DCEADF"
+              imageSource={visualSource}
+              badgeLabel={visualBadgeLabel ?? BRAND.companion.name}
+              variant="card"
+            />
+          </View>
+        ) : (
+          <View style={styles.loadingBadge}>
+            <ActivityIndicator size="small" color={BRAND.colors.canopy} />
+          </View>
+        )}
         <Text style={styles.eyebrow}>{BRAND.companion.name} prepare la suite</Text>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.body}>{body}</Text>
@@ -38,11 +55,25 @@ export function ScreenFeedbackState({
   tone = 'neutral',
   actionLabel,
   onPress,
+  visualSource,
+  visualBadgeLabel,
 }: FeedbackProps) {
   return (
     <View style={styles.centered}>
       <View style={[styles.panel, tone === 'warning' && styles.panelWarning]}>
-        <Text style={styles.icon}>{icon}</Text>
+        {visualSource ? (
+          <View style={styles.visualWrap}>
+            <CompanionVisual
+              accent={tone === 'warning' ? BRAND.colors.laterite : BRAND.colors.awara}
+              halo={tone === 'warning' ? '#EEDDCF' : '#F8E3B7'}
+              imageSource={visualSource}
+              badgeLabel={visualBadgeLabel ?? icon}
+              variant="card"
+            />
+          </View>
+        ) : (
+          <Text style={styles.icon}>{icon}</Text>
+        )}
         <Text style={styles.eyebrow}>{tone === 'warning' ? 'Point a verifier' : `${BRAND.companion.name} vous guide`}</Text>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.body}>{body}</Text>
@@ -86,6 +117,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#EAF2EE',
+    marginBottom: 14,
+  },
+  visualWrap: {
     marginBottom: 14,
   },
   icon: {

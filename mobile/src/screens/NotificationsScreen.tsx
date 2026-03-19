@@ -261,6 +261,8 @@ export const NotificationsScreen: React.FC = () => {
       <ScreenLoadingState
         title="Vos alertes se remettent en ordre"
         body="Le relais communal trie d abord les mises a jour utiles pour vous laisser relire ce qui compte vraiment."
+        visualSource={GENERATED_VISUAL_SOURCES['MOM-06'] ?? COMPANION_VISUAL_SLOTS.notifications.source}
+        visualBadgeLabel="Infos"
       />
     );
   }
@@ -318,6 +320,8 @@ export const NotificationsScreen: React.FC = () => {
             icon="🔔"
             title="Aucune notification pour l instant"
             body="Vous retrouverez ici les mises a jour, commentaires utiles et etapes de traitement de vos signalements."
+            visualSource={GENERATED_VISUAL_SOURCES['MOM-06'] ?? COMPANION_VISUAL_SLOTS.notifications.source}
+            visualBadgeLabel="Infos"
           />
         }
       />

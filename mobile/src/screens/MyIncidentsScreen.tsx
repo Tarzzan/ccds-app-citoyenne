@@ -502,6 +502,8 @@ export default function MyIncidentsScreen() {
         body={isStaff
           ? 'Le relais communal rassemble les dossiers utiles pour vous laisser commencer par les priorites du terrain.'
           : 'Le relais communal regroupe vos signalements pour vous rendre la suite plus lisible dossier par dossier.'}
+        visualSource={GENERATED_VISUAL_SOURCES['MOM-05'] ?? companionVisualSource}
+        visualBadgeLabel={isStaff ? 'Terrain' : 'Suivi'}
       />
     );
   }
