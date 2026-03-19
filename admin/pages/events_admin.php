@@ -4,6 +4,7 @@
  */
 $admin = require_admin_auth();
 $db = Database::getInstance();
+$isAdmin = ($admin['role'] ?? '') === 'admin';
 $eventHasEventDate = admin_db_has_column($db, 'events', 'event_date');
 $eventHasStartsAt = admin_db_has_column($db, 'events', 'starts_at');
 $eventHasEndsAt = admin_db_has_column($db, 'events', 'ends_at');
@@ -42,6 +43,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     try {
+        if (!$isAdmin) {
+            throw new RuntimeException('Seuls les administrateurs peuvent modifier les evenements.');
+        }
+
         if ($action === 'create') {
             $title = trim($_POST['title'] ?? '');
             $description = trim($_POST['description'] ?? '');
@@ -192,6 +197,9 @@ require_once __DIR__ . '/../includes/layout.php';
     <span class="badge badge-green"><?= $attendeesTotal ?> participation(s)</span>
 </div>
 
+<?php if (!$isAdmin): ?>
+<div class="alert alert-warning">Cette page est en lecture seule pour votre rôle. La publication et la suppression des evenements sont reservees aux administrateurs.</div>
+<?php else: ?>
 <div class="card" style="padding:20px;margin-bottom:18px;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
         <div>
@@ -224,6 +232,7 @@ require_once __DIR__ . '/../includes/layout.php';
         <button type="submit" class="btn btn-primary">Publier l’événement</button>
     </form>
 </div>
+<?php endif; ?>
 
 <?php if (empty($events)): ?>
 <div class="empty-state"><p>Aucun événement pour le moment.</p></div>
@@ -250,11 +259,15 @@ require_once __DIR__ . '/../includes/layout.php';
                     <span class="text-small text-muted"><?= (int)$ev['interested_count'] ?> intéressé(s)</span>
                 </td>
                 <td>
-                    <form method="post" style="display:inline" onsubmit="return confirm('Supprimer cet événement ?')">
-                        <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="event_id" value="<?= (int)$ev['id'] ?>">
-                        <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
-                    </form>
+                    <?php if ($isAdmin): ?>
+                        <form method="post" style="display:inline" onsubmit="return confirm('Supprimer cet événement ?')">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="event_id" value="<?= (int)$ev['id'] ?>">
+                            <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+                        </form>
+                    <?php else: ?>
+                        <span class="text-muted text-small">Lecture seule</span>
+                    <?php endif; ?>
                 </td>
             </tr>
         <?php endforeach; ?>

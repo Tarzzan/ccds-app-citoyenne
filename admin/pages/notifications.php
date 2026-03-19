@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../includes/bootstrap.php';
 $admin = require_admin_auth();
+$isAdmin = ($admin['role'] ?? '') === 'admin';
 
 $db = Database::getInstance();
 
@@ -13,6 +14,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'send_manual') {
+        if (!$isAdmin) {
+            $_SESSION['flash_error'] = 'Seuls les administrateurs peuvent envoyer une notification manuelle.';
+            header('Location: /admin/?page=notifications');
+            exit;
+        }
+
         $target    = $_POST['target'] ?? 'all';       // 'all' | 'user'
         $user_id   = (int)($_POST['user_id'] ?? 0);
         $title     = trim($_POST['notif_title'] ?? '');
@@ -174,51 +181,57 @@ require_once __DIR__ . '/../includes/layout.php';
   </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 1.5fr;gap:24px">
+<?php if (!$isAdmin): ?>
+<div class="alert alert-warning" style="margin-bottom:24px">Cette page est en lecture seule pour votre role. Les envois manuels sont reserves aux administrateurs.</div>
+<?php endif; ?>
+
+<div style="<?= $isAdmin ? 'display:grid;grid-template-columns:1fr 1.5fr;gap:24px' : 'display:block' ?>">
 
   <!-- Formulaire d'envoi manuel -->
-  <div class="card">
-    <div class="card-header"><span class="card-title">📤 Envoyer une notification</span></div>
-    <form method="POST" action="">
-      <input type="hidden" name="action" value="send_manual">
+  <?php if ($isAdmin): ?>
+    <div class="card">
+      <div class="card-header"><span class="card-title">📤 Envoyer une notification</span></div>
+      <form method="POST" action="">
+        <input type="hidden" name="action" value="send_manual">
 
-      <div class="form-group">
-        <label class="form-label">Destinataires</label>
-        <select name="target" class="form-control" id="target-select"
-                onchange="document.getElementById('user-select').style.display=this.value==='user'?'block':'none'">
-          <option value="all">Tous les citoyens</option>
-          <option value="user">Un citoyen spécifique</option>
-        </select>
-      </div>
+        <div class="form-group">
+          <label class="form-label">Destinataires</label>
+          <select name="target" class="form-control" id="target-select"
+                  onchange="document.getElementById('user-select').style.display=this.value==='user'?'block':'none'">
+            <option value="all">Tous les citoyens</option>
+            <option value="user">Un citoyen spécifique</option>
+          </select>
+        </div>
 
-      <div class="form-group" id="user-select" style="display:none">
-        <label class="form-label">Citoyen</label>
-        <select name="user_id" class="form-control">
-          <option value="">-- Choisir --</option>
-          <?php foreach ($users as $u): ?>
-            <option value="<?= $u['id'] ?>"><?= e($u['full_name']) ?> (<?= e($u['email']) ?>)</option>
-          <?php endforeach; ?>
-        </select>
-      </div>
+        <div class="form-group" id="user-select" style="display:none">
+          <label class="form-label">Citoyen</label>
+          <select name="user_id" class="form-control">
+            <option value="">-- Choisir --</option>
+            <?php foreach ($users as $u): ?>
+              <option value="<?= $u['id'] ?>"><?= e($u['full_name']) ?> (<?= e($u['email']) ?>)</option>
+            <?php endforeach; ?>
+          </select>
+        </div>
 
-      <div class="form-group">
-        <label class="form-label">Titre <span style="color:#ef4444">*</span></label>
-        <input type="text" name="notif_title" class="form-control"
-               placeholder="Ex: Maintenance planifiée" maxlength="100" required>
-      </div>
+        <div class="form-group">
+          <label class="form-label">Titre <span style="color:#ef4444">*</span></label>
+          <input type="text" name="notif_title" class="form-control"
+                 placeholder="Ex: Maintenance planifiée" maxlength="100" required>
+        </div>
 
-      <div class="form-group">
-        <label class="form-label">Message <span style="color:#ef4444">*</span></label>
-        <textarea name="notif_body" class="form-control" rows="3"
-                  placeholder="Ex: Des travaux de maintenance auront lieu demain de 8h à 12h…"
-                  maxlength="500" required></textarea>
-      </div>
+        <div class="form-group">
+          <label class="form-label">Message <span style="color:#ef4444">*</span></label>
+          <textarea name="notif_body" class="form-control" rows="3"
+                    placeholder="Ex: Des travaux de maintenance auront lieu demain de 8h à 12h…"
+                    maxlength="500" required></textarea>
+        </div>
 
-      <button type="submit" class="btn btn-primary w-100" style="justify-content:center">
-        🔔 Envoyer la notification
-      </button>
-    </form>
-  </div>
+        <button type="submit" class="btn btn-primary w-100" style="justify-content:center">
+          🔔 Envoyer la notification
+        </button>
+      </form>
+    </div>
+  <?php endif; ?>
 
   <!-- Historique des notifications -->
   <div class="card">
