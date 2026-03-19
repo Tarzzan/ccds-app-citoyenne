@@ -171,6 +171,7 @@ $serviceCategories = [];
 $serviceMembers = [];
 $servicePlans = [];
 $serviceQueue = [];
+$serviceCategoryHighlights = [];
 
 if (isset($_GET['detail'])) {
     $detailId = (int)$_GET['detail'];
@@ -195,6 +196,16 @@ if (isset($_GET['detail'])) {
         ");
         $stmt->execute([$detailId]);
         $serviceCategories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($serviceCategories as $category) {
+            $visual = category_visual_resolve($category['icon'] ?? 'road', $category['name'] ?? null);
+            $serviceCategoryHighlights[] = [
+                'name' => $category['name'],
+                'icon' => $category['icon'] ?? 'road',
+                'color' => $category['color'] ?? ($visual['accent'] ?? '#174b3a'),
+                'short_label' => $visual['short_label'] ?? $category['name'],
+                'description' => $visual['description'] ?? '',
+            ];
+        }
 
         $stmt = $db->prepare("
             SELECT
@@ -438,6 +449,83 @@ require_once __DIR__ . '/../includes/layout.php';
   background: #f8f3e8;
   border: 1px solid #ece4d5;
 }
+.services-category-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+.services-category-pill {
+  --category-accent: #174b3a;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--category-accent) 8%, #fff);
+  border: 1px solid color-mix(in srgb, var(--category-accent) 16%, #ece4d5);
+}
+.services-category-pill strong {
+  display: block;
+  color: #183229;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+.services-category-pill span {
+  display: block;
+  color: #5e6c67;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.services-mode-band {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+.services-mode-card {
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid #ece4d5;
+  background: #fffdf8;
+}
+.services-mode-card strong {
+  display: block;
+  font-size: 22px;
+  color: #183229;
+}
+.services-mode-card span {
+  display: block;
+  margin-top: 4px;
+  color: #5e6c67;
+  font-size: 12px;
+}
+.services-plan-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f3eee2;
+  color: #355248;
+  font-size: 11px;
+  font-weight: 700;
+}
+.services-queue-category-copy {
+  display: grid;
+  gap: 2px;
+}
+.services-queue-category-copy strong {
+  color: #183229;
+  font-size: 13px;
+}
+.services-queue-category-copy span {
+  color: #5e6c67;
+  font-size: 12px;
+  line-height: 1.4;
+}
 .services-queue-table {
   width: 100%;
   border-collapse: collapse;
@@ -458,6 +546,10 @@ require_once __DIR__ . '/../includes/layout.php';
 @media (max-width: 960px) {
   .services-layout,
   .services-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .services-category-strip,
+  .services-mode-band {
     grid-template-columns: 1fr;
   }
 }
@@ -564,6 +656,35 @@ require_once __DIR__ . '/../includes/layout.php';
         <a href="/admin/?page=services" class="btn btn-outline">Fermer le focus</a>
       </form>
 
+      <div class="services-mode-band">
+        <div class="services-mode-card">
+          <strong><?= (int)$detailService['active_internal_plans_count'] ?></strong>
+          <span>intervention(s) en equipe interne</span>
+        </div>
+        <div class="services-mode-card">
+          <strong><?= (int)$detailService['active_provider_plans_count'] ?></strong>
+          <span>mission(s) prestataire en cours</span>
+        </div>
+        <div class="services-mode-card">
+          <strong><?= (int)$detailService['unplanned_submitted_count'] ?></strong>
+          <span>dossier(s) encore sans plan visible</span>
+        </div>
+      </div>
+
+      <?php if ($serviceCategoryHighlights): ?>
+        <div class="services-category-strip">
+          <?php foreach ($serviceCategoryHighlights as $highlight): ?>
+            <div class="services-category-pill" style="--category-accent:<?= e($highlight['color']) ?>;">
+              <?= category_visual_html($highlight['icon'], $highlight['name'], 'md', $highlight['color']) ?>
+              <div>
+                <strong><?= e($highlight['short_label']) ?></strong>
+                <span><?= e($highlight['description']) ?></span>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+
       <div class="services-detail-grid">
         <div class="services-card" style="padding:16px">
           <h3 style="margin-bottom:12px;color:#183229">Catégories rattachées</h3>
@@ -619,7 +740,7 @@ require_once __DIR__ . '/../includes/layout.php';
                 Dossier <?= e($plan['incident_status']) ?>
                 <?= !empty($plan['assigned_user_name']) ? ' · ' . e($plan['assigned_user_name']) : '' ?>
               </div>
-              <div class="text-muted text-small" style="margin-top:4px">
+              <div class="services-plan-mode">
                 <?php if (($plan['source_type'] ?? '') === 'provider'): ?>
                   Prestataire missionné<?= !empty($plan['provider_name']) ? ' · ' . e($plan['provider_name']) : '' ?>
                 <?php else: ?>
@@ -662,7 +783,11 @@ require_once __DIR__ . '/../includes/layout.php';
                     <td>
                       <div style="display:flex;align-items:center;gap:8px">
                         <?= category_visual_html($queueItem['category_icon'] ?? 'road', $queueItem['category_name'], 'sm', $queueItem['category_color'] ?? null) ?>
-                        <span><?= e($queueItem['category_name']) ?></span>
+                        <?php $queueVisual = category_visual_resolve($queueItem['category_icon'] ?? 'road', $queueItem['category_name'] ?? null); ?>
+                        <div class="services-queue-category-copy">
+                          <strong><?= e($queueItem['category_name']) ?></strong>
+                          <span><?= e($queueVisual['description'] ?? '') ?></span>
+                        </div>
                       </div>
                     </td>
                     <td>
@@ -685,7 +810,7 @@ require_once __DIR__ . '/../includes/layout.php';
                         <?php if (!empty($queueItem['assigned_user_name'])): ?>
                           <div class="text-muted text-small"><?= e($queueItem['assigned_user_name']) ?></div>
                         <?php endif; ?>
-                        <div class="text-muted text-small" style="margin-top:4px">
+                        <div class="services-plan-mode">
                           <?php if (($queueItem['current_plan_source_type'] ?? '') === 'provider'): ?>
                             Prestataire missionné<?= !empty($queueItem['current_plan_provider_name']) ? ' · ' . e($queueItem['current_plan_provider_name']) : '' ?>
                           <?php else: ?>
