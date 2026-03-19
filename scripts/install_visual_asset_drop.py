@@ -17,6 +17,7 @@ VISUAL_DIR = ROOT / "assets" / "visual-production"
 GENERATED_DIR = VISUAL_DIR / "generated"
 MOBILE_GENERATED_TS = ROOT / "mobile" / "src" / "theme" / "generatedVisualSources.ts"
 VISUAL_MANIFEST_PATH = VISUAL_DIR / "visual-production-manifest.json"
+SITE_GENERATED_REGISTRY = ROOT / "site" / "assets" / "generated-visuals" / "registry.json"
 
 BATCH_FILES = {
     "badge-batch-01.json": "badges",
@@ -156,6 +157,43 @@ def write_mobile_generated_sources(manifest: dict) -> None:
     MOBILE_GENERATED_TS.write_text(content, encoding="utf-8")
 
 
+def write_site_generated_registry(manifest: dict) -> None:
+    visual_manifest = load_json(VISUAL_MANIFEST_PATH)
+    site_sources: dict[str, str] = {}
+    for asset in manifest["assets"]:
+        site_sources[asset["id"]] = "/" + asset["targets"]["site"].replace("\\", "/")
+
+    category_badges: dict[str, str] = {}
+    category_scenes: dict[str, str] = {}
+    for category in visual_manifest.get("categories", []):
+        category_id = category.get("id")
+        badge_id = category.get("asset_badge_id")
+        scene_id = category.get("asset_scene_id")
+        if category_id and badge_id and badge_id in site_sources:
+            category_badges[category_id] = site_sources[badge_id]
+        if category_id and scene_id and scene_id in site_sources:
+            category_scenes[category_id] = site_sources[scene_id]
+
+    registry = {
+        "installed_at_utc": manifest["installed_at_utc"],
+        "hero": {
+            "landing": site_sources.get("HERO-01"),
+            "store": site_sources.get("HERO-02"),
+        },
+        "companion": {
+            "agent_relations": site_sources.get("CHAR-05"),
+            "duo_reference": site_sources.get("CHAR-06"),
+            "welcome_duo": site_sources.get("MOM-01"),
+        },
+        "categories": {
+            "badges": category_badges,
+            "scenes": category_scenes,
+        },
+    }
+    SITE_GENERATED_REGISTRY.parent.mkdir(parents=True, exist_ok=True)
+    SITE_GENERATED_REGISTRY.write_text(json.dumps(registry, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Install generated visual asset drop into target folders.")
     parser.add_argument("source_dir", help="Directory containing generated asset files named as expected by the batches.")
@@ -168,10 +206,12 @@ def main() -> None:
     manifest = install_drop(source_dir)
     write_outputs(manifest)
     write_mobile_generated_sources(manifest)
+    write_site_generated_registry(manifest)
     print(f"installed_assets={manifest['assets_count']}")
     print(f"manifest={GENERATED_DIR / 'installed-visual-assets.json'}")
     print(f"report={GENERATED_DIR / 'installed-visual-assets.md'}")
     print(f"mobile_bindings={MOBILE_GENERATED_TS}")
+    print(f"site_registry={SITE_GENERATED_REGISTRY}")
 
 
 if __name__ == "__main__":

@@ -484,35 +484,48 @@
   </main>
   <script>
     (function () {
-      var generatedVisuals = [
-        {
-          url: 'assets/generated-visuals/hero/hero-01-landing-ma-commune-16x9.png',
-          onReady: function (url) {
-            var frame = document.getElementById('heroVisualFrame');
-            var image = document.getElementById('heroVisualImage');
-            if (!frame || !image) return;
-            image.src = url;
-            frame.classList.add('is-ready');
-          }
-        },
-        {
-          url: 'assets/generated-visuals/characters/char-05-agent-a2-bust-4x5.png',
-          onReady: function (url) {
-            var image = document.getElementById('companionVisual');
-            var fallback = document.getElementById('companionMark');
-            if (!image || !fallback) return;
-            image.src = url;
-            image.classList.add('is-ready');
-            fallback.classList.add('is-hidden');
-          }
-        }
-      ];
-
-      generatedVisuals.forEach(function (item) {
+      function applyHero(url) {
+        var frame = document.getElementById('heroVisualFrame');
+        var image = document.getElementById('heroVisualImage');
+        if (!frame || !image || !url) return;
         var probe = new Image();
-        probe.onload = function () { item.onReady(item.url); };
-        probe.src = item.url;
-      });
+        probe.onload = function () {
+          image.src = url;
+          frame.classList.add('is-ready');
+        };
+        probe.src = url;
+      }
+
+      function applyCompanion(url) {
+        var image = document.getElementById('companionVisual');
+        var fallback = document.getElementById('companionMark');
+        if (!image || !fallback || !url) return;
+        var probe = new Image();
+        probe.onload = function () {
+          image.src = url;
+          image.classList.add('is-ready');
+          fallback.classList.add('is-hidden');
+        };
+        probe.src = url;
+      }
+
+      fetch('/assets/generated-visuals/registry.json', { cache: 'no-store' })
+        .then(function (response) {
+          if (!response.ok) {
+            throw new Error('registry-missing');
+          }
+          return response.json();
+        })
+        .then(function (registry) {
+          applyHero(registry && registry.hero && registry.hero.landing);
+          applyCompanion(
+            (registry && registry.companion && registry.companion.agent_relations) ||
+            (registry && registry.companion && registry.companion.welcome_duo)
+          );
+        })
+        .catch(function () {
+          // Aucun registre installe : la landing garde ses fallbacks actuels.
+        });
     })();
   </script>
 </body>

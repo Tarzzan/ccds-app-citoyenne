@@ -64,6 +64,24 @@ function category_visual_resolve(?string $icon, ?string $name = null): array
 function category_visual_asset_url(?string $icon, ?string $name = null): string
 {
     $entry = category_visual_resolve($icon, $name);
+    $badgeAssetId = [
+        'road' => 'CAT-01',
+        'lightbulb' => 'CAT-02',
+        'tree' => 'CAT-03',
+        'trash' => 'CAT-04',
+        'bench' => 'CAT-05',
+        'droplets' => 'CAT-06',
+        'triangle-alert' => 'CAT-07',
+        'building-2' => 'CAT-08',
+    ][$entry['key'] ?? 'road'] ?? null;
+
+    if ($badgeAssetId) {
+        $generatedUrl = generated_visual_url($badgeAssetId);
+        if ($generatedUrl) {
+            return $generatedUrl;
+        }
+    }
+
     return '/admin/assets/img/category-icons/' . rawurlencode($entry['key']) . '.png';
 }
 

@@ -45,6 +45,11 @@ python3 scripts/install_visual_asset_drop.py /chemin/vers/le/drop
 - `admin/assets/img/generated-visuals/moments`
 - `admin/assets/img/generated-visuals/hero`
 
+Effet attendu :
+
+- les badges categories admin basculent automatiquement vers les `CAT-*` installes
+- les scenes terrain admin restent branchables via les helpers PHP existants
+
 ### Site
 
 - `site/assets/generated-visuals/badges`
@@ -52,6 +57,7 @@ python3 scripts/install_visual_asset_drop.py /chemin/vers/le/drop
 - `site/assets/generated-visuals/terrain`
 - `site/assets/generated-visuals/moments`
 - `site/assets/generated-visuals/hero`
+- `site/assets/generated-visuals/registry.json`
 
 ### Trace De Référence
 
@@ -69,6 +75,7 @@ Ce contrôle vérifie :
 
 - que le manifeste d installation existe
 - que le registre mobile généré existe
+- que le registre site généré existe
 - que les cibles mobile, admin et site existent réellement
 - que le nombre d assets installés n est pas vide
 

@@ -23,6 +23,7 @@ $incidents = $db->query("
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 foreach ($incidents as &$incident) {
+    $incident['cat_badge_url'] = category_visual_asset_url($incident['cat_icon'] ?? null, $incident['cat_name'] ?? null);
     $incident['cat_scene_url'] = category_scene_visual_url($incident['cat_icon'] ?? null, $incident['cat_name'] ?? null);
 }
 unset($incident);
@@ -38,7 +39,6 @@ require_once __DIR__ . '/../includes/layout.php';
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const incidents = <?= json_encode($incidents) ?>;
-const categoryIconBase = '/admin/assets/img/category-icons/';
 const statusColors = {
   submitted: '#94a3b8', acknowledged: '#3b82f6',
   in_progress: '#f59e0b', resolved: '#22c55e', rejected: '#ef4444'
@@ -68,7 +68,7 @@ incidents.forEach(inc => {
       <div style="font-size:13px;font-weight:700;margin:4px 0">${inc.description.substring(0,80)}${inc.description.length>80?'…':''}</div>
       <div style="display:flex;align-items:center;gap:8px;margin:8px 0 6px">
         <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:${inc.cat_color}18;border:1px solid ${inc.cat_color}33;overflow:hidden">
-          <img src="${categoryIconBase}${inc.cat_icon || 'road'}.png" alt="${inc.cat_name}" style="width:100%;height:100%;object-fit:contain">
+          <img src="${inc.cat_badge_url}" alt="${inc.cat_name}" style="width:100%;height:100%;object-fit:contain">
         </span>
         <span style="background:${inc.cat_color}22;color:${inc.cat_color};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${inc.cat_name}</span>
       </div>
