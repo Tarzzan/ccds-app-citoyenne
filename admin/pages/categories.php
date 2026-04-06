@@ -8,14 +8,52 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 $admin      = require_admin_auth();
 $page_title = 'Catégories';
 $active_nav = 'categories';
+$themePalette = visual_admin_data_palette();
 
 $db = Database::getInstance();
 $isAdmin = ($admin['role'] ?? '') === 'admin';
 $service_tables_ready = admin_db_has_table($db, 'services') && admin_db_has_table($db, 'service_category_map');
+$category_has_slug = admin_db_has_column($db, 'categories', 'slug');
 $services = $service_tables_ready ? intervention_get_services($db) : [];
 
 $success = '';
 $error   = '';
+
+function admin_category_slugify(string $value): string
+{
+    $normalized = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', trim(mb_strtolower($value)));
+    $normalized = $normalized === false ? trim(mb_strtolower($value)) : $normalized;
+    $slug = preg_replace('/[^a-z0-9]+/', '-', $normalized) ?? '';
+    $slug = trim($slug, '-');
+
+    return $slug !== '' ? $slug : 'categorie';
+}
+
+function admin_category_unique_slug(PDO $db, string $name, ?int $excludeId = null): string
+{
+    $baseSlug = admin_category_slugify($name);
+    $slug = $baseSlug;
+    $index = 2;
+
+    while (true) {
+        $sql = 'SELECT id FROM categories WHERE slug = ?';
+        $params = [$slug];
+        if ($excludeId !== null) {
+            $sql .= ' AND id <> ?';
+            $params[] = $excludeId;
+        }
+        $sql .= ' LIMIT 1';
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+
+        $slug = $baseSlug . '-' . $index;
+        $index++;
+    }
+}
 
 // --- Traitement des actions POST ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -31,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'create' && $isAdmin) {
         $name    = trim($_POST['name']    ?? '');
         $icon    = trim($_POST['icon']    ?? 'road');
-        $color   = trim($_POST['color']   ?? '#1d4ed8');
+        $color   = trim($_POST['color']   ?? ($themePalette['primary'] ?? '#355160'));
         $service = trim($_POST['service'] ?? '');
         $serviceId = $service_tables_ready ? (int)($_POST['service_id'] ?? 0) : 0;
 
@@ -46,16 +84,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $check = $db->prepare('SELECT id FROM categories WHERE name = ? LIMIT 1');
             $check->execute([$name]);
             if ($check->fetch()) {
-                $error = "Une catégorie avec le nom \"$name\" existe déjà.";
+                $error = "Une catégorie avec le nom \"$name\" existe déjà. Réutiliser l entrée existante évite de disperser le catalogue.";
             } else {
+                $slug = $category_has_slug ? admin_category_unique_slug($db, $name) : null;
+                $columns = ['name', 'icon', 'color', 'service', 'is_active'];
+                $values = ['?', '?', '?', '?', '1'];
+                $params = [$name, $icon, $color, $service];
+
+                if ($category_has_slug) {
+                    $columns[] = 'slug';
+                    $values[] = '?';
+                    $params[] = $slug;
+                }
+
                 $db->prepare(
-                    'INSERT INTO categories (name, icon, color, service, is_active) VALUES (?, ?, ?, ?, 1)'
-                )->execute([$name, $icon, $color, $service]);
+                    sprintf(
+                        'INSERT INTO categories (%s) VALUES (%s)',
+                        implode(', ', $columns),
+                        implode(', ', $values)
+                    )
+                )->execute($params);
                 $categoryId = (int)$db->lastInsertId();
                 if ($service_tables_ready) {
                     intervention_sync_category_default_service($db, $categoryId, $serviceId > 0 ? $serviceId : null);
                 }
-                $success = "Catégorie \"$name\" créée avec succès.";
+                $success = "Catégorie \"$name\" créée. Le repère visuel et le service par défaut sont maintenant disponibles pour les prochains dossiers.";
             }
         }
     }
@@ -65,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id      = (int)($_POST['id']      ?? 0);
         $name    = trim($_POST['name']     ?? '');
         $icon    = trim($_POST['icon']     ?? 'road');
-        $color   = trim($_POST['color']    ?? '#1d4ed8');
+        $color   = trim($_POST['color']    ?? ($themePalette['primary'] ?? '#355160'));
         $service = trim($_POST['service']  ?? '');
         $serviceId = $service_tables_ready ? (int)($_POST['service_id'] ?? 0) : 0;
 
@@ -75,15 +128,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($id && strlen($name) >= 2) {
+            $assignments = ['name = ?', 'icon = ?', 'color = ?', 'service = ?'];
+            $params = [$name, $icon, $color, $service];
+
+            if ($category_has_slug) {
+                $assignments[] = 'slug = ?';
+                $params[] = admin_category_unique_slug($db, $name, $id);
+            }
+
+            $params[] = $id;
             $db->prepare(
-                'UPDATE categories SET name = ?, icon = ?, color = ?, service = ? WHERE id = ?'
-            )->execute([$name, $icon, $color, $service, $id]);
+                sprintf('UPDATE categories SET %s WHERE id = ?', implode(', ', $assignments))
+            )->execute($params);
             if ($service_tables_ready) {
                 intervention_sync_category_default_service($db, $id, $serviceId > 0 ? $serviceId : null);
             }
-            $success = "Catégorie mise à jour.";
+            $success = "Catégorie mise à jour. Le référentiel est désormais aligné avec ce nouveau libellé et ce nouveau service.";
         } else {
-            $error = 'Données invalides.';
+            $error = 'Données invalides. Vérifier le nom, le service choisi et le repère visuel avant d enregistrer.';
         }
     }
 
@@ -92,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id'] ?? 0);
         if ($id) {
             $db->prepare('UPDATE categories SET is_active = NOT is_active WHERE id = ?')->execute([$id]);
-            $success = 'Statut de la catégorie mis à jour.';
+            $success = 'Statut de la catégorie mis à jour. Les nouveaux dossiers suivront désormais ce niveau d activation.';
         }
         header('Location: /admin/?page=categories'); exit;
     }
@@ -105,11 +167,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $count->execute([$id]);
             if ((int)$count->fetchColumn() > 0) {
                 $db->prepare('UPDATE categories SET is_active = 0 WHERE id = ?')->execute([$id]);
-                $success = 'Catégorie désactivée (des signalements y sont associés, suppression impossible).';
+                $success = 'Catégorie désactivée. Des signalements y sont encore associés, la suppression complète reste donc verrouillée.';
             } else {
                 $db->prepare('DELETE FROM categories WHERE id = ?')->execute([$id]);
-                $success = 'Catégorie supprimée.';
+                $success = 'Catégorie supprimée. Le catalogue ne la proposera plus pour les prochains signalements.';
             }
+        }
+    }
+    
+    // Changer le pack d'icônes global
+    elseif ($action === 'set_pack' && $isAdmin) {
+        $newPack = $_POST['active_pack'] ?? 'kourou';
+        if (in_array($newPack, ['kourou', 'cayenne', '3d_clay'])) {
+            $configFile = dirname(__DIR__) . '/includes/.icon_pack_config.json';
+            file_put_contents($configFile, json_encode(['active_pack' => $newPack]));
+            $success = 'Thème visuel mis à jour : ' . $newPack . '. L ensemble de la plateforme utilise désormais ce pack d icônes.';
         }
         header('Location: /admin/?page=categories'); exit;
     }
@@ -156,41 +228,83 @@ if ($edit_id) {
 $visual_catalog  = category_visuals_catalog();
 $selected_visual = category_visual_resolve($edit_cat['icon'] ?? 'road', $edit_cat['name'] ?? '');
 $default_icon    = $selected_visual['key'] ?? ($edit_cat['icon'] ?? 'road');
-$default_color   = $edit_cat['color'] ?? ($selected_visual['accent'] ?? '#1d4ed8');
+$default_color   = $edit_cat['color'] ?? ($selected_visual['accent'] ?? ($themePalette['primary'] ?? '#355160'));
 $default_service_id = (int)($edit_cat['mapped_service_id'] ?? 0);
 $default_scene_url = category_scene_visual_url($default_icon, $edit_cat['name'] ?? ($selected_visual['label'] ?? ''));
 
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
+<div class="page-async-scope" data-async-scope="categories-admin">
+<div class="page-hero">
+  <div class="page-hero-copy">
+    <div class="page-hero-kicker">Catalogue métier</div>
+    <div class="page-hero-title">Maintenir un référentiel lisible pour toute l interface.</div>
+    <?php if ($isTrainingMode): ?>
+    <div class="page-hero-text">
+      Les catégories structurent les signalements, les services responsables et les repères visuels utilisés dans l’ensemble du produit. Cette page doit rester claire, stable et éditable sans déformer le catalogue.
+    </div>
+    <?php endif; ?>
+  </div>
+  <div class="page-hero-metrics">
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= count($categories) ?></span>
+      <span class="hero-chip-label">categorie(s) au catalogue</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= count(array_filter($categories, static fn($cat) => (int)($cat['is_active'] ?? 0) === 1)) ?></span>
+      <span class="hero-chip-label">categorie(s) actives</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= array_sum(array_map(static fn($cat) => (int)($cat['incident_count'] ?? 0), $categories)) ?></span>
+      <span class="hero-chip-label">signalements relies</span>
+    </div>
+  </div>
+</div>
 <?php if ($success): ?>
-  <div class="alert alert-success" style="margin-bottom:16px;padding:12px 16px;background:#dcfce7;border-radius:8px;color:#166534;border:1px solid #bbf7d0">
-    ✅ <?= e($success) ?>
+  <div class="alert alert-success categories-alert">
+    OK · <?= e($success) ?>
   </div>
 <?php endif; ?>
 <?php if ($error): ?>
-  <div class="alert alert-danger" style="margin-bottom:16px;padding:12px 16px;background:#fee2e2;border-radius:8px;color:#991b1b;border:1px solid #fecaca">
-    ❌ <?= e($error) ?>
+  <div class="alert alert-danger categories-alert">
+    Erreur · <?= e($error) ?>
   </div>
 <?php endif; ?>
 <?php if (!$isAdmin): ?>
-  <div class="alert alert-warning" style="margin-bottom:16px;padding:12px 16px;background:#fef3c7;border-radius:8px;color:#92400e;border:1px solid #fcd34d">
+  <div class="alert alert-warning categories-alert">
     Cette page est en lecture seule pour votre rôle. La création et la modification des catégories sont réservées aux administrateurs.
   </div>
 <?php endif; ?>
 
-<div style="display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start;">
+<div class="categories-admin-layout">
 
   <!-- Liste des catégories -->
   <div class="card">
     <div class="card-header">
-      <span class="card-title">🏷️ <?= count($categories) ?> catégorie<?= count($categories) > 1 ? 's' : '' ?></span>
+      <div>
+        <span class="card-title"><?= count($categories) ?> catégorie<?= count($categories) > 1 ? 's' : '' ?></span>
+        <?php if ($isTrainingMode): ?>
+        <p class="admin-section-note">Lire d abord la lisibilité du catalogue : nom, service par défaut, activité réelle et possibilité d agir sans casser des dossiers existants.</p>
+        <?php endif; ?>
+      </div>
+      <div>
+        <form method="POST" action="" data-async-form style="display:flex; gap:0.5rem; align-items:center;">
+          <input type="hidden" name="action" value="set_pack">
+          <span class="text-small text-muted">Thème Global :</span>
+          <select name="active_pack" class="form-control" style="width:140px; padding:0.25rem 0.5rem; height:auto;" onchange="this.form.submit()">
+            <option value="kourou" <?= category_visual_active_pack() === 'kourou' ? 'selected' : '' ?>>Minimal (Kourou)</option>
+            <option value="cayenne" <?= category_visual_active_pack() === 'cayenne' ? 'selected' : '' ?>>Détaillé (Cayenne)</option>
+            <option value="3d_clay" <?= category_visual_active_pack() === '3d_clay' ? 'selected' : '' ?>>Premium (3D Clay)</option>
+          </select>
+        </form>
+      </div>
     </div>
     <div class="table-wrapper">
       <table>
         <thead>
           <tr>
-            <th style="width:64px">Repère</th>
+            <th class="categories-repere-col">Repère</th>
             <th>Nom</th>
             <th>Service</th>
             <th>Couleur</th>
@@ -202,22 +316,28 @@ require_once __DIR__ . '/../includes/layout.php';
         </thead>
         <tbody>
           <?php foreach ($categories as $cat): ?>
-          <tr style="<?= !(bool)$cat['is_active'] ? 'opacity:.45' : '' ?>">
-            <td style="text-align:center"><?= category_visual_html($cat['icon'] ?? 'road', $cat['name'], 'md', $cat['color'] ?? null) ?></td>
+          <tr class="<?= !(bool)$cat['is_active'] ? 'categories-row-muted' : '' ?>">
+            <td class="categories-repere-cell">
+              <?= category_visual_html($cat['icon'] ?? 'road', $cat['name'], 'md', $cat['color'] ?? null) ?>
+            </td>
             <td>
-              <span style="font-weight:700;font-size:14px"><?= e($cat['name']) ?></span>
+              <?php $categoryVisual = category_visual_resolve($cat['icon'] ?? 'road', $cat['name'] ?? null); ?>
+              <div class="admin-category-cell-copy">
+                <span><strong><?= e($cat['name']) ?></strong></span>
+                <div class="text-muted text-small"><?= e($categoryVisual['description'] ?? '') ?></div>
+              </div>
             </td>
             <td class="text-muted text-small"><?= e($cat['mapped_service_name'] ?? $cat['service'] ?? '—') ?></td>
             <td>
-              <div style="display:flex;align-items:center;gap:6px">
-                <div style="width:22px;height:22px;border-radius:5px;background:<?= e($cat['color']) ?>;flex-shrink:0"></div>
-                <code style="font-size:11px;color:#64748b"><?= e($cat['color']) ?></code>
+              <div class="categories-color-row">
+                <div class="categories-swatch" style="background:<?= e($cat['color']) ?>"></div>
+                <code class="categories-code"><?= e($cat['color']) ?></code>
               </div>
             </td>
             <td class="text-center">
               <?php if ($cat['incident_count'] > 0): ?>
                 <a href="/admin/?page=incidents&cat=<?= $cat['id'] ?>"
-                   class="badge badge-blue" style="text-decoration:none">
+                   class="badge badge-blue categories-link-reset" data-async-link data-async-scope="admin-main">
                   <?= $cat['incident_count'] ?>
                 </a>
               <?php else: ?>
@@ -226,7 +346,7 @@ require_once __DIR__ . '/../includes/layout.php';
             </td>
             <td class="text-center">
               <?php if ($cat['total_votes'] > 0): ?>
-                <span style="color:#f59e0b;font-weight:700">👍 <?= (int)$cat['total_votes'] ?></span>
+                <span class="categories-vote-copy"><?= (int)$cat['total_votes'] ?> soutien<?= (int)$cat['total_votes'] > 1 ? 's' : '' ?></span>
               <?php else: ?>
                 <span class="text-muted">—</span>
               <?php endif; ?>
@@ -237,29 +357,30 @@ require_once __DIR__ . '/../includes/layout.php';
               </span>
             </td>
             <td>
-              <div style="display:flex;gap:4px;flex-wrap:nowrap">
+              <div class="categories-actions">
                 <?php if ($isAdmin): ?>
                   <a href="/admin/?page=categories&edit=<?= $cat['id'] ?>"
-                     class="btn btn-outline btn-sm" title="Modifier">✏️</a>
+                     class="btn btn-outline btn-sm" title="Modifier" data-async-link data-async-scope="admin-main">Editer</a>
 
-                  <form method="POST" action="" style="display:inline">
+                  <form method="POST" action="" class="categories-inline-form" data-async-form>
                     <input type="hidden" name="action" value="toggle">
                     <input type="hidden" name="id" value="<?= $cat['id'] ?>">
                     <button type="submit" class="btn btn-outline btn-sm"
                             title="<?= $cat['is_active'] ? 'Désactiver' : 'Activer' ?>">
-                      <?= $cat['is_active'] ? '⏸️' : '▶️' ?>
+                      <?= $cat['is_active'] ? 'Pause' : 'Activer' ?>
                     </button>
                   </form>
 
                   <?php if ($cat['incident_count'] == 0): ?>
-                  <form method="POST" action="" style="display:inline"
+                  <form method="POST" action="" class="categories-inline-form"
+                        data-async-form
                         onsubmit="return confirm('Supprimer la catégorie « <?= e($cat['name']) ?> » ? Cette action est irréversible.')">
                     <input type="hidden" name="action" value="delete">
                     <input type="hidden" name="id" value="<?= $cat['id'] ?>">
-                    <button type="submit" class="btn btn-danger btn-sm" title="Supprimer">🗑️</button>
+                    <button type="submit" class="btn btn-danger btn-sm" title="Supprimer">Supprimer</button>
                   </form>
                   <?php else: ?>
-                    <button class="btn btn-outline btn-sm" disabled title="Impossible : des signalements utilisent cette catégorie" style="opacity:.3">🗑️</button>
+                    <button class="btn btn-outline btn-sm categories-blocked-btn" disabled title="Impossible : des signalements utilisent cette catégorie">Utilisee</button>
                   <?php endif; ?>
                 <?php else: ?>
                   <span class="text-muted text-small">Lecture seule</span>
@@ -269,7 +390,7 @@ require_once __DIR__ . '/../includes/layout.php';
           </tr>
           <?php endforeach; ?>
           <?php if (empty($categories)): ?>
-          <tr><td colspan="8" class="text-center text-muted" style="padding:40px">Aucune catégorie.</td></tr>
+          <tr><td colspan="8" class="text-center text-muted categories-empty-row">Aucune catégorie. Créer d abord un premier repère métier pour éviter un catalogue vide côté saisie citoyenne et backoffice.</td></tr>
           <?php endif; ?>
         </tbody>
       </table>
@@ -277,25 +398,56 @@ require_once __DIR__ . '/../includes/layout.php';
   </div>
 
   <!-- Formulaire création / édition -->
-  <div class="card" style="position:sticky;top:80px">
-    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
-      <span class="card-title"><?= $isAdmin ? ($edit_cat ? '✏️ Modifier la catégorie' : '➕ Nouvelle catégorie') : '📚 Catalogue des catégories' ?></span>
+  <div class="card categories-editor-card">
+    <div class="card-header card-header--split">
+      <span class="card-title"><?= $isAdmin ? ($edit_cat ? 'Modifier la catégorie' : 'Nouvelle catégorie') : 'Catalogue des catégories' ?></span>
       <?php if ($edit_cat && $isAdmin): ?>
-        <a href="/admin/?page=categories" class="btn btn-outline btn-sm">✕ Annuler</a>
+        <a href="/admin/?page=categories" class="btn btn-outline btn-sm" data-async-link data-async-scope="admin-main">Annuler</a>
       <?php endif; ?>
     </div>
     <?php if ($isAdmin): ?>
-    <form method="POST" action="" style="padding:0 4px 4px">
+    <?php if ($isTrainingMode): ?>
+    <div class="admin-form-guide">
+      <strong>Sequence conseillee</strong>
+      <div class="admin-form-guide-list">
+        <div class="admin-form-guide-item">
+          <span class="admin-form-guide-step">01</span>
+          <div>
+            <strong>Nommer la categorie</strong>
+            <span>Choisir un libelle stable, compréhensible par l habitant comme par le service.</span>
+          </div>
+        </div>
+        <div class="admin-form-guide-item">
+          <span class="admin-form-guide-step">02</span>
+          <div>
+            <strong>Fixer le repere visuel</strong>
+            <span>L univers visuel sert au reperage rapide. Il doit rester distinct des autres categories proches.</span>
+          </div>
+        </div>
+        <div class="admin-form-guide-item">
+          <span class="admin-form-guide-step">03</span>
+          <div>
+            <strong>Rattacher le bon service</strong>
+            <span>Le service choisi deviendra la porte d entree par defaut des prochains dossiers de cette categorie.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <?php endif; ?>
+    <form method="POST" action="" class="categories-form-shell" data-async-form>
       <input type="hidden" name="action" value="<?= $edit_cat ? 'update' : 'create' ?>">
       <?php if ($edit_cat): ?>
         <input type="hidden" name="id" value="<?= $edit_cat['id'] ?>">
       <?php endif; ?>
 
       <div class="form-group">
-        <label class="form-label">Nom <span style="color:#ef4444">*</span></label>
+        <label class="form-label">Nom <span class="form-required">*</span></label>
         <input type="text" name="name" class="form-control"
                value="<?= e($edit_cat['name'] ?? '') ?>"
                placeholder="Ex: Voirie, Éclairage public…" required maxlength="100">
+        <?php if ($isTrainingMode): ?>
+        <div class="admin-section-note">Eviter les doublons metier et les intitulés trop proches qui feraient hesiter dans le mobile ou le backoffice.</div>
+        <?php endif; ?>
       </div>
 
       <div class="form-group">
@@ -307,118 +459,35 @@ require_once __DIR__ . '/../includes/layout.php';
             <label
               class="category-preset<?= $is_selected ? ' is-selected' : '' ?>"
               data-category-key="<?= e($visual['key'] ?? '') ?>"
-              data-category-color="<?= e($visual['accent'] ?? '#1d4ed8') ?>"
+              data-category-color="<?= e($visual['accent'] ?? ($themePalette['primary'] ?? '#355160')) ?>"
               data-category-scene-url="<?= e((string)category_scene_visual_url($visual['key'] ?? 'road', $visual['label'] ?? '')) ?>"
               data-category-scene-label="<?= e($visual['label'] ?? '') ?>"
             >
               <input type="radio" name="category_icon_preview" value="<?= e($visual['key'] ?? '') ?>" <?= $is_selected ? 'checked' : '' ?>>
               <div class="category-preset-top">
                 <?= category_visual_html($visual['key'] ?? 'road', $visual['label'] ?? '', 'lg', $visual['accent'] ?? null) ?>
-                <span class="category-preset-dot" style="background:<?= e($visual['accent'] ?? '#1d4ed8') ?>"></span>
+                <span class="category-preset-dot" style="background:<?= e($visual['accent'] ?? ($themePalette['primary'] ?? '#355160')) ?>"></span>
               </div>
               <div class="category-preset-title"><?= e($visual['label'] ?? '') ?></div>
               <div class="category-preset-text"><?= e($visual['description'] ?? '') ?></div>
             </label>
           <?php endforeach; ?>
         </div>
-        <div class="text-muted text-small" style="margin-top:6px">Chaque catégorie dispose maintenant d’un pictogramme premium cohérent entre mobile, back-office et administration.</div>
-        <div class="category-scene-preview<?= $default_scene_url ? ' is-ready' : '' ?>" id="categoryScenePreview" data-default-label="<?= e($selected_visual['label'] ?? 'Categorie') ?>">
-          <img id="categoryScenePreviewImage" alt="Scene terrain categorie"<?= $default_scene_url ? ' src="' . e($default_scene_url) . '"' : '' ?>>
-          <div class="category-scene-preview-copy">
-            <strong id="categoryScenePreviewTitle"><?= e($selected_visual['label'] ?? 'Categorie') ?></strong>
-            <span id="categoryScenePreviewText">Les scenes terrain validées viendront ici clarifier la réalité du terrain sans remplacer l’icône fonctionnelle.</span>
-          </div>
-        </div>
+        <?php if ($isTrainingMode): ?>
+        <div class="text-muted text-small categories-helper" style="margin-top:0.75rem;">Le pictogramme final appliqué dépend du `Thème Global` couramment activé sur toute l'interface.</div>
+        <?php endif; ?>
       </div>
 
       <div class="form-group">
         <label class="form-label">Couleur d'identification</label>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div class="categories-color-row">
           <input type="color" name="color" id="colorPicker"
                  value="<?= e($default_color) ?>"
-                 style="width:48px;height:40px;border:none;cursor:pointer;border-radius:8px;padding:2px">
+                 class="categories-color-input">
           <input type="text" id="colorHexInput" class="form-control"
                  value="<?= e($default_color) ?>"
-                 placeholder="#1d4ed8" maxlength="7" style="flex:1;font-family:monospace">
+                 placeholder="<?= e($themePalette['primary'] ?? '#355160') ?>" maxlength="7" class="categories-hex-input">
         </div>
-        <script>
-          (() => {
-            const picker = document.getElementById('colorPicker');
-            const hexIn = document.getElementById('colorHexInput');
-            const iconInput = document.getElementById('categoryIconInput');
-            const presets = Array.from(document.querySelectorAll('.category-preset'));
-            const scenePreview = document.getElementById('categoryScenePreview');
-            const scenePreviewImage = document.getElementById('categoryScenePreviewImage');
-            const scenePreviewTitle = document.getElementById('categoryScenePreviewTitle');
-
-            if (!picker || !hexIn || !iconInput) {
-              return;
-            }
-
-            const updateScenePreview = (preset) => {
-              if (!scenePreview || !scenePreviewImage || !scenePreviewTitle || !preset) {
-                return;
-              }
-
-              const sceneUrl = preset.getAttribute('data-category-scene-url') || '';
-              const sceneLabel = preset.getAttribute('data-category-scene-label') || scenePreview.dataset.defaultLabel || 'Categorie';
-              scenePreviewTitle.textContent = sceneLabel;
-
-              if (!sceneUrl) {
-                scenePreview.classList.remove('is-ready');
-                scenePreviewImage.removeAttribute('src');
-                return;
-              }
-
-              scenePreviewImage.src = sceneUrl;
-              scenePreview.classList.add('is-ready');
-            };
-
-            const syncColorFieldNames = () => {
-              picker.name = '';
-              hexIn.name = 'color';
-            };
-
-            picker.addEventListener('input', () => {
-              hexIn.value = picker.value;
-              syncColorFieldNames();
-            });
-
-            hexIn.addEventListener('input', () => {
-              if (/^#[0-9a-fA-F]{6}$/.test(hexIn.value)) {
-                picker.value = hexIn.value;
-              }
-            });
-
-            hexIn.addEventListener('change', syncColorFieldNames);
-
-            presets.forEach((preset) => {
-              preset.addEventListener('click', () => {
-                const key = preset.getAttribute('data-category-key') || 'road';
-                const color = preset.getAttribute('data-category-color') || picker.value;
-
-                iconInput.value = key;
-                picker.value = color;
-                hexIn.value = color;
-                syncColorFieldNames();
-
-                presets.forEach((entry) => entry.classList.remove('is-selected'));
-                preset.classList.add('is-selected');
-
-                const radio = preset.querySelector('input[type="radio"]');
-                if (radio) {
-                  radio.checked = true;
-                }
-
-                updateScenePreview(preset);
-              });
-            });
-
-            const selectedPreset = presets.find((entry) => entry.classList.contains('is-selected')) || presets[0];
-            updateScenePreview(selectedPreset);
-            syncColorFieldNames();
-          })();
-        </script>
       </div>
 
       <div class="form-group">
@@ -435,9 +504,11 @@ require_once __DIR__ . '/../includes/layout.php';
               </option>
             <?php endforeach; ?>
           </select>
-          <div class="text-muted text-small" style="margin-top:6px">
+          <?php if ($isTrainingMode): ?>
+          <div class="text-muted text-small categories-helper">
             Ce service deviendra le responsable par défaut des dossiers de cette catégorie.
           </div>
+          <?php endif; ?>
         <?php else: ?>
           <input type="text" name="service" class="form-control"
                  value="<?= e($edit_cat['service'] ?? '') ?>"
@@ -445,14 +516,14 @@ require_once __DIR__ . '/../includes/layout.php';
         <?php endif; ?>
       </div>
 
-      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px">
-        <?= $edit_cat ? '💾 Enregistrer les modifications' : '➕ Créer la catégorie premium' ?>
+      <button type="submit" class="btn btn-primary btn-block-center">
+        <?= $edit_cat ? 'Enregistrer les modifications' : 'Créer la catégorie premium' ?>
       </button>
     </form>
     <?php else: ?>
-      <div style="padding:16px 4px 4px">
-        <p class="text-muted" style="margin:0 0 12px">Les catégories structurent tout le territoire. Leur création et leur modification restent réservées aux administrateurs.</p>
-        <ul class="text-small text-muted" style="margin:0;padding-left:18px;line-height:1.7">
+      <div class="categories-readonly-copy">
+        <p class="text-muted">Les catégories structurent toute l interface. Leur création et leur modification restent réservées aux administrateurs.</p>
+        <ul class="text-small text-muted categories-readonly-list">
           <li>consulter la liste et les services rattachés</li>
           <li>ouvrir la file des dossiers liés à une catégorie</li>
           <li>remonter à un administrateur si un changement de catalogue est nécessaire</li>
@@ -460,6 +531,8 @@ require_once __DIR__ . '/../includes/layout.php';
       </div>
     <?php endif; ?>
   </div>
+
+</div>
 
 </div>
 

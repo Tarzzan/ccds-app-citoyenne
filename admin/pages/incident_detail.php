@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../../backend/config/PushNotificationService.php';
 $admin = require_admin_auth();
+$themePalette = visual_admin_data_palette();
 
 $id = (int)($_GET['id'] ?? 0);
 if (!$id) render_error(400, 'Identifiant de signalement manquant.');
@@ -30,6 +31,19 @@ if (!$inc) render_error(404, 'Signalement introuvable.');
 $photos_stmt = $db->prepare("SELECT * FROM photos WHERE incident_id = ? ORDER BY id");
 $photos_stmt->execute([$id]);
 $photos = $photos_stmt->fetchAll(PDO::FETCH_ASSOC);
+$photos = admin_hydrate_incident_photo_rows($db, $photos);
+if ($photos === []) {
+    $fallbackPhotoPath = admin_demo_seed_photo_path($inc['reference'] ?? null);
+    if ($fallbackPhotoPath !== null) {
+        $photos = [admin_hydrate_public_photo($db, [
+            'file_path' => $fallbackPhotoPath,
+            'file_name' => basename($fallbackPhotoPath),
+            'moderation_status' => 'visible',
+            'moderation_reason' => null,
+            'moderation_placeholder_key' => null,
+        ])];
+    }
+}
 
 // Charger l'historique des statuts
 $history_stmt = $db->prepare("
@@ -77,6 +91,23 @@ if (admin_is_service_scoped_agent($admin)) {
     if (!$incidentServiceId || !admin_has_service_access($admin, $incidentServiceId)) {
         render_error(403, 'Ce dossier ne fait pas partie de votre perimetre de service.');
     }
+}
+
+if (($_GET['export'] ?? '') === 'pdf') {
+    $composerAutoload = __DIR__ . '/../../backend/vendor/autoload.php';
+    if (file_exists($composerAutoload)) {
+        require_once $composerAutoload;
+    } else {
+        $fpdfPath = __DIR__ . '/../../backend/vendor/fpdf/fpdf.php';
+        if (!file_exists($fpdfPath)) {
+            render_error(500, 'FPDF non disponible sur cet environnement.');
+        }
+        require_once $fpdfPath;
+    }
+
+    require_once __DIR__ . '/../../backend/config/PdfReportService.php';
+    (new PdfReportService($db))->generate($id);
+    exit;
 }
 
 $current_plan = $service_tables_ready ? intervention_get_current_plan($db, $id) : null;
@@ -152,8 +183,17 @@ try {
 $status_flow = ['submitted', 'acknowledged', 'in_progress', 'resolved'];
 $status_index = array_search($inc['status'], $status_flow, true);
 $status_index = $status_index === false ? -1 : $status_index;
+$internal_comments_count = count(array_filter($comments, static fn(array $comment): bool => !empty($comment['is_internal'])));
+$public_comments_count = max(0, count($comments) - $internal_comments_count);
+$moderated_photos_count = count(array_filter($photos, static fn(array $photo): bool => !empty($photo['moderation_message'])));
+$history_notes_count = count(array_filter($history, static fn(array $entry): bool => !empty($entry['note'])));
+$service_history_public_count = count(array_filter($service_history, static fn(array $entry): bool => !empty($entry['citizen_label'])));
+$incidentCategoryVisual = category_visual_resolve($inc['cat_icon'] ?? 'road', $inc['cat_name'] ?? null);
+$incidentCategorySceneUrl = category_scene_visual_url($inc['cat_icon'] ?? 'road', $inc['cat_name'] ?? null);
 $incidentVisualAsset = $inc['status'] === 'resolved' ? 'MOM-04' : 'MOM-03';
 $incidentVisualUrl = generated_visual_url($incidentVisualAsset);
+$incidentGuideAsset = in_array($inc['status'], ['submitted', 'acknowledged'], true) ? 'CHAR-05' : 'CHAR-04';
+$incidentGuideUrl = generated_visual_url($incidentGuideAsset);
 $next_step_label = match ($inc['status']) {
     'submitted' => 'Confirmer la prise en charge',
     'acknowledged' => 'Passer en intervention terrain',
@@ -261,11 +301,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        if ($scheduled_date === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $scheduled_date)) {
-            $_SESSION['flash_error'] = 'La date planifiee est obligatoire.';
+        if ($scheduled_date !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $scheduled_date)) {
+            $_SESSION['flash_error'] = 'Le format de la date planifiee est invalide.';
             header("Location: /admin/?page=incident_detail&id=$id");
             exit;
         }
+        $scheduled_date_val = $scheduled_date !== '' ? $scheduled_date : null;
 
         if ($source_type === 'provider' && $provider_name === '') {
             $_SESSION['flash_error'] = 'Indiquez le nom du prestataire missionne.';
@@ -305,7 +346,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 && incident_plan_matches_payload($existing_plan, [
                     'service_id' => $service_id,
                     'assigned_user_id' => $assigned_user_id > 0 ? $assigned_user_id : null,
-                    'scheduled_date' => $scheduled_date,
+                    'scheduled_date' => $scheduled_date_val,
                     'time_window_start' => $time_window_start !== '' ? $time_window_start : null,
                     'time_window_end' => $time_window_end !== '' ? $time_window_end : null,
                     'internal_note' => $internal_note !== '' ? $internal_note : null,
@@ -339,7 +380,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $admin['id'],
                 $assigned_user_id > 0 ? $assigned_user_id : null,
                 $is_reschedule ? 'rescheduled' : 'scheduled',
-                $scheduled_date,
+                $scheduled_date_val,
                 $time_window_start !== '' ? $time_window_start : null,
                 $time_window_end !== '' ? $time_window_end : null,
                 $internal_note !== '' ? $internal_note : null,
@@ -397,7 +438,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     : 'Intervention planifiee pour le service ' . $service['name'],
                 'citizen_label' => $citizen_label,
                 'payload'       => [
-                    'scheduled_date' => $scheduled_date,
+                    'scheduled_date' => $scheduled_date_val,
                     'time_window'    => $window_label !== '' ? $window_label : null,
                     'source_type'    => $source_type,
                     'provider_name'  => $provider_name !== '' ? $provider_name : null,
@@ -409,7 +450,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 (new PushNotificationService($db))->notifyInterventionPlanned($id, [
                     'service_name' => $service['name'],
-                    'scheduled_date' => $scheduled_date,
+                    'scheduled_date' => $scheduled_date_val,
                     'time_window_start' => $time_window_start !== '' ? $time_window_start : null,
                     'time_window_end' => $time_window_end !== '' ? $time_window_end : null,
                     'citizen_message' => $citizen_message !== '' ? $citizen_message : null,
@@ -483,9 +524,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                ->execute([$target_status, (int)$current_plan['id']]);
 
             $historyLabel = match ($target_status) {
-                'in_progress' => 'Intervention demarree pour le service ' . ($current_plan['service_name'] ?? 'communal'),
-                'completed' => 'Intervention marquee comme terminee pour le service ' . ($current_plan['service_name'] ?? 'communal'),
-                'cancelled' => 'Intervention annulee pour le service ' . ($current_plan['service_name'] ?? 'communal'),
+                'in_progress' => 'Intervention demarree pour le service ' . ($current_plan['service_name'] ?? 'attribue'),
+                'completed' => 'Intervention marquee comme terminee pour le service ' . ($current_plan['service_name'] ?? 'attribue'),
+                'cancelled' => 'Intervention annulee pour le service ' . ($current_plan['service_name'] ?? 'attribue'),
                 default => 'Intervention mise a jour',
             };
             $citizenLabel = match ($target_status) {
@@ -583,79 +624,119 @@ $active_nav = 'incidents';
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
-<div class="page-hero">
-  <div class="page-hero-copy">
-    <div class="page-hero-kicker">Dossier terrain</div>
-    <h2 class="page-hero-title"><?= $inc['title'] ? e($inc['title']) : 'Signalement citoyen sans titre' ?></h2>
-    <p class="page-hero-text">
-      Ce dossier doit permettre de comprendre en quelques secondes ou en est le traitement, quelle est la prochaine action utile et ce que verra le citoyen.
-    </p>
-  </div>
-  <div class="page-hero-metrics">
-    <div class="hero-chip">
-      <span class="hero-chip-value"><?= e($inc['reference']) ?></span>
-      <span class="hero-chip-label">reference de suivi</span>
-    </div>
-    <div class="hero-chip">
-      <span class="hero-chip-value"><?= status_label($inc['status']) ?></span>
-      <span class="hero-chip-label">etat actuel</span>
-    </div>
-    <div class="hero-chip">
-      <span class="hero-chip-value"><?= e($next_step_label) ?></span>
-      <span class="hero-chip-label">prochaine action utile</span>
-    </div>
-  </div>
-</div>
+<div class="page-async-scope" data-async-scope="incident-detail-admin">
 
-<div class="admin-guidance-grid">
-  <div class="admin-guidance-card">
-    <div class="admin-guidance-kicker">Lecture rapide</div>
-    <h3>Ce que le dossier raconte au premier regard.</h3>
-    <p>
-      Categorie, priorite, progression, citoyen concerne et trace de traitement doivent rester visibles sans devoir relire toute la fiche.
-    </p>
-  </div>
-  <div class="admin-guidance-card">
-    <div class="admin-guidance-kicker">Action recommande</div>
-    <h3><?= e($next_step_label) ?></h3>
-    <p>
-      Garder la prochaine etape explicite evite les traitements hesitants et rend la reponse plus lisible pour toute la chaine commune-terrain-citoyen.
-    </p>
-    <?php if ($incidentVisualUrl): ?>
-      <div class="admin-guidance-visual">
-        <?= generated_visual_html($incidentVisualAsset, ['class' => 'generated-visual generated-visual--contain generated-visual--portrait', 'label' => 'Scene de suivi dossier']) ?>
-        <div class="admin-guidance-visual-copy">
-          <strong>Scene de dossier disponible</strong>
-          <span>Le futur lot visuel pourra rendre cet etat de traitement immediatement lisible pour les agents.</span>
+<div class="dashboard-split-grid" style="margin-bottom: 20px; align-items: start;">
+  <div style="display:flex; flex-direction:column;">
+    <div class="page-hero <?= $incidentVisualUrl ? 'page-hero--with-visual' : '' ?>" style="margin-bottom:0; display:flex; flex-direction:row; align-items:stretch; gap:20px; flex-wrap:wrap;">
+      
+      <!-- Colonne Gauche : Textes & Badges -->
+      <div style="flex: 1 1 350px; display:flex; flex-direction:column; justify-content:flex-start; gap:18px;">
+        <div class="page-hero-copy" style="grid-column:unset; grid-row:unset;">
+          <div class="page-hero-kicker">Dossier terrain</div>
+          <h2 class="page-hero-title"><?= $inc['title'] ? e($inc['title']) : 'Signalement citoyen sans titre' ?></h2>
+          <?php if ($isTrainingMode): ?>
+          <p class="page-hero-text">
+            Ce dossier doit permettre de comprendre en quelques secondes ou en est le traitement, quelle est la prochaine action utile et ce que verra le citoyen.
+          </p>
+          <?php endif; ?>
+        </div>
+        
+        <div class="page-hero-metrics" style="display:flex; flex-wrap:wrap; gap:10px; grid-column:unset; grid-row:unset;">
+          <div class="hero-chip" style="flex: 1 1 auto;">
+            <span class="hero-chip-value"><?= e($inc['reference']) ?></span>
+            <span class="hero-chip-label">reference de suivi</span>
+          </div>
+          <div class="hero-chip" style="flex: 1 1 auto;">
+            <span class="hero-chip-value"><?= status_label($inc['status']) ?></span>
+            <span class="hero-chip-label">etat actuel</span>
+          </div>
+          <div class="hero-chip" style="flex: 100%; max-width:100%;">
+            <span class="hero-chip-value"><?= e($next_step_label) ?></span>
+            <span class="hero-chip-label">prochaine action utile</span>
+          </div>
         </div>
       </div>
-    <?php endif; ?>
-  </div>
-</div>
-
-<div class="admin-progress-card">
-  <div class="admin-progress-kicker">Progression dossier</div>
-  <div class="admin-progress-row">
-    <?php foreach ($status_flow as $index => $status): ?>
-      <?php
-        $done = $inc['status'] !== 'rejected' && $status_index >= $index;
-        $active = $inc['status'] === $status;
-      ?>
-      <div class="admin-progress-step">
-        <div class="admin-progress-dot <?= $done ? 'is-done' : '' ?> <?= $active ? 'is-active' : '' ?>"></div>
-        <div class="admin-progress-label"><?= e(status_label($status)) ?></div>
-      </div>
-    <?php endforeach; ?>
-  </div>
-  <?php if ($inc['status'] === 'rejected'): ?>
-    <div class="admin-progress-note">
-      Ce dossier est actuellement classe sans suite. La valeur de cette fiche depend surtout d un motif clair et d une trace de verification.
+      
+      <!-- Colonne Droite : Image Dynamique -->
+      <?php if ($incidentVisualUrl): ?>
+        <div class="page-hero-visual" style="flex: 0 0 240px; min-height: 220px; display:flex; flex-direction:column; grid-column:unset; grid-row:unset;">
+          <div class="generated-visual-panel generated-visual-panel--hero" style="width:100%; flex:1; border-radius:18px; position:relative; overflow:hidden; margin:0; display:flex; flex-direction:column; justify-content:flex-end;">
+            <img src="<?= e($incidentVisualUrl) ?>" alt="Scene du dossier" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1;">
+            
+            <div class="generated-visual-caption" style="position:relative; z-index:2; background:rgba(14,49,39,0.85); padding:12px; margin:0; border-radius:0;">
+              <strong style="color:#fff; font-size:12px; display:block;">Contexte terrain</strong>
+              <span style="color:rgba(255,255,255,0.7); font-size:11px;">Le signal et l'action prioritaire en un regard.</span>
+            </div>
+          </div>
+        </div>
+      <?php endif; ?>
+      
     </div>
-  <?php endif; ?>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:16px;">
+    <div class="admin-guidance-grid" style="grid-template-columns:1fr; gap:12px; margin-bottom:0;">
+      
+      <?php if ($isTrainingMode): ?>
+      <div class="admin-guidance-card">
+        <div class="admin-guidance-kicker">Lecture rapide</div>
+        <h3 style="font-size:1.1rem; margin-bottom:4px;">Ce que le dossier raconte au premier regard.</h3>
+        <p style="font-size:0.85rem;">
+          Priorite, citoyen concerne et traces de traitement doivent rester visibles au dessus de la ligne de flottaison.
+        </p>
+      </div>
+      <?php endif; ?>
+
+      <div class="admin-guidance-card">
+        <div class="admin-guidance-kicker">Action recommande</div>
+        <h3 style="font-size:1.1rem; margin-bottom:4px;"><?= e($next_step_label) ?></h3>
+        
+        <?php if ($isTrainingMode): ?>
+        <p style="font-size:0.85rem;">
+          Garder la direction prioritaire explicite evite l'hesitation dans la chaine de traitement.
+        </p>
+        <?php endif; ?>
+
+        <?php if ($incidentGuideUrl || $incidentVisualUrl): ?>
+          <div class="admin-guidance-visual" style="margin-top:12px;">
+            <?= generated_visual_html($incidentGuideUrl ? $incidentGuideAsset : $incidentVisualAsset, ['class' => 'generated-visual generated-visual--contain generated-visual--portrait', 'label' => 'Repere d action dossier']) ?>
+            <div class="admin-guidance-visual-copy">
+              <strong>Repere agent</strong>
+              <?php if ($isTrainingMode): ?>
+              <span>Le dossier assigne un visage a la responsabilite immediate.</span>
+              <?php endif; ?>
+            </div>
+          </div>
+        <?php endif; ?>
+      </div>
+    </div>
+
+    <div class="admin-progress-card" style="margin-bottom:0;">
+      <div class="admin-progress-kicker">Progression dossier</div>
+      <div class="admin-progress-row">
+        <?php foreach ($status_flow as $index => $status): ?>
+          <?php
+            $done = $inc['status'] !== 'rejected' && $status_index >= $index;
+            $active = $inc['status'] === $status;
+          ?>
+          <div class="admin-progress-step">
+            <div class="admin-progress-dot <?= $done ? 'is-done' : '' ?> <?= $active ? 'is-active' : '' ?>"></div>
+            <div class="admin-progress-label text-small"><?= e(status_label($status)) ?></div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+      <?php if ($inc['status'] === 'rejected'): ?>
+        <div class="admin-progress-note text-small">
+          Dossier classe sans suite. Attention au motif de cloture.
+        </div>
+      <?php endif; ?>
+    </div>
+  </div>
 </div>
 
 <?php if ($service_context || $current_plan): ?>
-<div class="admin-guidance-grid" style="margin-top:18px">
+<div class="admin-guidance-grid incident-detail-guidance-grid">
   <div class="admin-guidance-card">
     <div class="admin-guidance-kicker">Service responsable</div>
     <h3><?= e($service_context['service_name'] ?? 'Aucun service attribue') ?></h3>
@@ -684,74 +765,270 @@ require_once __DIR__ . '/../includes/layout.php';
     <?php endif; ?>
   </div>
 </div>
+
+<div class="card dashboard-section-card">
+  <div class="card-header">
+    <span class="card-title">Cockpit d execution</span>
+    <?php if ($isTrainingMode): ?>
+    <span class="text-muted text-small">Lire d abord ce qui doit devenir visible pour l agent et pour le citoyen.</span>
+    <?php endif; ?>
+  </div>
+  <div class="services-mode-band services-mode-band--tight">
+    <div class="services-mode-card">
+      <strong><?= e($service_context['service_name'] ?? 'Aucun') ?></strong>
+      <span>service pilote</span>
+    </div>
+    <div class="services-mode-card">
+      <strong><?= e($current_plan ? incident_plan_status_pill((string)$current_plan['status'])['label'] : 'A planifier') ?></strong>
+      <span>etat d execution</span>
+    </div>
+    <div class="services-mode-card">
+      <strong>
+        <?php if ($current_plan && ($current_plan['source_type'] ?? 'internal') === 'provider' && !empty($current_plan['provider_name'])): ?>
+          <?= e($current_plan['provider_name']) ?>
+        <?php elseif ($current_plan): ?>
+          Equipe interne
+        <?php else: ?>
+          En attente
+        <?php endif; ?>
+      </strong>
+      <span>mode d execution</span>
+    </div>
+  </div>
+  <div class="services-alert-band services-mode-band--spaced">
+    <div class="services-alert is-info">
+      <strong><?= e($next_step_label) ?></strong>
+      <div>prochaine etape recommandee pour faire avancer le dossier</div>
+    </div>
+    <div class="services-alert is-warning">
+      <strong>
+        <?php if ($current_plan): ?>
+          <?= e($current_plan['scheduled_date'] ?? 'Date a confirmer') ?>
+        <?php else: ?>
+          Aucun creneau
+        <?php endif; ?>
+      </strong>
+      <div>fenetre visible actuellement cote execution</div>
+    </div>
+  </div>
+</div>
 <?php endif; ?>
 
-<div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;">
+<div class="incident-detail-layout">
 
   <!-- Colonne principale -->
   <div>
 
     <!-- En-tête du signalement -->
-    <div class="card">
-      <div class="d-flex align-center justify-between" style="margin-bottom:16px">
+    <div class="card incident-detail-card">
+      <div class="d-flex align-center justify-between incident-detail-header">
         <div>
-          <code style="font-size:12px;color:#94a3b8"><?= e($inc['reference']) ?></code>
-          <h2 style="font-size:20px;font-weight:800;margin-top:4px">
+          <code class="incident-detail-ref"><?= e($inc['reference']) ?></code>
+          <h2 class="incident-detail-card-title">
             <?= $inc['title'] ? e($inc['title']) : '<span class="text-muted">Sans titre</span>' ?>
           </h2>
         </div>
-        <a href="/admin/?page=incidents" class="btn btn-outline btn-sm">← Retour</a>
+        <div class="users-inline-actions incident-detail-header-actions">
+          <?php include __DIR__ . '/../includes/pdf_export_button.php'; ?>
+          <a href="/admin/?page=incidents" class="btn btn-outline btn-sm" data-async-link data-async-scope="admin-main">← Retour</a>
+        </div>
       </div>
 
-      <div class="d-flex gap-8 flex-wrap" style="margin-bottom:16px;align-items:center">
-        <div style="display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:14px;background:<?= e($inc['cat_color']) ?>14;border:1px solid <?= e($inc['cat_color']) ?>33">
-          <?= category_visual_html($inc['cat_icon'] ?? 'road', $inc['cat_name'], 'sm', $inc['cat_color'] ?? null) ?>
-          <span style="font-size:13px;font-weight:700;color:<?= e($inc['cat_color']) ?>"><?= e($inc['cat_name']) ?></span>
+      <div class="d-flex gap-8 flex-wrap incident-detail-badges incident-detail-badges-row">
+        <div class="incident-detail-category-chip" style="--category-accent:<?= e($inc['cat_color']) ?>">
+          <?= category_visual_html($inc['cat_icon'] ?? 'road', $inc['cat_name'], 'md', $inc['cat_color'] ?? null) ?>
+          <div class="admin-category-cell-copy">
+            <span class="incident-detail-category-name"><?= e($inc['cat_name']) ?></span>
+            <span class="text-muted text-small"><?= e($incidentCategoryVisual['description'] ?? '') ?></span>
+          </div>
         </div>
         <span class="badge <?= status_class($inc['status']) ?>"><?= status_label($inc['status']) ?></span>
         <span class="badge <?= priority_class($inc['priority'] ?? 'medium') ?>"><?= priority_label($inc['priority'] ?? 'medium') ?></span>
-        <span class="badge badge-gray">📅 <?= format_date($inc['created_at']) ?></span>
+        <span class="badge badge-gray">Cree le <?= format_date($inc['created_at']) ?></span>
         <!-- Badge votes (v1.1) -->
         <?php if ($inc['votes_count'] > 0): ?>
-        <span class="badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0">
-          👍 <?= (int)$inc['votes_count'] ?> vote<?= $inc['votes_count'] > 1 ? 's' : '' ?> "Moi aussi"
+        <span class="badge incident-detail-votes-badge">
+          <?= (int)$inc['votes_count'] ?> soutien<?= $inc['votes_count'] > 1 ? 's' : '' ?> citoyen<?= $inc['votes_count'] > 1 ? 's' : '' ?>
         </span>
         <?php endif; ?>
       </div>
 
-      <p style="font-size:15px;line-height:1.7;color:#374151;margin-bottom:16px"><?= nl2br(e($inc['description'])) ?></p>
+      <p class="incident-detail-description"><?= nl2br(e($inc['description'])) ?></p>
 
-      <?php if ($inc['address']): ?>
-      <p class="text-muted text-small">📍 <?= e($inc['address']) ?></p>
+      <div class="incident-detail-meta-list">
+        <?php if ($inc['address']): ?>
+        <p class="text-muted text-small">Lieu · <?= e($inc['address']) ?></p>
+        <?php endif; ?>
+        <p class="text-muted text-small">Coordonnées · <?= number_format($inc['latitude'],6) ?>, <?= number_format($inc['longitude'],6) ?></p>
+      </div>
+
+      <!-- CARTE ET PREUVES DU SIGNALEMENT -->
+      <?php if ((!empty($inc['latitude']) && !empty($inc['longitude'])) || !empty($photos)): ?>
+      <div class="card incident-detail-card" style="margin-top:20px;">
+        <div class="card-header card-header--split">
+          <div>
+            <span class="card-title">Localisation et Preuves</span>
+            <?php if ($isTrainingMode): ?>
+            <p class="incident-detail-section-note">Verifiez les coordonnees GPS et les preuves visuelles attachees au dossier (cliquez sur une photo pour activer l'Inspecteur).</p>
+            <?php endif; ?>
+          </div>
+          <?php if (!empty($photos)): ?>
+            <div class="incident-detail-proof-summary">
+              <span class="badge badge-gray"><?= count($photos) ?> photo<?= count($photos) > 1 ? 's' : '' ?></span>
+            </div>
+          <?php endif; ?>
+        </div>
+        
+        <?php if (!empty($inc['latitude']) && !empty($inc['longitude'])): ?>
+          <div id="incident-detail-map" style="height: 250px; border-radius: 8px; z-index: 1; margin-bottom: <?= !empty($photos) ? '20px' : '0' ?>;"></div>
+        <?php endif; ?>
+
+        <?php if (!empty($photos)): ?>
+          <div class="incident-detail-photo-grid">
+            <?php foreach ($photos as $index => $ph): ?>
+              <div class="incident-detail-photo-card"
+                   data-photo-index="<?= $index ?>"
+                   data-photo-url="<?= e($ph['url']) ?>">
+                <span class="incident-detail-photo-thumb-wrap">
+                  <img src="<?= e($ph['url']) ?>" alt="Photo" class="incident-detail-photo-thumb" loading="lazy">
+                  <span class="incident-detail-photo-index"><?= ($index + 1) ?>/<?= count($photos) ?></span>
+                  <span class="incident-detail-photo-hover-hint">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M11 8v6M8 11h6"/></svg>
+                  </span>
+                </span>
+                <div class="incident-detail-photo-meta">
+                  <span class="incident-detail-photo-title"><?= e($ph['file_name'] ?? 'Preuve citoyenne') ?></span>
+                  <?php if (!empty($ph['moderation_message'])): ?>
+                    <small><?= e($ph['moderation_message']) ?></small>
+                  <?php else: ?>
+                    <small>Cliquer pour ouvrir.</small>
+                  <?php endif; ?>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </div>
       <?php endif; ?>
-      <p class="text-muted text-small">🗺️ Coordonnées : <?= number_format($inc['latitude'],6) ?>, <?= number_format($inc['longitude'],6) ?></p>
+
+
+
+      <div class="incident-detail-reading-strip">
+        <div class="incident-detail-reading-item">
+          <small>Preuves</small>
+          <strong><?= count($photos) ?> photo<?= count($photos) > 1 ? 's' : '' ?></strong>
+          <span><?= $moderated_photos_count > 0 ? $moderated_photos_count . ' note' . ($moderated_photos_count > 1 ? 's' : '') . ' de moderation' : 'serie source lisible dans la fiche' ?></span>
+        </div>
+        <div class="incident-detail-reading-item">
+          <small>Echanges</small>
+          <strong><?= count($comments) ?> commentaire<?= count($comments) > 1 ? 's' : '' ?></strong>
+          <span><?= $public_comments_count ?> public<?= $public_comments_count > 1 ? 's' : '' ?> · <?= $internal_comments_count ?> interne<?= $internal_comments_count > 1 ? 's' : '' ?></span>
+        </div>
+        <div class="incident-detail-reading-item">
+          <small>Trace</small>
+          <strong><?= count($history) + count($service_history) ?> etape<?= (count($history) + count($service_history)) > 1 ? 's' : '' ?></strong>
+          <span><?= $history_notes_count ?> note<?= $history_notes_count > 1 ? 's' : '' ?> statut · <?= $service_history_public_count ?> message<?= $service_history_public_count > 1 ? 's' : '' ?> visible<?= $service_history_public_count > 1 ? 's' : '' ?></span>
+        </div>
+      </div>
+
     </div>
 
-    <!-- Photos -->
-    <?php if (!empty($photos)): ?>
-    <div class="card">
-      <div class="card-header"><span class="card-title">📷 Photos (<?= count($photos) ?>)</span></div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;">
-        <?php foreach ($photos as $ph): ?>
-          <a href="<?= e($ph['url']) ?>" target="_blank">
-            <img src="<?= e($ph['url']) ?>" alt="Photo"
-                 style="width:160px;height:120px;object-fit:cover;border-radius:8px;border:2px solid #e2e8f0;">
-          </a>
-        <?php endforeach; ?>
+
+
+    <!-- Hover aperçu flottant -->
+    <div id="photo-hover-preview" class="photo-hover-preview" aria-hidden="true">
+      <img id="photo-hover-img" src="" alt="">
+    </div>
+
+    <!-- Modal lightbox style Instagram -->
+    <div id="photo-lightbox" class="photo-lightbox" role="dialog" aria-modal="true" aria-label="Preuve citoyenne" aria-hidden="true">
+      <div class="photo-lightbox-backdrop"></div>
+      <div class="photo-lightbox-shell">
+        <!-- Navigateur gauche/droite -->
+        <button class="photo-lightbox-nav photo-lightbox-nav--prev" id="lb-prev" aria-label="Photo précédente">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <button class="photo-lightbox-nav photo-lightbox-nav--next" id="lb-next" aria-label="Photo suivante">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <!-- Fermer -->
+        <button class="photo-lightbox-close" id="lb-close" aria-label="Fermer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <!-- Photo -->
+        <div class="photo-lightbox-media">
+          <img id="lb-img" src="" alt="Preuve citoyenne">
+          <div class="photo-lightbox-counter" id="lb-counter"></div>
+        </div>
+        <!-- Panneau latéral -->
+        <aside class="photo-lightbox-panel">
+          <div class="photo-lightbox-panel-head">
+            <span class="photo-lightbox-cat-dot" id="lb-cat-dot"></span>
+            <div>
+              <strong id="lb-incident-ref"></strong>
+              <span class="photo-lightbox-incident-title" id="lb-incident-title"></span>
+            </div>
+            <span class="badge" id="lb-status-badge"></span>
+          </div>
+          <div class="photo-lightbox-panel-photo-name" id="lb-photo-name"></div>
+          <div class="photo-lightbox-panel-actions">
+            <a id="lb-source-link" href="#" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Source originale
+            </a>
+          </div>
+          <div class="photo-lightbox-comments" id="lb-comments">
+            <!-- injecté par JS -->
+          </div>
+
+          <!-- Quick Action Planification Modal Embbed -->
+          <div class="photo-lightbox-quick-action" style="padding: 20px; border-top: 1px solid rgba(0,0,0,0.06); background: rgba(245,248,246,0.5);">
+            <div style="font-size: 13px; font-weight: 800; margin-bottom: 12px; color: var(--primary);">Action Rapide · Planification</div>
+            <form method="POST" action="" data-async-form>
+              <input type="hidden" name="action" value="plan_intervention">
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label class="form-label" style="font-size: 11px;">Service responsable</label>
+                <select name="service_id" class="form-control" style="padding: 6px; font-size: 12px; height: 32px;" required>
+                  <option value="">Choisir un service…</option>
+                  <?php foreach ($services as $service): ?>
+                    <option value="<?= (int)$service['id'] ?>" <?= ((int)($current_plan['service_id'] ?? $service_context['service_id'] ?? 0) === (int)$service['id']) ? 'selected' : '' ?>>
+                      <?= e($service['name']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="d-flex gap-8" style="margin-bottom: 12px;">
+                <div class="form-group" style="margin-bottom: 0px; flex: 1;">
+                  <label class="form-label" style="font-size: 11px;">Date prevue (opt.)</label>
+                  <input type="date" name="scheduled_date" class="form-control" style="padding: 6px; font-size: 12px; height: 32px;" value="<?= e($current_plan['scheduled_date'] ?? '') ?>">
+                </div>
+                <div class="form-group" style="margin-bottom: 0px; flex: 1;">
+                  <label class="form-label" style="font-size: 11px;">Mode</label>
+                  <select name="source_type" class="form-control" style="padding: 6px; font-size: 12px; height: 32px;">
+                    <option value="internal" <?= (($current_plan['source_type'] ?? 'internal') === 'internal') ? 'selected' : '' ?>>Interne</option>
+                    <option value="provider" <?= (($current_plan['source_type'] ?? '') === 'provider') ? 'selected' : '' ?>>Prestataire</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%; padding: 6px 12px; font-size: 12px; background: linear-gradient(180deg, var(--primary), var(--primary-dark));">
+                Valider l intervention
+              </button>
+            </form>
+          </div>
+        </aside>
       </div>
     </div>
-    <?php endif; ?>
 
     <!-- Votants "Moi aussi" (v1.1) -->
     <?php if (!empty($voters)): ?>
-    <div class="card">
+    <div class="card incident-detail-card">
       <div class="card-header">
-        <span class="card-title">👍 Citoyens concernés (<?= count($voters) ?>)</span>
-        <span class="text-muted text-small" style="margin-left:8px">Ont voté "Moi aussi"</span>
+        <span class="card-title">Citoyens concernes (<?= count($voters) ?>)</span>
+        <span class="text-muted text-small incident-detail-voters-note">Ont signale leur soutien</span>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <div class="incident-detail-voters">
         <?php foreach ($voters as $v): ?>
-          <span style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;padding:4px 12px;font-size:13px;color:#15803d">
+          <span class="incident-detail-voter-pill">
             <?= e($v['full_name']) ?>
           </span>
         <?php endforeach; ?>
@@ -760,45 +1037,58 @@ require_once __DIR__ . '/../includes/layout.php';
     <?php endif; ?>
 
     <!-- Commentaires -->
-    <div class="card">
-      <div class="card-header"><span class="card-title">💬 Commentaires</span></div>
+    <div class="card incident-detail-card">
+      <div class="card-header card-header--split">
+        <div>
+          <span class="card-title">Commentaires</span>
+          <p class="incident-detail-section-note">Lecture croisee des echanges publics et des notes internes sans perdre le fil du dossier.</p>
+        </div>
+        <div class="incident-detail-section-badges">
+          <span class="badge badge-gray"><?= count($comments) ?> entree<?= count($comments) > 1 ? 's' : '' ?></span>
+          <span class="badge badge-gray"><?= $public_comments_count ?> publique<?= $public_comments_count > 1 ? 's' : '' ?></span>
+          <span class="badge badge-gray"><?= $internal_comments_count ?> interne<?= $internal_comments_count > 1 ? 's' : '' ?></span>
+        </div>
+      </div>
 
       <?php foreach ($comments as $cm): ?>
-        <div style="background:<?= $cm['is_internal'] ? '#fef9c3' : '#f8fafc' ?>;border-radius:10px;padding:14px;margin-bottom:12px;border-left:3px solid <?= $cm['is_internal'] ? '#f59e0b' : '#e2e8f0' ?>">
-          <div class="d-flex align-center justify-between" style="margin-bottom:6px">
+        <div class="incident-detail-comment-card <?= $cm['is_internal'] ? 'incident-detail-comment-card--internal' : '' ?>">
+          <div class="d-flex align-center justify-between incident-detail-comment-head">
             <div>
               <strong><?= e($cm['author_name']) ?></strong>
-              <span class="badge badge-<?= $cm['author_role']==='admin'?'red':($cm['author_role']==='agent'?'blue':'gray') ?>" style="margin-left:6px;font-size:10px">
+              <span class="badge badge-<?= $cm['author_role']==='admin'?'red':($cm['author_role']==='agent'?'blue':'gray') ?> incident-detail-comment-role">
                 <?= role_label($cm['author_role']) ?>
               </span>
               <?php if ($cm['is_internal']): ?>
-                <span class="badge badge-yellow" style="margin-left:4px;font-size:10px">🔒 Note interne</span>
+                <span class="badge badge-yellow incident-detail-comment-internal">Interne</span>
               <?php endif; ?>
             </div>
             <span class="text-muted text-small"><?= format_date($cm['created_at']) ?></span>
           </div>
-          <p style="margin:0;font-size:14px;line-height:1.6"><?= nl2br(e($cm['comment'])) ?></p>
+          <p class="incident-detail-comment-text"><?= nl2br(e($cm['comment'])) ?></p>
         </div>
       <?php endforeach; ?>
 
       <?php if (empty($comments)): ?>
-        <p class="text-muted text-small">Aucun commentaire pour l'instant.</p>
+        <div class="incident-detail-empty">
+          <strong>Aucun commentaire pour l instant.</strong>
+          <span>Le dossier peut encore etre qualifie ou documente sans echange supplementaire.</span>
+        </div>
       <?php endif; ?>
 
       <!-- Formulaire d'ajout de commentaire -->
-      <form method="POST" action="" style="margin-top:16px">
+      <form method="POST" action="" class="incident-detail-comment-form" data-async-form>
         <input type="hidden" name="action" value="add_comment">
         <div class="form-group">
           <label class="form-label">Ajouter un commentaire</label>
           <textarea name="comment" class="form-control" rows="3"
                     placeholder="Répondre au citoyen ou ajouter une note interne…" required></textarea>
         </div>
-        <div class="d-flex align-center gap-8">
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+        <div class="d-flex align-center gap-8 incident-detail-comment-form-actions">
+          <label class="incident-detail-comment-toggle">
             <input type="checkbox" name="is_internal" value="1">
-            🔒 Note interne (non visible par le citoyen)
+            Note interne (non visible par le citoyen)
           </label>
-          <button type="submit" class="btn btn-primary btn-sm" style="margin-left:auto">Envoyer</button>
+          <button type="submit" class="btn btn-primary btn-sm incident-detail-comment-submit">Envoyer</button>
         </div>
       </form>
     </div>
@@ -806,22 +1096,22 @@ require_once __DIR__ . '/../includes/layout.php';
   </div><!-- /col principale -->
 
   <!-- Colonne latérale -->
-  <div>
+  <aside class="incident-detail-sidebar">
 
     <!-- Informations citoyen -->
-    <div class="card">
-      <div class="card-header"><span class="card-title">👤 Citoyen</span></div>
+    <div class="card incident-detail-card">
+      <div class="card-header"><span class="card-title">Citoyen</span></div>
       <p><strong><?= e($inc['reporter_name']) ?></strong></p>
-      <p class="text-muted text-small">📧 <?= e($inc['reporter_email']) ?></p>
+      <p class="text-muted text-small">Email · <?= e($inc['reporter_email']) ?></p>
       <?php if ($inc['reporter_phone']): ?>
-        <p class="text-muted text-small">📞 <?= e($inc['reporter_phone']) ?></p>
+        <p class="text-muted text-small">Telephone · <?= e($inc['reporter_phone']) ?></p>
       <?php endif; ?>
     </div>
 
     <!-- Changer le statut + envoi notification (v1.1) -->
-    <div class="card">
-      <div class="card-header"><span class="card-title">⚙️ Traitement</span></div>
-      <form method="POST" action="">
+    <div class="card incident-detail-card">
+      <div class="card-header"><span class="card-title">Traitement</span></div>
+      <form method="POST" action="" data-async-form>
         <input type="hidden" name="action" value="change_status">
         <div class="form-group">
           <label class="form-label">Nouveau statut</label>
@@ -849,28 +1139,64 @@ require_once __DIR__ . '/../includes/layout.php';
         </div>
 
         <!-- Option notification push (v1.1) -->
-        <div class="form-group" style="background:#f0fdf4;border-radius:8px;padding:12px;border:1px solid #bbf7d0">
-          <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-            <input type="checkbox" name="send_notification" value="1" checked style="margin-top:2px">
+        <div class="form-group incident-detail-notify-box">
+          <label class="incident-detail-notify-label">
+            <input type="checkbox" name="send_notification" value="1" checked class="incident-detail-notify-checkbox">
             <div>
-              <span style="font-size:13px;font-weight:600;color:#15803d">🔔 Notifier le citoyen</span>
-              <p style="font-size:11px;color:#166534;margin:2px 0 0">
+              <span class="incident-detail-notify-title">Notifier le citoyen</span>
+              <p class="incident-detail-notify-copy">
                 Envoie une notification push sur l'application mobile du citoyen
               </p>
             </div>
           </label>
         </div>
 
-        <button type="submit" class="btn btn-success w-100" style="justify-content:center">
-          ✅ Mettre à jour
+        <button type="submit" class="btn btn-success w-100 incident-detail-submit-center">
+          Mettre a jour
         </button>
       </form>
     </div>
 
     <?php if ($service_tables_ready): ?>
-    <div class="card">
-      <div class="card-header"><span class="card-title">🗓️ Planifier l intervention</span></div>
-      <form method="POST" action="">
+    <div class="card incident-detail-card">
+      <div class="card-header"><span class="card-title">Lecture d execution</span></div>
+      <div class="admin-category-strip incident-detail-pill-column">
+        <div class="admin-category-pill" style="--category-accent:<?= e($inc['cat_color'] ?? ($incidentCategoryVisual['accent'] ?? ($themePalette['primary'] ?? '#355160'))) ?>;">
+          <?= category_visual_html($inc['cat_icon'] ?? 'road', $inc['cat_name'], 'md', $inc['cat_color'] ?? null) ?>
+          <div class="admin-category-pill-copy">
+            <strong>
+              <?php if ($current_plan && ($current_plan['source_type'] ?? 'internal') === 'provider' && !empty($current_plan['provider_name'])): ?>
+                Prestataire missionne · <?= e($current_plan['provider_name']) ?>
+              <?php elseif ($current_plan && ($current_plan['source_type'] ?? 'internal') === 'internal'): ?>
+                Equipe interne
+              <?php else: ?>
+                Service en attente de planification
+              <?php endif; ?>
+            </strong>
+            <span>
+              <?php if ($current_plan): ?>
+                <?= e($current_plan['service_name'] ?? ($service_context['service_name'] ?? 'Service attribue')) ?>
+                <?php if (!empty($current_plan['scheduled_date'])): ?>
+                  · <?= e($current_plan['scheduled_date']) ?>
+                <?php endif; ?>
+                <?php if (!empty($current_plan['time_window_start']) || !empty($current_plan['time_window_end'])): ?>
+                  · <?= e(trim(implode(' - ', array_filter([$current_plan['time_window_start'] ?? null, $current_plan['time_window_end'] ?? null])))) ?>
+                <?php endif; ?>
+              <?php else: ?>
+                Le service est connu, mais aucune fenetre visible n est encore posee pour le citoyen.
+              <?php endif; ?>
+            </span>
+          </div>
+          <span class="admin-category-pill-count admin-category-pill-count--wide">
+            <?= e($current_plan ? incident_plan_status_pill((string)$current_plan['status'])['label'] : 'A planifier') ?>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card incident-detail-card">
+      <div class="card-header"><span class="card-title">Planifier l intervention</span></div>
+      <form method="POST" action="" data-async-form>
         <input type="hidden" name="action" value="plan_intervention">
 
         <div class="form-group">
@@ -897,16 +1223,16 @@ require_once __DIR__ . '/../includes/layout.php';
           </select>
         </div>
 
-        <div class="d-flex gap-8">
-          <div class="form-group" style="flex:1">
-            <label class="form-label">Date prevue</label>
-            <input type="date" name="scheduled_date" class="form-control" value="<?= e($current_plan['scheduled_date'] ?? '') ?>" required>
+        <div class="d-flex gap-8 incident-detail-plan-row">
+          <div class="form-group incident-detail-plan-col">
+            <label class="form-label">Date prevue (optionnelle)</label>
+            <input type="date" name="scheduled_date" class="form-control" value="<?= e($current_plan['scheduled_date'] ?? '') ?>">
           </div>
-          <div class="form-group" style="flex:1">
+          <div class="form-group incident-detail-plan-col">
             <label class="form-label">Debut</label>
             <input type="time" name="time_window_start" class="form-control" value="<?= e($current_plan['time_window_start'] ?? '') ?>">
           </div>
-          <div class="form-group" style="flex:1">
+          <div class="form-group incident-detail-plan-col">
             <label class="form-label">Fin</label>
             <input type="time" name="time_window_end" class="form-control" value="<?= e($current_plan['time_window_end'] ?? '') ?>">
           </div>
@@ -939,36 +1265,36 @@ require_once __DIR__ . '/../includes/layout.php';
                     placeholder="Ex: Intervention a synchroniser avec la tournee secteur ouest."><?= e($current_plan['internal_note'] ?? '') ?></textarea>
         </div>
 
-        <button type="submit" class="btn btn-primary w-100" style="justify-content:center">
+        <button type="submit" class="btn btn-primary w-100 incident-detail-submit-center">
           <?= $current_plan ? 'Mettre a jour la planification' : 'Planifier l intervention' ?>
         </button>
       </form>
 
       <?php if ($current_plan): ?>
         <?php $planPill = incident_plan_status_pill((string)$current_plan['status']); ?>
-        <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px">
-            <strong style="color:#183229">Avancement de l intervention</strong>
+        <div class="incident-detail-plan-footer">
+          <div class="incident-detail-plan-footer-head">
+            <strong>Avancement de l intervention</strong>
             <span class="badge <?= e($planPill['class']) ?>"><?= e($planPill['label']) ?></span>
           </div>
-          <p class="text-muted text-small" style="margin-bottom:12px">
+          <p class="text-muted text-small incident-detail-plan-footer-copy">
             Utilisez ces actions pour rendre visible le passage terrain sans reouvrir toute la planification.
           </p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div class="incident-detail-plan-actions">
             <?php if (in_array((string)$current_plan['status'], ['scheduled', 'rescheduled'], true)): ?>
-              <form method="POST" action="">
+              <form method="POST" action="" data-async-form>
                 <input type="hidden" name="action" value="update_plan_status">
                 <input type="hidden" name="target_status" value="in_progress">
                 <button type="submit" class="btn btn-primary btn-sm">Demarrer l intervention</button>
               </form>
             <?php endif; ?>
             <?php if (in_array((string)$current_plan['status'], ['scheduled', 'rescheduled', 'in_progress'], true)): ?>
-              <form method="POST" action="">
+              <form method="POST" action="" data-async-form>
                 <input type="hidden" name="action" value="update_plan_status">
                 <input type="hidden" name="target_status" value="completed">
                 <button type="submit" class="btn btn-success btn-sm">Marquer terminee</button>
               </form>
-              <form method="POST" action="" onsubmit="return confirm('Annuler cette intervention ?')">
+              <form method="POST" action="" onsubmit="return confirm('Annuler cette intervention ?')" data-async-form>
                 <input type="hidden" name="action" value="update_plan_status">
                 <input type="hidden" name="target_status" value="cancelled">
                 <button type="submit" class="btn btn-outline btn-sm">Annuler</button>
@@ -982,8 +1308,17 @@ require_once __DIR__ . '/../includes/layout.php';
 
     <!-- Historique des statuts -->
     <?php if (!empty($history)): ?>
-    <div class="card">
-      <div class="card-header"><span class="card-title">📜 Historique</span></div>
+    <div class="card incident-detail-card">
+      <div class="card-header card-header--split">
+        <div>
+          <span class="card-title">Historique</span>
+          <p class="incident-detail-section-note">Trace des changements de statut et des decisions visibles dans le cycle de traitement.</p>
+        </div>
+        <div class="incident-detail-section-badges">
+          <span class="badge badge-gray"><?= count($history) ?> etape<?= count($history) > 1 ? 's' : '' ?></span>
+          <span class="badge badge-gray"><?= $history_notes_count ?> note<?= $history_notes_count > 1 ? 's' : '' ?></span>
+        </div>
+      </div>
       <ul class="timeline">
         <?php foreach ($history as $h): ?>
         <li class="timeline-item">
@@ -991,13 +1326,13 @@ require_once __DIR__ . '/../includes/layout.php';
           <div class="timeline-content">
             <div>
               <?php if ($h['old_status']): ?>
-                <span class="badge <?= status_class($h['old_status']) ?>" style="font-size:10px"><?= status_label($h['old_status']) ?></span>
+                <span class="badge <?= status_class($h['old_status']) ?> incident-detail-comment-role"><?= status_label($h['old_status']) ?></span>
                 → 
               <?php endif; ?>
               <span class="badge <?= status_class($h['new_status']) ?>"><?= status_label($h['new_status']) ?></span>
             </div>
             <?php if ($h['note']): ?>
-              <p style="font-size:13px;margin:4px 0 0"><?= e($h['note']) ?></p>
+              <p class="incident-detail-history-note"><?= e($h['note']) ?></p>
             <?php endif; ?>
             <div class="timeline-meta">
               <?= e($h['changed_by_name']) ?> · <?= format_date($h['changed_at']) ?>
@@ -1010,8 +1345,17 @@ require_once __DIR__ . '/../includes/layout.php';
     <?php endif; ?>
 
     <?php if (!empty($service_history)): ?>
-    <div class="card">
-      <div class="card-header"><span class="card-title">🧭 Trace d intervention</span></div>
+    <div class="card incident-detail-card">
+      <div class="card-header card-header--split">
+        <div>
+          <span class="card-title">Trace d intervention</span>
+          <p class="incident-detail-section-note">Lecture du passage terrain et des actions de service sans rouvrir toute la planification.</p>
+        </div>
+        <div class="incident-detail-section-badges">
+          <span class="badge badge-gray"><?= count($service_history) ?> trace<?= count($service_history) > 1 ? 's' : '' ?></span>
+          <span class="badge badge-gray"><?= $service_history_public_count ?> message<?= $service_history_public_count > 1 ? 's' : '' ?> visible<?= $service_history_public_count > 1 ? 's' : '' ?></span>
+        </div>
+      </div>
       <ul class="timeline">
         <?php foreach ($service_history as $entry): ?>
         <?php $payload = !empty($entry['payload_json']) ? json_decode($entry['payload_json'], true) : []; ?>
@@ -1020,10 +1364,10 @@ require_once __DIR__ . '/../includes/layout.php';
           <div class="timeline-content">
             <div><strong><?= e($entry['event_label'] ?? $entry['event_type']) ?></strong></div>
             <?php if (!empty($entry['citizen_label'])): ?>
-              <p style="font-size:13px;margin:4px 0 0;color:#374151"><?= e($entry['citizen_label']) ?></p>
+              <p class="incident-detail-history-note incident-detail-history-note--muted"><?= e($entry['citizen_label']) ?></p>
             <?php endif; ?>
             <?php if (!empty($payload['scheduled_date'])): ?>
-              <p style="font-size:12px;margin:4px 0 0;color:#64748b">
+              <p class="incident-detail-meta-note">
                 Date prevue : <?= e($payload['scheduled_date']) ?>
                 <?php if (!empty($payload['time_window'])): ?>
                   · <?= e($payload['time_window']) ?>
@@ -1031,7 +1375,7 @@ require_once __DIR__ . '/../includes/layout.php';
               </p>
             <?php endif; ?>
             <?php if (!empty($payload['provider_name'])): ?>
-              <p style="font-size:12px;margin:4px 0 0;color:#64748b">Prestataire : <?= e($payload['provider_name']) ?></p>
+              <p class="incident-detail-meta-note">Prestataire : <?= e($payload['provider_name']) ?></p>
             <?php endif; ?>
             <div class="timeline-meta">
               <?= e($entry['actor_name'] ?? 'Systeme') ?>
@@ -1047,8 +1391,472 @@ require_once __DIR__ . '/../includes/layout.php';
     </div>
     <?php endif; ?>
 
-  </div><!-- /col latérale -->
+  </aside><!-- /col latérale -->
 
 </div>
+</div>
+
+<style>
+/* ── Photo grid ──────────────────────────────────────────── */
+.incident-detail-photo-grid {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 16px !important;
+}
+.incident-detail-photo-card {
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease;
+  position: relative;
+  z-index: 1;
+  border-radius: 14px;
+  overflow: hidden;
+  width: 180px;
+  height: 180px;
+  flex-shrink: 0;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.incident-detail-photo-card:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 16px 32px rgba(15,48,38,0.18);
+  z-index: 10;
+}
+.incident-detail-photo-thumb-wrap { position: relative; display: block; height: 100%; }
+.incident-detail-photo-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.incident-detail-photo-hover-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.2s, background 0.2s;
+}
+.incident-detail-photo-card:hover .incident-detail-photo-hover-hint {
+  opacity: 1;
+  background: rgba(0,0,0,0.32);
+}
+
+/* ── Hover preview flottant ──────────────────────────────── */
+.photo-hover-preview {
+  position: fixed;
+  z-index: 9000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.35);
+  width: 260px;
+  height: 260px;
+  background: #111;
+}
+.photo-hover-preview.is-visible { opacity: 1; }
+.photo-hover-preview img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Lightbox ────────────────────────────────────────────── */
+.photo-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+.photo-lightbox.is-open {
+  visibility: visible;
+  opacity: 1;
+}
+.photo-lightbox.is-open .photo-lightbox-shell {
+  transform: scale(1);
+}
+.photo-lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(8px);
+}
+.photo-lightbox-shell {
+  position: relative;
+  display: flex;
+  width: min(1000px, 95vw);
+  height: min(680px, 92vh);
+  background: #111;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+  transform: scale(0.95);
+  transition: transform 0.35s cubic-bezier(0.19, 1, 0.22, 1);
+}
+.photo-lightbox-media {
+  flex: 1 1 0%;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.photo-lightbox-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  transition: opacity 0.25s;
+}
+.photo-lightbox-media img.is-loading { opacity: 0; transform: scale(0.98); }
+.photo-lightbox-counter {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.photo-lightbox-panel {
+  width: 320px;
+  flex-shrink: 0;
+  background: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  border-left: 1px solid rgba(255,255,255,0.08);
+}
+.photo-lightbox-panel-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.photo-lightbox-cat-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+.photo-lightbox-panel-head > div { flex: 1; }
+.photo-lightbox-panel-head strong { color: #fff; font-size: 13px; display: block; }
+.photo-lightbox-incident-title { color: #999; font-size: 12px; display: block; margin-top: 2px; line-height: 1.3; }
+.photo-lightbox-panel-photo-name {
+  padding: 10px 16px;
+  font-size: 12px;
+  color: #bbb;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.photo-lightbox-panel-actions {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.photo-lightbox-panel-actions .btn {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+  background: rgba(255,255,255,0.08); color: #ddd; border: 1px solid rgba(255,255,255,0.12);
+}
+.photo-lightbox-panel-actions .btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+.photo-lightbox-comments {
+  flex: 1;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lb-comment {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.lb-comment-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.lb-comment-author { color: #fff; font-weight: 600; }
+.lb-comment-date { color: #666; margin-left: auto; }
+.lb-comment-text { font-size: 12px; color: #ccc; line-height: 1.5; }
+.lb-comment-internal .lb-comment-author { color: #fbbf24; }
+.lb-comments-empty { color: #555; font-size: 12px; font-style: italic; padding: 8px 0; }
+.photo-lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: rgba(0,0,0,0.5);
+  border: none;
+  color: #fff;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.photo-lightbox-nav:hover { background: rgba(0,0,0,0.8); }
+.photo-lightbox-nav--prev { left: 8px; }
+.photo-lightbox-nav--next { right: calc(320px + 8px); }
+.photo-lightbox-close {
+  position: absolute;
+  top: 10px; right: calc(320px + 10px);
+  z-index: 10;
+  background: rgba(0,0,0,0.5);
+  border: none;
+  color: #fff;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.photo-lightbox-close:hover { background: rgba(200,0,0,0.7); }
+
+.detail-map-popup-proof { text-align: center; font-family: inherit; }
+.detail-map-popup-proof img { width: 100%; max-width: 250px; object-fit: cover; border-radius: 6px; box-shadow: 0 8px 16px rgba(0,0,0,0.15); margin-top: 8px; }
+</style>
+
+<!-- Lightbox photo viewer -->
+<script>
+(() => {
+  const PHOTOS = <?= json_encode(array_map(static fn($ph) => [
+    'url'      => $ph['url'] ?? '',
+    'name'     => $ph['file_name'] ?? 'Preuve citoyenne',
+    'mod'      => $ph['moderation_message'] ?? null,
+  ], $photos)) ?>;
+
+  const INCIDENT = <?= json_encode([
+    'ref'    => $inc['reference'] ?? ('#' . $inc['id']),
+    'title'  => $inc['title'] ?: ($inc['cat_name'] ?? ''),
+    'status' => $inc['status'] ?? '',
+    'color'  => $inc['cat_color'] ?? '#355160',
+  ]) ?>;
+
+  const STATUS_LABELS = {
+    submitted:    'Soumis',
+    acknowledged: 'Pris en charge',
+    in_progress:  'En cours',
+    resolved:     'Resolu',
+    rejected:     'Rejete',
+  };
+  const STATUS_COLORS = {
+    submitted:    'badge-gray',
+    acknowledged: 'badge-blue',
+    in_progress:  'badge-blue',
+    resolved:     'badge-green',
+    rejected:     'badge-red',
+  };
+
+  const COMMENTS = <?= json_encode(array_map(static fn($cm) => [
+    'author'    => $cm['author_name'] ?? 'Anonyme',
+    'role'      => $cm['author_role'] ?? 'citizen',
+    'internal'  => (bool)$cm['is_internal'],
+    'text'      => $cm['comment'] ?? '',
+    'date'      => !empty($cm['created_at'])
+        ? date('d/m/Y H:i', strtotime($cm['created_at']))
+        : '',
+  ], $comments)) ?>;
+
+  // ── Hover preview ──────────────────────────────────────────
+  const hoverEl  = document.getElementById('photo-hover-preview');
+  const hoverImg = document.getElementById('photo-hover-img');
+  let hoverTimer = null;
+
+  function positionHover(e) {
+    const margin = 16;
+    let x = e.clientX + margin;
+    let y = e.clientY + margin;
+    if (x + 260 > window.innerWidth)  x = e.clientX - 260 - margin;
+    if (y + 260 > window.innerHeight) y = e.clientY - 260 - margin;
+    hoverEl.style.left = x + 'px';
+    hoverEl.style.top  = y + 'px';
+  }
+
+  document.querySelectorAll('.incident-detail-photo-card').forEach(card => {
+    const url = card.dataset.photoUrl;
+
+    card.addEventListener('mouseenter', e => {
+      hoverImg.src = url;
+      hoverTimer = setTimeout(() => {
+        positionHover(e);
+        hoverEl.classList.add('is-visible');
+      }, 180);
+    });
+
+    card.addEventListener('mousemove', positionHover);
+
+    card.addEventListener('mouseleave', () => {
+      clearTimeout(hoverTimer);
+      hoverEl.classList.remove('is-visible');
+    });
+
+    card.addEventListener('click', () => {
+      openLightbox(parseInt(card.dataset.photoIndex, 10));
+    });
+  });
+
+  // ── Lightbox ───────────────────────────────────────────────
+  const lb       = document.getElementById('photo-lightbox');
+  const lbImg    = document.getElementById('lb-img');
+  const lbPrev   = document.getElementById('lb-prev');
+  const lbNext   = document.getElementById('lb-next');
+  const lbClose  = document.getElementById('lb-close');
+  const lbCounter   = document.getElementById('lb-counter');
+  const lbRef       = document.getElementById('lb-incident-ref');
+  const lbTitle     = document.getElementById('lb-incident-title');
+  const lbStatus    = document.getElementById('lb-status-badge');
+  const lbCatDot    = document.getElementById('lb-cat-dot');
+  const lbPhotoName = document.getElementById('lb-photo-name');
+  const lbSourceLink = document.getElementById('lb-source-link');
+  const lbComments  = document.getElementById('lb-comments');
+
+  let currentIndex = 0;
+
+  function openLightbox(index) {
+    if (!PHOTOS.length) return;
+    currentIndex = Math.max(0, Math.min(index, PHOTOS.length - 1));
+    renderLightbox();
+    lb.classList.add('is-open');
+    lb.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    hoverEl.classList.remove('is-visible');
+    lbClose.focus();
+  }
+
+  function closeLightbox() {
+    lb.classList.remove('is-open');
+    lb.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  function renderLightbox() {
+    const ph = PHOTOS[currentIndex];
+
+    // Photo
+    lbImg.classList.add('is-loading');
+    lbImg.onload = () => lbImg.classList.remove('is-loading');
+    lbImg.src = ph.url;
+
+    // Compteur
+    lbCounter.textContent = PHOTOS.length > 1
+      ? (currentIndex + 1) + ' / ' + PHOTOS.length : '';
+
+    // Nav visibility
+    lbPrev.style.display = (currentIndex > 0) ? 'flex' : 'none';
+    lbNext.style.display = (currentIndex < PHOTOS.length - 1) ? 'flex' : 'none';
+
+    // Infos incident
+    lbRef.textContent = INCIDENT.ref;
+    lbTitle.textContent = INCIDENT.title;
+    lbCatDot.style.background = INCIDENT.color;
+    const sLabel = STATUS_LABELS[INCIDENT.status] || INCIDENT.status;
+    const sClass = STATUS_COLORS[INCIDENT.status] || 'badge-gray';
+    lbStatus.textContent = sLabel;
+    lbStatus.className = 'badge ' + sClass;
+
+    // Nom photo
+    lbPhotoName.textContent = ph.name;
+
+    // Lien source
+    lbSourceLink.href = ph.url;
+
+    // Commentaires
+    if (!COMMENTS.length) {
+      lbComments.innerHTML = '<span class="lb-comments-empty">Aucun commentaire sur ce dossier.</span>';
+    } else {
+      lbComments.innerHTML = COMMENTS.map(cm => {
+        const cls = cm.internal ? 'lb-comment lb-comment-internal' : 'lb-comment';
+        const intTag = cm.internal ? '<span style="font-size:10px;color:#fbbf24;margin-left:4px;">interne</span>' : '';
+        return `<div class="${cls}">
+          <div class="lb-comment-head">
+            <span class="lb-comment-author">${escHtml(cm.author)}${intTag}</span>
+            <span class="lb-comment-date">${escHtml(cm.date)}</span>
+          </div>
+          <p class="lb-comment-text">${escHtml(cm.text)}</p>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  lbPrev.addEventListener('click', () => { if (currentIndex > 0) { currentIndex--; renderLightbox(); } });
+  lbNext.addEventListener('click', () => { if (currentIndex < PHOTOS.length - 1) { currentIndex++; renderLightbox(); } });
+  lbClose.addEventListener('click', closeLightbox);
+  lb.querySelector('.photo-lightbox-backdrop').addEventListener('click', closeLightbox);
+
+  document.addEventListener('keydown', e => {
+    if (!lb.classList.contains('is-open')) return;
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft' && currentIndex > 0) { currentIndex--; renderLightbox(); }
+    if (e.key === 'ArrowRight' && currentIndex < PHOTOS.length - 1) { currentIndex++; renderLightbox(); }
+  });
+})();
+</script>
+
+<!-- Chargement de la carte Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+(() => {
+  const lat = <?= json_encode((float)($inc['latitude'] ?? 0)) ?>;
+  const lng = <?= json_encode((float)($inc['longitude'] ?? 0)) ?>;
+  const leadPhoto = <?= json_encode(!empty($photos[0]['url']) ? $photos[0]['url'] : null) ?>;
+  
+  if (!lat || !lng || typeof L === 'undefined') return;
+  const mapElem = document.getElementById('incident-detail-map');
+  if (!mapElem) return;
+
+  const map = L.map('incident-detail-map').setView([lat, lng], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(map);
+
+  const marker = L.circleMarker([lat, lng], {
+    radius: 12, 
+    fillColor: '<?= addslashes($inc['cat_color'] ?? '#355160') ?>', 
+    color: '#fff',
+    weight: 3, 
+    opacity: 1, 
+    fillOpacity: 0.9
+  }).addTo(map);
+
+  let popupHtml = '<div class="detail-map-popup-proof">';
+  popupHtml += '<strong><?= addslashes($inc['title'] ?: $inc['cat_name']) ?></strong>';
+  if (leadPhoto) {
+    popupHtml += '<br><img src="' + leadPhoto + '" alt="Preuve locale">';
+  } else {
+    popupHtml += '<br><small>Aucune photo citoyenne</small>';
+  }
+  popupHtml += '</div>';
+
+  marker.bindPopup(popupHtml, { minWidth: 260, offset: [0, -5] });
+
+  // Survol demande par l'utilisateur
+  marker.on('mouseover', function(e) {
+    this.openPopup();
+  });
+})();
+</script>
 
 <?php require_once __DIR__ . '/../includes/layout_footer.php'; ?>

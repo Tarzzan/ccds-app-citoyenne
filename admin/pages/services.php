@@ -14,6 +14,9 @@ $admin      = require_admin_auth();
 $page_title = 'Services';
 $active_nav = 'services';
 $db         = Database::getInstance();
+$lead_photo_select = admin_incident_first_photo_select($db, 'i');
+$themePalette = visual_admin_data_palette();
+$themePresets = visual_admin_theme_presets();
 
 $tablesReady = admin_db_has_table($db, 'services')
     && admin_db_has_table($db, 'service_category_map')
@@ -31,8 +34,12 @@ $agent_service_scope_ids = admin_allowed_service_ids($admin);
 $agent_is_scoped = admin_is_service_scoped_agent($admin);
 $scope_notice = null;
 
+if ($tablesReady && !admin_db_has_column($db, 'services', 'theme_variant')) {
+    $db->exec("ALTER TABLE services ADD COLUMN theme_variant VARCHAR(255) DEFAULT NULL AFTER description");
+}
+
 if (!$tablesReady) {
-    $_SESSION['flash_error'] = "Le socle services n'est pas encore disponible sur cet environnement.";
+    $_SESSION['flash_error'] = "Le socle services n'est pas encore disponible sur cet environnement. La lecture des files et des rattachements reste bloquée tant que cette base n est pas prête.";
     header('Location: /admin/?page=dashboard');
     exit;
 }
@@ -44,22 +51,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $admin['role'] === 'admin') {
         $name = trim($_POST['name'] ?? '');
         $code = trim($_POST['code'] ?? '');
         $description = trim($_POST['description'] ?? '');
+        $themeVariant = trim($_POST['theme_variant'] ?? '');
 
         if ($name === '' || $code === '') {
-            $_SESSION['flash_error'] = 'Nom et code sont obligatoires.';
+            $_SESSION['flash_error'] = 'Nom et code sont obligatoires. Le service doit être identifiable à la fois par son libellé et par son code stable.';
         } else {
             $exists = $db->prepare('SELECT id FROM services WHERE code = ? LIMIT 1');
             $exists->execute([$code]);
 
             if ($exists->fetch(PDO::FETCH_ASSOC)) {
-                $_SESSION['flash_error'] = 'Ce code service existe deja.';
+                $_SESSION['flash_error'] = 'Ce code service existe déjà. Réutiliser un code unique évite de brouiller les branchements internes.';
             } else {
                 $stmt = $db->prepare('
-                    INSERT INTO services (code, name, description, is_active, created_at)
-                    VALUES (?, ?, ?, 1, NOW())
+                    INSERT INTO services (code, name, description, theme_variant, is_active, created_at)
+                    VALUES (?, ?, ?, ?, 1, NOW())
                 ');
-                $stmt->execute([$code, $name, $description !== '' ? $description : null]);
-                $_SESSION['flash_success'] = 'Service cree avec succes.';
+                $stmt->execute([$code, $name, $description !== '' ? $description : null, $themeVariant !== '' ? $themeVariant : null]);
+                $_SESSION['flash_success'] = 'Service créé. Il peut maintenant recevoir des rattachements, des catégories et une file dédiée.';
             }
         }
 
@@ -72,23 +80,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $admin['role'] === 'admin') {
         $name = trim($_POST['name'] ?? '');
         $code = trim($_POST['code'] ?? '');
         $description = trim($_POST['description'] ?? '');
+        $themeVariant = trim($_POST['theme_variant'] ?? '');
 
         if ($serviceId <= 0 || $name === '' || $code === '') {
-            $_SESSION['flash_error'] = 'Donnees service invalides.';
+            $_SESSION['flash_error'] = 'Données service invalides. Vérifier le nom, le code et le service ciblé avant d enregistrer.';
         } else {
             $exists = $db->prepare('SELECT id FROM services WHERE code = ? AND id <> ? LIMIT 1');
             $exists->execute([$code, $serviceId]);
 
             if ($exists->fetch(PDO::FETCH_ASSOC)) {
-                $_SESSION['flash_error'] = 'Ce code service est deja utilise.';
+                $_SESSION['flash_error'] = 'Ce code service est déjà utilisé. Garder un code distinct reste nécessaire pour la lecture technique et métier.';
             } else {
                 $stmt = $db->prepare('
                     UPDATE services
-                    SET code = ?, name = ?, description = ?, updated_at = NOW()
+                    SET code = ?, name = ?, description = ?, theme_variant = ?, updated_at = NOW()
                     WHERE id = ?
                 ');
-                $stmt->execute([$code, $name, $description !== '' ? $description : null, $serviceId]);
-                $_SESSION['flash_success'] = 'Service mis a jour.';
+                $stmt->execute([$code, $name, $description !== '' ? $description : null, $themeVariant !== '' ? $themeVariant : null, $serviceId]);
+                $_SESSION['flash_success'] = 'Service mis à jour. La lecture du poste, des files et des rattachements est désormais alignée sur cette nouvelle version.';
             }
         }
 
@@ -100,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $admin['role'] === 'admin') {
         $serviceId = (int)($_POST['service_id'] ?? 0);
         if ($serviceId > 0) {
             $db->prepare('UPDATE services SET is_active = NOT is_active, updated_at = NOW() WHERE id = ?')->execute([$serviceId]);
-            $_SESSION['flash_success'] = 'Statut du service mis a jour.';
+            $_SESSION['flash_success'] = 'Statut du service mis à jour. Vérifier ensuite l impact sur les files et les rattachements visibles.';
         }
 
         header('Location: /admin/?page=services');
@@ -171,6 +180,8 @@ $serviceCategories = [];
 $serviceMembers = [];
 $servicePlans = [];
 $serviceQueue = [];
+$serviceCategoryHighlights = [];
+$serviceRecentProofs = [];
 
 if (isset($_GET['detail'])) {
     $detailId = (int)$_GET['detail'];
@@ -195,6 +206,16 @@ if (isset($_GET['detail'])) {
         ");
         $stmt->execute([$detailId]);
         $serviceCategories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($serviceCategories as $category) {
+            $visual = category_visual_resolve($category['icon'] ?? 'road', $category['name'] ?? null);
+            $serviceCategoryHighlights[] = [
+                'name' => $category['name'],
+                'icon' => $category['icon'] ?? 'road',
+                'color' => $category['color'] ?? ($visual['accent'] ?? ($themePalette['primary'] ?? '#355160')),
+                'short_label' => $visual['short_label'] ?? $category['name'],
+                'description' => $visual['description'] ?? '',
+            ];
+        }
 
         $stmt = $db->prepare("
             SELECT
@@ -249,6 +270,8 @@ if (isset($_GET['detail'])) {
                 c.icon AS category_icon,
                 c.color AS category_color,
                 reporter.full_name AS reporter_name,
+                {$lead_photo_select},
+                (SELECT COUNT(*) FROM photos ph WHERE ph.incident_id = i.id) AS photo_count,
                 plan.id AS current_plan_id,
                 plan.status AS current_plan_status,
                 plan.scheduled_date,
@@ -284,6 +307,16 @@ if (isset($_GET['detail'])) {
         ");
         $stmt->execute([$detailId]);
         $serviceQueue = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($serviceQueue as &$queueItem) {
+            $queueItem['lead_photo'] = admin_incident_preview_photo($db, $queueItem);
+        }
+        unset($queueItem);
+
+        $serviceRecentProofs = admin_fetch_recent_proof_incidents($db, [
+            'limit' => 4,
+            'service_ids' => [$detailId],
+            'only_open' => true,
+        ]);
     }
 }
 
@@ -297,182 +330,70 @@ $kpis = [
     'plans_today' => array_sum(array_map(static fn(array $s): int => (int)$s['plans_today_count'], $services)),
     'overdue_plans' => array_sum(array_map(static fn(array $s): int => (int)$s['overdue_plans_count'], $services)),
 ];
+$servicesHeroPortraits = [
+    ['asset' => visual_admin_slot_asset('services_primary', 'CHAR-04'), 'label' => 'Coordination service'],
+    ['asset' => visual_admin_slot_asset('services_secondary', 'CHAR-05'), 'label' => 'Equipe terrain'],
+];
+$servicesHeroHasPortraits = false;
+foreach ($servicesHeroPortraits as $heroPortrait) {
+    if (generated_visual_url($heroPortrait['asset'])) {
+        $servicesHeroHasPortraits = true;
+        break;
+    }
+}
 
 require_once __DIR__ . '/../includes/layout.php';
 ?>
-<style>
-.services-hero {
-  background: linear-gradient(135deg, #0e3127 0%, #174b3a 56%, #2d6f86 100%);
-  color: #fff;
-  border-radius: 28px;
-  padding: 28px;
-  margin-bottom: 24px;
-  box-shadow: 0 18px 38px rgba(14,49,39,.16);
-}
-.services-kicker {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: #f2d58c;
-  margin-bottom: 10px;
-}
-.services-title {
-  font-size: 30px;
-  font-family: 'Merriweather', serif;
-  font-weight: 900;
-  line-height: 1.15;
-  margin-bottom: 10px;
-}
-.services-text {
-  color: rgba(255,255,255,.84);
-  max-width: 720px;
-}
-.services-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.services-kpi {
-  background: rgba(255,253,248,.94);
-  border: 1px solid #ece4d5;
-  border-radius: 20px;
-  padding: 18px;
-  box-shadow: 0 10px 24px rgba(14,49,39,.06);
-}
-.services-kpi strong {
-  display: block;
-  font-size: 28px;
-  color: #183229;
-}
-.services-kpi span {
-  display: block;
-  margin-top: 4px;
-  color: #5e6c67;
-}
-.services-alert-band {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.services-alert {
-  border-radius: 20px;
-  padding: 18px;
-  border: 1px solid #ece4d5;
-  background: rgba(255,253,248,.94);
-  box-shadow: 0 10px 24px rgba(14,49,39,.06);
-}
-.services-alert strong {
-  display: block;
-  font-size: 24px;
-  margin-bottom: 6px;
-}
-.services-alert.is-warning strong {
-  color: #a64b2a;
-}
-.services-alert.is-info strong {
-  color: #2d6f86;
-}
-.services-layout {
-  display: grid;
-  grid-template-columns: 1.5fr .9fr;
-  gap: 24px;
-}
-.services-card {
-  background: rgba(255,253,248,.94);
-  border: 1px solid #ece4d5;
-  border-radius: 22px;
-  padding: 20px;
-  box-shadow: 0 10px 24px rgba(14,49,39,.06);
-}
-.services-list {
-  display: grid;
-  gap: 12px;
-}
-.services-row {
-  border: 1px solid #ece4d5;
-  border-radius: 18px;
-  padding: 16px;
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  background: #fffdf8;
-}
-.services-row-title {
-  font-size: 17px;
-  font-weight: 800;
-  color: #183229;
-}
-.services-row-meta {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-}
-.services-mini-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: #f3eee2;
-  color: #355248;
-  font-size: 12px;
-  font-weight: 700;
-}
-.services-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 18px;
-}
-.services-detail-list {
-  display: grid;
-  gap: 10px;
-}
-.services-detail-item {
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: #f8f3e8;
-  border: 1px solid #ece4d5;
-}
-.services-queue-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.services-queue-table th,
-.services-queue-table td {
-  padding: 12px 10px;
-  border-bottom: 1px solid #ece4d5;
-  vertical-align: top;
-}
-.services-queue-table th {
-  text-align: left;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: #5e6c67;
-}
-@media (max-width: 960px) {
-  .services-layout,
-  .services-detail-grid {
-    grid-template-columns: 1fr;
-  }
-}
-</style>
-
-<div class="services-hero">
-  <div class="services-kicker">Chaîne d intervention</div>
-  <div class="services-title">Relier les catégories, les agents et les opérations planifiées.</div>
-  <div class="services-text">
-    Cette page donne enfin une lecture exploitable du dispositif métier : qui porte quoi, quelle charge est ouverte et quels services structurent la réponse communale.
+<div class="page-async-scope" data-async-scope="services-admin">
+<div class="page-hero <?= $servicesHeroHasPortraits ? 'page-hero--with-visual' : '' ?>">
+  <div class="page-hero-copy">
+    <div class="page-hero-kicker">Chaîne d intervention</div>
+    <div class="page-hero-title">Relier les catégories, les agents et les opérations planifiées.</div>
+    <?php if ($isTrainingMode): ?>
+    <div class="page-hero-text">
+      Cette page donne une lecture exploitable du dispositif metier : qui porte quoi, quelle charge est ouverte et quels services structurent la reponse de terrain.
+    </div>
+    <?php endif; ?>
   </div>
+  <div class="page-hero-metrics">
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$kpis['total'] ?></span>
+      <span class="hero-chip-label">services configurés</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$kpis['active_plans'] ?></span>
+      <span class="hero-chip-label">plans actifs</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$kpis['open_incidents'] ?></span>
+      <span class="hero-chip-label">dossiers ouverts</span>
+    </div>
+  </div>
+  <?php if ($servicesHeroHasPortraits): ?>
+    <div class="page-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero">
+        <div class="dashboard-hero-portraits">
+          <?php foreach ($servicesHeroPortraits as $heroPortrait): ?>
+            <?php if (!generated_visual_url($heroPortrait['asset'])) { continue; } ?>
+            <figure class="dashboard-hero-portrait-card">
+              <?= generated_visual_html($heroPortrait['asset'], ['class' => 'generated-visual generated-visual--portrait dashboard-hero-portrait', 'label' => $heroPortrait['label']]) ?>
+              <figcaption><?= e($heroPortrait['label']) ?></figcaption>
+            </figure>
+          <?php endforeach; ?>
+        </div>
+        <?php if ($isTrainingMode): ?>
+        <div class="generated-visual-caption">
+          <strong>Duo service terrain</strong>
+          <span>Le pilotage des services revient vers un duo agents stylise pour lire la charge, les categories et les interventions sans rupture visuelle.</span>
+        </div>
+        <?php endif; ?>
+      </div>
+    </div>
+  <?php endif; ?>
 </div>
 
 <?php if ($scope_notice): ?>
-  <div class="alert alert-info" style="margin:16px 0 0"><?= e($scope_notice) ?></div>
+  <div class="alert alert-info services-scope-alert"><?= e($scope_notice) ?></div>
 <?php endif; ?>
 
 <div class="services-grid">
@@ -497,7 +418,7 @@ require_once __DIR__ . '/../includes/layout.php';
 
 <div class="services-layout">
   <div class="services-card">
-    <div class="card-header" style="padding:0 0 16px;border:none">
+    <div class="card-header services-card-header-clean">
       <span class="card-title">Catalogue services</span>
     </div>
 
@@ -508,7 +429,7 @@ require_once __DIR__ . '/../includes/layout.php';
             <div class="services-row-title"><?= e($service['name']) ?></div>
             <div class="text-muted text-small"><code><?= e($service['code']) ?></code></div>
             <?php if (!empty($service['description'])): ?>
-              <div class="text-muted" style="margin-top:8px"><?= e($service['description']) ?></div>
+              <div class="text-muted services-copy-gap"><?= e($service['description']) ?></div>
             <?php endif; ?>
             <div class="services-row-meta">
               <span class="services-mini-badge"><?= (int)$service['categories_count'] ?> catégorie(s)</span>
@@ -519,13 +440,13 @@ require_once __DIR__ . '/../includes/layout.php';
               <span class="services-mini-badge"><?= (int)$service['open_incidents_count'] ?> dossier(s) ouvert(s)</span>
             </div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;min-width:140px">
+          <div class="services-row-actions">
             <span class="badge <?= (int)$service['is_active'] === 1 ? 'badge-green' : 'badge-gray' ?>">
               <?= (int)$service['is_active'] === 1 ? 'Actif' : 'Inactif' ?>
             </span>
-            <a href="/admin/?page=services&detail=<?= (int)$service['id'] ?>" class="btn btn-outline btn-sm">Détail</a>
+            <a href="/admin/?page=services&detail=<?= (int)$service['id'] ?>" class="btn btn-outline btn-sm" data-async-link data-async-scope="admin-main">Détail</a>
             <?php if ($admin['role'] === 'admin'): ?>
-              <form method="POST">
+              <form method="POST" data-async-form>
                 <input type="hidden" name="action" value="toggle_service">
                 <input type="hidden" name="service_id" value="<?= (int)$service['id'] ?>">
                 <button type="submit" class="btn <?= (int)$service['is_active'] === 1 ? 'btn-danger' : 'btn-primary' ?> btn-sm">
@@ -540,12 +461,68 @@ require_once __DIR__ . '/../includes/layout.php';
   </div>
 
   <div class="services-card">
-    <div class="card-header" style="padding:0 0 16px;border:none">
+    <div class="card-header services-card-header-clean">
       <span class="card-title"><?= $detailService ? 'Service en focus' : 'Nouveau service' ?></span>
     </div>
 
     <?php if ($detailService): ?>
-      <form method="POST">
+      <div class="card services-focus-card">
+        <div class="card-header services-card-header-tight">
+          <span class="card-title">Cockpit d execution du service</span>
+          <span class="text-muted text-small">Lire ici ce qui doit etre planifie, execute ou relance avant d editer le service.</span>
+        </div>
+        <div class="services-mode-band services-mode-band--tight">
+          <div class="services-mode-card">
+            <strong><?= (int)$detailService['unplanned_submitted_count'] ?></strong>
+            <span>a planifier</span>
+          </div>
+          <div class="services-mode-card">
+            <strong><?= (int)$detailService['plans_today_count'] ?></strong>
+            <span>prevues aujourd hui</span>
+          </div>
+          <div class="services-mode-card">
+            <strong><?= (int)$detailService['overdue_plans_count'] ?></strong>
+            <span>en retard</span>
+          </div>
+        </div>
+        <div class="services-mode-band services-mode-band--spaced">
+          <div class="services-mode-card">
+            <strong><?= (int)$detailService['active_internal_plans_count'] ?></strong>
+            <span>equipe interne</span>
+          </div>
+          <div class="services-mode-card">
+            <strong><?= (int)$detailService['active_provider_plans_count'] ?></strong>
+            <span>prestataire</span>
+          </div>
+          <div class="services-mode-card">
+            <strong><?= (int)$detailService['open_incidents_count'] ?></strong>
+            <span>dossiers ouverts</span>
+          </div>
+        </div>
+      </div>
+
+      <?php if ($isTrainingMode): ?>
+      <div class="admin-form-guide">
+        <strong>Edition du service</strong>
+        <div class="admin-form-guide-list">
+          <div class="admin-form-guide-item">
+            <span class="admin-form-guide-step">01</span>
+            <div>
+              <strong>Stabiliser le nom et le code</strong>
+              <span>Ces deux champs servent de repere dans les vues admin et dans les rattachements de categories ou d agents.</span>
+            </div>
+          </div>
+          <div class="admin-form-guide-item">
+            <span class="admin-form-guide-step">02</span>
+            <div>
+              <strong>Documenter le perimetre</strong>
+              <span>La description doit dire ce que le service prend en charge, pas simplement reformuler son nom.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <?php endif; ?>
+      <form method="POST" data-async-form>
         <input type="hidden" name="action" value="update_service">
         <input type="hidden" name="service_id" value="<?= (int)$detailService['id'] ?>">
         <div class="form-group">
@@ -560,30 +537,122 @@ require_once __DIR__ . '/../includes/layout.php';
           <label class="form-label">Description</label>
           <textarea name="description" class="form-control" rows="4"><?= e((string)($detailService['description'] ?? '')) ?></textarea>
         </div>
+        <div class="form-group">
+          <label class="form-label">Thème visuel exclusif (Optionnel)</label>
+          <select name="theme_variant" class="form-control">
+            <option value="">Par défaut (Socle commun)</option>
+            <?php foreach ($themePresets as $presetId => $preset): ?>
+              <option value="<?= e($presetId) ?>" <?= ($detailService['theme_variant'] ?? '') === $presetId ? 'selected' : '' ?>><?= e((string)$preset['label']) ?> <?= ($preset['is_custom'] ?? false) ? '(Perso)' : '' ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
         <button type="submit" class="btn btn-primary">Enregistrer</button>
-        <a href="/admin/?page=services" class="btn btn-outline">Fermer le focus</a>
+        <a href="/admin/?page=services" class="btn btn-outline" data-async-link data-async-scope="admin-main">Fermer le focus</a>
       </form>
 
+      <div class="services-mode-band">
+        <div class="services-mode-card">
+          <strong><?= (int)$detailService['active_internal_plans_count'] ?></strong>
+          <span>intervention(s) en equipe interne</span>
+        </div>
+        <div class="services-mode-card">
+          <strong><?= (int)$detailService['active_provider_plans_count'] ?></strong>
+          <span>mission(s) prestataire en cours</span>
+        </div>
+        <div class="services-mode-card">
+          <strong><?= (int)$detailService['unplanned_submitted_count'] ?></strong>
+          <span>dossier(s) encore sans plan visible</span>
+        </div>
+      </div>
+
+      <?php if ($serviceCategoryHighlights): ?>
+        <div class="services-category-strip">
+          <?php foreach ($serviceCategoryHighlights as $highlight): ?>
+            <div class="services-category-pill" style="--category-accent:<?= e($highlight['color']) ?>;">
+              <?= category_visual_html($highlight['icon'], $highlight['name'], 'md', $highlight['color']) ?>
+              <div>
+                <strong><?= e($highlight['short_label']) ?></strong>
+                <span><?= e($highlight['description']) ?></span>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($serviceRecentProofs): ?>
+        <div class="card dashboard-section-card services-detail-card services-detail-card--spaced">
+          <div class="card-header card-header--split">
+            <div>
+              <span class="card-title">Dernières preuves citoyennes du service</span>
+              <p class="admin-section-note">Lecture directe des dernières pièces terrain sans repasser par toute la file du service.</p>
+            </div>
+            <a href="/admin/?page=incidents&service=<?= (int)$detailService['id'] ?>&proof=with_photo" class="btn btn-outline btn-sm" data-async-link data-async-scope="admin-main">Ouvrir la file avec preuves</a>
+          </div>
+          <div class="dashboard-proof-grid">
+            <?php foreach ($serviceRecentProofs as $proofIncident): ?>
+              <a href="/admin/?page=incident_detail&id=<?= (int)$proofIncident['id'] ?>" class="dashboard-proof-card" data-async-link data-async-scope="admin-main">
+                <span class="dashboard-proof-card-media">
+                  <?php if (!empty($proofIncident['lead_photo']['url'])): ?>
+                    <img src="<?= e($proofIncident['lead_photo']['url']) ?>" alt="Preuve citoyenne" class="dashboard-proof-card-image">
+                  <?php else: ?>
+                    <span class="dashboard-proof-card-empty">Aucune photo</span>
+                  <?php endif; ?>
+                </span>
+                <span class="dashboard-proof-card-copy">
+                  <span class="dashboard-proof-card-topline">
+                    <?= category_visual_html($proofIncident['cat_icon'] ?? 'road', $proofIncident['cat_name'], 'sm', $proofIncident['cat_color'] ?? null) ?>
+                    <span class="dashboard-proof-card-meta">
+                      <strong><?= e($proofIncident['cat_name']) ?></strong>
+                      <span><?= e($proofIncident['reference']) ?> · <?= e($proofIncident['reporter']) ?></span>
+                    </span>
+                  </span>
+                  <span class="dashboard-proof-card-description"><?= e($proofIncident['title'] ?: $proofIncident['description']) ?></span>
+                  <span class="dashboard-proof-card-foot">
+                    <span class="badge badge-gray"><?= (int)$proofIncident['photo_count'] ?> photo<?= (int)$proofIncident['photo_count'] > 1 ? 's' : '' ?></span>
+                    <?php if ((int)$proofIncident['comment_count'] > 0): ?>
+                      <span class="badge badge-gray"><?= (int)$proofIncident['comment_count'] ?> commentaire<?= (int)$proofIncident['comment_count'] > 1 ? 's' : '' ?></span>
+                    <?php endif; ?>
+                    <span class="badge <?= status_class($proofIncident['status']) ?>"><?= status_label($proofIncident['status']) ?></span>
+                  </span>
+                </span>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      <?php endif; ?>
+
       <div class="services-detail-grid">
-        <div class="services-card" style="padding:16px">
-          <h3 style="margin-bottom:12px;color:#183229">Catégories rattachées</h3>
+        <div class="services-card services-detail-card">
+          <div class="services-section-head">
+            <div>
+              <h3 class="services-section-title">Catégories rattachées</h3>
+              <p class="admin-section-note">Socle métier porté par le service dans la chaîne de traitement.</p>
+            </div>
+            <span class="badge badge-gray"><?= count($serviceCategories) ?> categorie<?= count($serviceCategories) > 1 ? 's' : '' ?></span>
+          </div>
           <div class="services-detail-list">
             <?php foreach ($serviceCategories as $category): ?>
               <div class="services-detail-item">
-                <div style="display:flex;align-items:center;gap:10px">
-                  <?= category_visual_html($category['icon'] ?? 'road', $category['name'], 'sm', $category['color'] ?? null) ?>
+                <div class="services-queue-category">
+                  <?= category_visual_html($category['icon'] ?? 'road', $category['name'], 'md', $category['color'] ?? null) ?>
                   <strong><?= e($category['name']) ?></strong>
                 </div>
               </div>
             <?php endforeach; ?>
             <?php if (!$serviceCategories): ?>
-              <p class="text-muted">Aucune catégorie rattachée.</p>
+              <p class="text-muted">Aucune catégorie rattachée. Le service reste donc sans porte d entrée métier claire pour les prochains dossiers.</p>
             <?php endif; ?>
           </div>
         </div>
 
-        <div class="services-card" style="padding:16px">
-          <h3 style="margin-bottom:12px;color:#183229">Agents et responsables</h3>
+        <div class="services-card services-detail-card">
+          <div class="services-section-head">
+            <div>
+              <h3 class="services-section-title">Agents et responsables</h3>
+              <p class="admin-section-note">Qui agit sur ce service et avec quel niveau de responsabilité.</p>
+            </div>
+            <span class="badge badge-gray"><?= count($serviceMembers) ?> membre<?= count($serviceMembers) > 1 ? 's' : '' ?></span>
+          </div>
           <div class="services-detail-list">
             <?php foreach ($serviceMembers as $member): ?>
               <div class="services-detail-item">
@@ -596,14 +665,20 @@ require_once __DIR__ . '/../includes/layout.php';
               </div>
             <?php endforeach; ?>
             <?php if (!$serviceMembers): ?>
-              <p class="text-muted">Aucun agent rattaché.</p>
+              <p class="text-muted">Aucun agent rattaché. Ce service n a pas encore de relais humain visible dans le backoffice.</p>
             <?php endif; ?>
           </div>
         </div>
       </div>
 
-      <div class="services-card" style="padding:16px;margin-top:18px">
-        <h3 style="margin-bottom:12px;color:#183229">Dernières interventions planifiées</h3>
+      <div class="services-card services-detail-card services-detail-card--spaced">
+        <div class="services-section-head">
+          <div>
+            <h3 class="services-section-title">Dernières interventions planifiées</h3>
+            <p class="admin-section-note">Derniers dossiers déjà portés par une planification visible côté service.</p>
+          </div>
+          <span class="badge badge-gray"><?= count($servicePlans) ?> plan<?= count($servicePlans) > 1 ? 's' : '' ?></span>
+        </div>
         <div class="services-detail-list">
           <?php foreach ($servicePlans as $plan): ?>
             <div class="services-detail-item">
@@ -619,7 +694,7 @@ require_once __DIR__ . '/../includes/layout.php';
                 Dossier <?= e($plan['incident_status']) ?>
                 <?= !empty($plan['assigned_user_name']) ? ' · ' . e($plan['assigned_user_name']) : '' ?>
               </div>
-              <div class="text-muted text-small" style="margin-top:4px">
+              <div class="services-plan-mode">
                 <?php if (($plan['source_type'] ?? '') === 'provider'): ?>
                   Prestataire missionné<?= !empty($plan['provider_name']) ? ' · ' . e($plan['provider_name']) : '' ?>
                 <?php else: ?>
@@ -629,15 +704,21 @@ require_once __DIR__ . '/../includes/layout.php';
             </div>
           <?php endforeach; ?>
           <?php if (!$servicePlans): ?>
-            <p class="text-muted">Aucune intervention planifiée sur ce service.</p>
+            <p class="text-muted">Aucune intervention planifiée sur ce service. La file reste lisible, mais aucune date d exécution n est encore portée ici.</p>
           <?php endif; ?>
         </div>
       </div>
 
-      <div class="services-card" style="padding:16px;margin-top:18px">
-        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
-          <h3 style="color:#183229">File active du service</h3>
-          <a href="/admin/?page=incidents&service=<?= (int)$detailService['id'] ?>" class="btn btn-outline btn-sm">Ouvrir toute la file</a>
+      <div class="services-card services-detail-card services-detail-card--spaced">
+        <div class="services-queue-head">
+          <div>
+            <h3 class="services-section-title">File active du service</h3>
+            <p class="admin-section-note">Prioriser ici les dossiers à traiter, planifier ou relancer avec preuve et plan visibles.</p>
+          </div>
+          <div class="services-queue-head-actions">
+            <span class="badge badge-gray"><?= count($serviceQueue) ?> dossier<?= count($serviceQueue) > 1 ? 's' : '' ?></span>
+            <a href="/admin/?page=incidents&service=<?= (int)$detailService['id'] ?>" class="btn btn-outline btn-sm" data-async-link data-async-scope="admin-main">Ouvrir toute la file</a>
+          </div>
         </div>
         <?php if ($serviceQueue): ?>
           <div class="table-wrapper">
@@ -646,7 +727,8 @@ require_once __DIR__ . '/../includes/layout.php';
                 <tr>
                   <th>Dossier</th>
                   <th>Catégorie</th>
-                  <th>Statut</th>
+                  <th>Preuve</th>
+                  <th>État & Priorité</th>
                   <th>Plan</th>
                   <th>Action</th>
                 </tr>
@@ -655,25 +737,53 @@ require_once __DIR__ . '/../includes/layout.php';
                 <?php foreach ($serviceQueue as $queueItem): ?>
                   <tr>
                     <td>
-                      <div style="font-weight:800;color:#183229"><?= e($queueItem['reference']) ?></div>
+                      <div class="services-queue-ref"><?= e($queueItem['reference']) ?></div>
                       <div class="text-muted text-small"><?= e($queueItem['title'] ?: 'Sans titre') ?></div>
                       <div class="text-muted text-small"><?= e($queueItem['reporter_name']) ?></div>
                     </td>
                     <td>
-                      <div style="display:flex;align-items:center;gap:8px">
+                      <div class="services-queue-category">
                         <?= category_visual_html($queueItem['category_icon'] ?? 'road', $queueItem['category_name'], 'sm', $queueItem['category_color'] ?? null) ?>
-                        <span><?= e($queueItem['category_name']) ?></span>
+                        <div class="services-queue-category-copy">
+                          <strong><?= e($queueItem['category_name']) ?></strong>
+                        </div>
                       </div>
                     </td>
                     <td>
-                      <span class="badge <?= status_class($queueItem['status']) ?>"><?= status_label($queueItem['status']) ?></span>
-                      <div class="text-muted text-small" style="margin-top:6px">
-                        <?= priority_label($queueItem['priority'] ?? 'medium') ?>
+                      <div class="admin-proof-cell admin-proof-cell--compact">
+                        <?php if (!empty($queueItem['lead_photo']['url'])): ?>
+                          <a href="/admin/?page=incident_detail&id=<?= (int)$queueItem['id'] ?>" class="admin-proof-thumb-link" data-async-link data-async-scope="admin-main" aria-label="Voir la preuve citoyenne">
+                            <span class="admin-proof-thumb-wrap">
+                              <img src="<?= e($queueItem['lead_photo']['url']) ?>" alt="Preuve citoyenne" class="admin-proof-thumb admin-proof-thumb--small">
+                              <?php if ((int)($queueItem['photo_count'] ?? 0) > 1): ?>
+                                <span class="admin-proof-thumb-badge">+<?= (int)$queueItem['photo_count'] - 1 ?></span>
+                              <?php endif; ?>
+                            </span>
+                          </a>
+                        <?php else: ?>
+                          <div class="admin-proof-thumb admin-proof-thumb--small admin-proof-thumb--empty">Aucune photo</div>
+                        <?php endif; ?>
+                        <div class="admin-proof-copy">
+                          <?php if ((int)($queueItem['photo_count'] ?? 0) > 0): ?>
+                            <div class="admin-proof-counts">
+                              <span class="badge badge-gray"><?= (int)$queueItem['photo_count'] ?> photo<?= (int)$queueItem['photo_count'] > 1 ? 's' : '' ?></span>
+                            </div>
+                          <?php endif; ?>
+                          <?php if (!empty($queueItem['lead_photo']['moderation_message'])): ?>
+                            <div class="admin-proof-note"><?= e($queueItem['lead_photo']['moderation_message']) ?></div>
+                          <?php endif; ?>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start;">
+                        <span class="badge <?= status_class($queueItem['status']) ?>"><?= status_label($queueItem['status']) ?></span>
+                        <span class="badge <?= priority_class($queueItem['priority'] ?? 'medium') ?>"><?= priority_label($queueItem['priority'] ?? 'medium') ?></span>
                       </div>
                     </td>
                     <td>
                       <?php if (!empty($queueItem['current_plan_id'])): ?>
-                        <div style="font-weight:700;color:#183229">
+                        <div class="services-queue-plan-title">
                           <?= e(ucfirst(str_replace('_', ' ', (string)$queueItem['current_plan_status']))) ?>
                         </div>
                         <div class="text-muted text-small">
@@ -685,7 +795,7 @@ require_once __DIR__ . '/../includes/layout.php';
                         <?php if (!empty($queueItem['assigned_user_name'])): ?>
                           <div class="text-muted text-small"><?= e($queueItem['assigned_user_name']) ?></div>
                         <?php endif; ?>
-                        <div class="text-muted text-small" style="margin-top:4px">
+                        <div class="services-plan-mode">
                           <?php if (($queueItem['current_plan_source_type'] ?? '') === 'provider'): ?>
                             Prestataire missionné<?= !empty($queueItem['current_plan_provider_name']) ? ' · ' . e($queueItem['current_plan_provider_name']) : '' ?>
                           <?php else: ?>
@@ -697,7 +807,7 @@ require_once __DIR__ . '/../includes/layout.php';
                       <?php endif; ?>
                     </td>
                     <td>
-                      <a href="/admin/?page=incident_detail&id=<?= (int)$queueItem['id'] ?>" class="btn btn-primary btn-sm">Traiter</a>
+                      <a href="/admin/?page=incident_detail&id=<?= (int)$queueItem['id'] ?>" class="btn btn-primary btn-sm" data-async-link data-async-scope="admin-main">Traiter</a>
                     </td>
                   </tr>
                 <?php endforeach; ?>
@@ -705,11 +815,32 @@ require_once __DIR__ . '/../includes/layout.php';
             </table>
           </div>
         <?php else: ?>
-          <p class="text-muted">Aucun dossier ouvert pour ce service actuellement.</p>
+          <p class="text-muted">Aucun dossier ouvert pour ce service actuellement. C est un état sain tant qu aucune charge nouvelle n est remontée.</p>
         <?php endif; ?>
       </div>
     <?php else: ?>
-      <form method="POST">
+      <?php if ($isTrainingMode): ?>
+      <div class="admin-form-guide">
+        <strong>Creation d un service</strong>
+        <div class="admin-form-guide-list">
+          <div class="admin-form-guide-item">
+            <span class="admin-form-guide-step">01</span>
+            <div>
+              <strong>Nommer le service comme une equipe exploitable</strong>
+              <span>Le nom doit rester clair dans les files, les categories et les details utilisateur.</span>
+            </div>
+          </div>
+          <div class="admin-form-guide-item">
+            <span class="admin-form-guide-step">02</span>
+            <div>
+              <strong>Utiliser un code stable</strong>
+              <span>Le code doit rester court, lisible et durable pour les branchements internes.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <?php endif; ?>
+      <form method="POST" data-async-form>
         <input type="hidden" name="action" value="create_service">
         <div class="form-group">
           <label class="form-label">Nom</label>
@@ -718,15 +849,29 @@ require_once __DIR__ . '/../includes/layout.php';
         <div class="form-group">
           <label class="form-label">Code</label>
           <input type="text" name="code" class="form-control" required placeholder="Ex: voirie_proximite">
+          <?php if ($isTrainingMode): ?>
+          <div class="admin-section-note">Preferer un code simple, sans ambiguite, qui pourra rester stable meme si le libelle evolue.</div>
+          <?php endif; ?>
         </div>
         <div class="form-group">
           <label class="form-label">Description</label>
           <textarea name="description" class="form-control" rows="4" placeholder="Mission, périmètre, nature des interventions..."></textarea>
         </div>
+        <div class="form-group">
+          <label class="form-label">Thème visuel exclusif (Optionnel)</label>
+          <select name="theme_variant" class="form-control">
+            <option value="">Par défaut (Socle commun)</option>
+            <?php foreach ($themePresets as $presetId => $preset): ?>
+              <option value="<?= e($presetId) ?>"><?= e((string)$preset['label']) ?> <?= ($preset['is_custom'] ?? false) ? '(Perso)' : '' ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
         <button type="submit" class="btn btn-primary">Créer le service</button>
       </form>
     <?php endif; ?>
   </div>
+</div>
+
 </div>
 
 <?php require_once __DIR__ . '/../includes/layout_footer.php'; ?>

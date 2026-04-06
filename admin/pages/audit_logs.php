@@ -8,6 +8,8 @@ $admin      = require_admin_auth();
 $page_title = 'Logs d\'audit';
 $active_nav = 'audit_logs';
 $db         = Database::getInstance();
+$themePalette = visual_admin_data_palette();
+$statusPalette = visual_admin_status_palette();
 
 if ($admin['role'] !== 'admin') {
     render_error(403, 'Accès réservé aux administrateurs.');
@@ -22,7 +24,7 @@ try {
 
 if (empty($columns)) {
     require_once __DIR__ . '/../includes/layout.php';
-    echo '<div class="alert alert-warning">La table <strong>audit_logs</strong> n\'est pas disponible dans cet environnement.</div>';
+    echo '<div class="alert alert-warning">La table <strong>audit_logs</strong> n\'est pas disponible dans cet environnement. La traçabilité avancée reste donc indisponible tant que la migration correspondante n a pas été appliquée.</div>';
     require_once __DIR__ . '/../includes/layout_footer.php';
     return;
 }
@@ -105,197 +107,73 @@ try {
 }
 
 $actionLabels = [
-    'incident_status_changed' => ['label' => 'Statut modifié', 'icon' => '🔄', 'color' => '#2D6F86'],
-    'incident.deleted_via_admin' => ['label' => 'Signalement supprimé', 'icon' => '🗑️', 'color' => '#C94B3C'],
-    'comment_report.dismissed' => ['label' => 'Signalement classé', 'icon' => '✅', 'color' => '#2F7D50'],
-    'comment.deleted_via_admin' => ['label' => 'Commentaire supprimé', 'icon' => '🗑️', 'color' => '#C94B3C'],
-    'comment.deleted_via_moderation' => ['label' => 'Commentaire supprimé', 'icon' => '🗑️', 'color' => '#C94B3C'],
-    'user.suspended_via_moderation' => ['label' => 'Utilisateur suspendu', 'icon' => '🚫', 'color' => '#A64B2A'],
-    'user_banned' => ['label' => 'Utilisateur suspendu', 'icon' => '🚫', 'color' => '#A64B2A'],
-    'notification_sent' => ['label' => 'Notification envoyée', 'icon' => '🔔', 'color' => '#D48B2C'],
+    'incident_status_changed' => ['label' => 'Statut modifié', 'icon' => 'STA', 'color' => $statusPalette['acknowledged']],
+    'incident.deleted_via_admin' => ['label' => 'Signalement supprimé', 'icon' => 'SUP', 'color' => $themePalette['danger']],
+    'comment_report.dismissed' => ['label' => 'Signalement classé', 'icon' => 'OK', 'color' => $statusPalette['resolved']],
+    'comment.deleted_via_admin' => ['label' => 'Commentaire supprimé', 'icon' => 'SUP', 'color' => $themePalette['danger']],
+    'comment.deleted_via_moderation' => ['label' => 'Commentaire supprimé', 'icon' => 'SUP', 'color' => $themePalette['danger']],
+    'user.suspended_via_moderation' => ['label' => 'Utilisateur suspendu', 'icon' => 'BLQ', 'color' => $statusPalette['in_progress']],
+    'user_banned' => ['label' => 'Utilisateur suspendu', 'icon' => 'BLQ', 'color' => $statusPalette['in_progress']],
+    'notification_sent' => ['label' => 'Notification envoyée', 'icon' => 'INF', 'color' => $themePalette['accent']],
 ];
 
 require_once __DIR__ . '/../includes/layout.php';
 ?>
-<style>
-.audit-hero {
-  background: linear-gradient(135deg, #0e3127 0%, #174b3a 52%, #2d6f86 100%);
-  color: #fff;
-  border-radius: 28px;
-  padding: 28px;
-  margin-bottom: 24px;
-  box-shadow: 0 18px 38px rgba(14, 49, 39, .16);
-}
-.audit-kicker {
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #f2d58c;
-  margin-bottom: 10px;
-}
-.audit-title {
-  font-size: 30px;
-  font-family: 'Merriweather', serif;
-  font-weight: 900;
-  line-height: 1.15;
-  margin-bottom: 10px;
-}
-.audit-text {
-  color: rgba(255,255,255,.82);
-  max-width: 640px;
-}
-.audit-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.audit-stat {
-  background: rgba(255,253,248,.94);
-  border: 1px solid #ece4d5;
-  border-radius: 20px;
-  padding: 18px;
-  box-shadow: 0 10px 24px rgba(14, 49, 39, .06);
-}
-.audit-stat strong {
-  display: block;
-  font-size: 28px;
-  color: #183229;
-}
-.audit-stat span {
-  font-size: 13px;
-  color: #5e6c67;
-}
-.audit-filters {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-}
-.audit-filters input,
-.audit-filters select {
-  min-width: 150px;
-}
-.audit-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: rgba(255,253,248,.94);
-  border: 1px solid #ece4d5;
-  border-radius: 18px;
-  overflow: hidden;
-  box-shadow: 0 10px 24px rgba(14, 49, 39, .06);
-}
-.audit-table th {
-  background: #f8f3e8;
-  padding: 12px 14px;
-  text-align: left;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: #5e6c67;
-}
-.audit-table td {
-  padding: 12px 14px;
-  border-top: 1px solid #f2ebde;
-  vertical-align: middle;
-}
-.audit-table tr:hover td {
-  background: #fbf7ef;
-}
-.audit-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-}
-.audit-entity {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: #efe7d7;
-  color: #5e6c67;
-  font-size: 11px;
-  font-weight: 700;
-}
-.audit-pagination {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  margin-top: 20px;
-  flex-wrap: wrap;
-}
-.audit-page {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 38px;
-  height: 38px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid #d8d0c2;
-  color: #183229;
-  background: #fffdf8;
-  text-decoration: none;
-}
-.audit-page.active {
-  background: #174b3a;
-  border-color: #174b3a;
-  color: #fff;
-}
-.audit-modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, .5);
-  z-index: 1000;
-  align-items: center;
-  justify-content: center;
-}
-.audit-modal.open {
-  display: flex;
-}
-.audit-modal-box {
-  width: 760px;
-  max-width: 94vw;
-  max-height: 82vh;
-  overflow: auto;
-  background: #fffdf8;
-  border-radius: 24px;
-  padding: 24px;
-  border: 1px solid #ece4d5;
-  box-shadow: 0 18px 38px rgba(14, 49, 39, .16);
-}
-.audit-modal-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-top: 16px;
-}
-.audit-modal-col {
-  background: #f8f3e8;
-  border-radius: 16px;
-  padding: 14px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: monospace;
-  font-size: 12px;
-}
-@media (max-width: 768px) {
-  .audit-modal-grid {
-    grid-template-columns: 1fr;
-  }
-}
-</style>
 
-<div class="audit-hero">
-  <div class="audit-kicker">Traçabilité</div>
-  <div class="audit-title">Suivre les actions sensibles du back-office</div>
-  <div class="audit-text">
-    Les logs d’audit permettent d’identifier qui a agi, sur quelle ressource, et à quel moment, afin de fiabiliser la gouvernance du service.
+<div class="page-async-scope" data-async-scope="audit-admin">
+<div class="page-hero page-hero--with-visual">
+  <div class="page-hero-copy">
+    <div class="page-hero-kicker">Traçabilité</div>
+    <div class="page-hero-title">Suivre les actions sensibles du back-office</div>
+    <div class="page-hero-text">
+      Les logs d’audit permettent d’identifier qui a agi, sur quelle ressource, et à quel moment, afin de fiabiliser la gouvernance du service.
+    </div>
+  </div>
+  <div class="page-hero-metrics">
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= $total ?></span>
+      <span class="hero-chip-label">entree(s) sur la période</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= $stats['actors_7d'] ?></span>
+      <span class="hero-chip-label">agents actifs sur 7 jours</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= $stats['deletions_30d'] ?></span>
+      <span class="hero-chip-label">actions de suppression</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= $stats['suspensions_30d'] ?></span>
+      <span class="hero-chip-label">suspensions récentes</span>
+    </div>
+  </div>
+  <div class="page-hero-visual">
+    <div class="generated-visual-panel generated-visual-panel--hero hero-visual-stack">
+      <?= generated_visual_html('ILL-01', ['class' => 'generated-visual generated-visual--cover hero-visual-stack-main', 'label' => 'Lecture de traces']) ?>
+      <?= generated_visual_html('ILL-05', ['class' => 'generated-visual generated-visual--cover hero-visual-stack-inset', 'label' => 'Cadre de gouvernance']) ?>
+      <?= generated_visual_html('CHAR-05', ['class' => 'generated-visual generated-visual--portrait hero-visual-stack-agent', 'label' => 'Relais audit']) ?>
+      <div class="generated-visual-caption hero-visual-stack-copy">
+        <strong>Memoire d exploitation</strong>
+        <span>Qui a agi, sur quoi, et avec quel niveau de sensibilité pour le service.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="admin-guidance-grid">
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Bonne lecture</div>
+    <h3>Lire les traces comme une aide a la gouvernance, pas comme une punition.</h3>
+    <p>
+      Les logs servent d abord a comprendre la chaine d action, a retrouver un contexte et a fiabiliser les décisions sensibles prises dans le backoffice.
+    </p>
+  </div>
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Reflexe utile</div>
+    <h3>Filtrer vite, puis ouvrir le bon détail.</h3>
+    <p>
+      L enjeu n est pas de lire toute la table, mais d isoler la bonne période, le bon agent et la bonne action pour rejouer proprement un incident d exploitation.
+    </p>
   </div>
 </div>
 
@@ -306,24 +184,40 @@ require_once __DIR__ . '/../includes/layout.php';
   <div class="audit-stat"><strong><?= $stats['suspensions_30d'] ?></strong><span>suspensions sur 30 jours</span></div>
 </div>
 
-<form method="GET" action="/admin/" class="audit-filters">
-  <input type="hidden" name="page" value="audit_logs">
-  <select name="admin_id" class="form-control">
-    <option value="">Tous les agents</option>
-    <?php foreach ($admins as $actor): ?>
-      <option value="<?= $actor['id'] ?>" <?= $filterAdmin === (int)$actor['id'] ? 'selected' : '' ?>><?= e($actor['full_name']) ?></option>
-    <?php endforeach; ?>
-  </select>
-  <input type="text" name="entity" class="form-control" value="<?= e($filterEntity) ?>" placeholder="Entité">
-  <input type="text" name="action" class="form-control" value="<?= e($filterAction) ?>" placeholder="Action">
-  <input type="date" name="from" class="form-control" value="<?= e($filterFrom) ?>">
-  <input type="date" name="to" class="form-control" value="<?= e($filterTo) ?>">
-  <button type="submit" class="btn btn-primary">Filtrer</button>
-  <a href="/admin/?page=audit_logs" class="btn btn-outline">Réinitialiser</a>
-</form>
+<div class="card audit-filters-card">
+  <div class="card-header">
+    <span class="card-title">Filtrer les traces</span>
+    <span class="text-small text-muted">Réduire la lecture aux agents, entités et fenêtres de temps utiles.</span>
+  </div>
+  <form method="GET" action="/admin/" class="audit-filters" data-async-form>
+    <input type="hidden" name="page" value="audit_logs">
+    <select name="admin_id" class="form-control">
+      <option value="">Tous les agents</option>
+      <?php foreach ($admins as $actor): ?>
+        <option value="<?= $actor['id'] ?>" <?= $filterAdmin === (int)$actor['id'] ? 'selected' : '' ?>><?= e($actor['full_name']) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <input type="text" name="entity" class="form-control" value="<?= e($filterEntity) ?>" placeholder="Entité">
+    <input type="text" name="action" class="form-control" value="<?= e($filterAction) ?>" placeholder="Action">
+    <input type="date" name="from" class="form-control" value="<?= e($filterFrom) ?>">
+    <input type="date" name="to" class="form-control" value="<?= e($filterTo) ?>">
+    <div class="audit-filter-actions">
+      <button type="submit" class="btn btn-primary">Filtrer</button>
+      <a href="/admin/?page=audit_logs" class="btn btn-outline" data-async-link>Réinitialiser</a>
+    </div>
+  </form>
+</div>
 
-<div class="table-wrapper">
-  <table class="audit-table">
+<div class="card">
+  <div class="card-header card-header--split">
+    <div>
+      <span class="card-title">Historique d’audit</span>
+      <p class="admin-section-note">Conserver une lecture compacte : acteur, action, cible et charge utile avant d’ouvrir le détail JSON.</p>
+    </div>
+    <span class="text-small text-muted"><?= $total ?> entrée(s) trouvée(s)</span>
+  </div>
+  <div class="table-wrapper">
+    <table class="audit-table">
     <thead>
       <tr>
         <th>Date</th>
@@ -337,11 +231,11 @@ require_once __DIR__ . '/../includes/layout.php';
     </thead>
     <tbody>
       <?php if (empty($logs)): ?>
-        <tr><td colspan="7" class="text-center text-muted" style="padding:36px">Aucun log pour cette période.</td></tr>
+        <tr><td colspan="7" class="text-center text-muted audit-empty">Aucun log pour cette période. Élargir la fenêtre, retirer un filtre ou attendre un nouvel événement d exploitation.</td></tr>
       <?php endif; ?>
       <?php foreach ($logs as $log): ?>
         <?php
-          $meta = $actionLabels[$log['action']] ?? ['label' => $log['action'], 'icon' => '⚙️', 'color' => '#5E6C67'];
+          $meta = $actionLabels[$log['action']] ?? ['label' => $log['action'], 'icon' => 'LOG', 'color' => '#5E6C67'];
           $detailsPayload = $log['log_details'] ?? null;
           $oldPayload = $log['log_old_value'] ?? null;
           $newPayload = $log['log_new_value'] ?? null;
@@ -356,7 +250,7 @@ require_once __DIR__ . '/../includes/layout.php';
             <span class="text-small text-muted"><?= e($log['admin_email']) ?></span>
           </td>
           <td>
-            <span class="audit-action" style="background:<?= e($meta['color']) ?>22;color:<?= e($meta['color']) ?>">
+            <span class="audit-action" style="--audit-accent:<?= e($meta['color']) ?>">
               <?= e($meta['icon']) ?> <?= e($meta['label']) ?>
             </span>
           </td>
@@ -379,42 +273,44 @@ require_once __DIR__ . '/../includes/layout.php';
         </tr>
       <?php endforeach; ?>
     </tbody>
-  </table>
-</div>
-
-<?php if ($totalPages > 1): ?>
-  <div class="audit-pagination">
-    <?php for ($p = 1; $p <= min($totalPages, 10); $p++): ?>
-      <?php if ($p === $pageNum): ?>
-        <span class="audit-page active"><?= $p ?></span>
-      <?php else: ?>
-        <a class="audit-page" href="/admin/?page=audit_logs&admin_id=<?= $filterAdmin ?>&entity=<?= urlencode($filterEntity) ?>&action=<?= urlencode($filterAction) ?>&from=<?= urlencode($filterFrom) ?>&to=<?= urlencode($filterTo) ?>&p=<?= $p ?>"><?= $p ?></a>
-      <?php endif; ?>
-    <?php endfor; ?>
+    </table>
   </div>
-<?php endif; ?>
+
+  <?php if ($totalPages > 1): ?>
+    <div class="audit-pagination">
+      <?php for ($p = 1; $p <= min($totalPages, 10); $p++): ?>
+        <?php if ($p === $pageNum): ?>
+          <span class="audit-page active"><?= $p ?></span>
+        <?php else: ?>
+          <a class="audit-page" data-async-link href="/admin/?page=audit_logs&admin_id=<?= $filterAdmin ?>&entity=<?= urlencode($filterEntity) ?>&action=<?= urlencode($filterAction) ?>&from=<?= urlencode($filterFrom) ?>&to=<?= urlencode($filterTo) ?>&p=<?= $p ?>"><?= $p ?></a>
+        <?php endif; ?>
+      <?php endfor; ?>
+    </div>
+  <?php endif; ?>
+</div>
 
 <div class="audit-modal" id="auditModal" onclick="closeAuditModal(event)">
   <div class="audit-modal-box">
-    <h3 style="font-size:24px;color:#183229">Détail de l’entrée d’audit</h3>
-    <p class="text-muted" style="margin-top:6px">Affichage du contenu enregistré par l’action.</p>
+    <h3 class="audit-modal-title">Détail de l’entrée d’audit</h3>
+    <p class="text-muted audit-modal-text">Affichage du contenu enregistré par l’action.</p>
     <div class="audit-modal-grid">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#5e6c67;margin-bottom:6px">DETAILS</div>
+        <div class="audit-modal-label">DETAILS</div>
         <div class="audit-modal-col" id="auditDetails"></div>
       </div>
       <div>
-        <div style="font-size:12px;font-weight:800;color:#5e6c67;margin-bottom:6px">AVANT / APRES</div>
+        <div class="audit-modal-label">AVANT / APRES</div>
         <div class="audit-modal-col" id="auditDiff"></div>
       </div>
     </div>
-    <div style="margin-top:18px;display:flex;justify-content:flex-end">
+    <div class="audit-modal-actions">
       <button type="button" class="btn btn-outline" onclick="document.getElementById('auditModal').classList.remove('open')">Fermer</button>
     </div>
   </div>
 </div>
 
 <script>
+(() => {
 function auditFormat(value) {
   if (!value) return '(vide)';
   try {
@@ -424,17 +320,20 @@ function auditFormat(value) {
   }
 }
 
-function openAuditModal(details, oldValue, newValue) {
+window.openAuditModal = function openAuditModal(details, oldValue, newValue) {
   document.getElementById('auditDetails').textContent = auditFormat(details);
   document.getElementById('auditDiff').textContent = 'Avant:\n' + auditFormat(oldValue) + '\n\nAprès:\n' + auditFormat(newValue);
   document.getElementById('auditModal').classList.add('open');
-}
+};
 
-function closeAuditModal(event) {
+window.closeAuditModal = function closeAuditModal(event) {
   if (event.target.id === 'auditModal') {
     document.getElementById('auditModal').classList.remove('open');
   }
-}
+};
+})();
 </script>
+
+</div>
 
 <?php require_once __DIR__ . '/../includes/layout_footer.php'; ?>

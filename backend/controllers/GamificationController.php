@@ -33,6 +33,17 @@ class GamificationController extends BaseController
         'commenter' => ['label' => 'Commentateur',      'icon' => '💬',  'desc' => '10 commentaires postés'],
     ];
 
+    private const LEGACY_BADGE_NAME_MAP = [
+        'explorateur' => 'explorer',
+        'contributeur_actif' => 'active',
+        'top_contributeur' => 'top',
+        'signalement_populaire' => 'popular',
+        'probleme_resolu' => 'resolved',
+        'probleme_resolu_' => 'resolved',
+        'votant_engage' => 'voter',
+        'commentateur' => 'commenter',
+    ];
+
     /**
      * GET /gamification — Stats de l'utilisateur connecté
      */
@@ -207,8 +218,22 @@ class GamificationController extends BaseController
         // Insérer uniquement les badges non encore obtenus
         foreach ($toAward as $badge) {
             try {
-                $db->prepare("INSERT IGNORE INTO user_badges (user_id, badge_key, awarded_at) VALUES (?, ?, NOW())")
-                   ->execute([$userId, $badge]);
+                if (self::columnExists($db, 'user_badges', 'badge_key')) {
+                    $db->prepare("INSERT IGNORE INTO user_badges (user_id, badge_key, awarded_at) VALUES (?, ?, NOW())")
+                       ->execute([$userId, $badge]);
+                    continue;
+                }
+
+                if (
+                    self::columnExists($db, 'user_badges', 'badge_id')
+                    && self::tableExists($db, 'badges')
+                ) {
+                    $badgeId = self::legacyBadgeIdForKey($db, $badge);
+                    if ($badgeId !== null) {
+                        $db->prepare("INSERT IGNORE INTO user_badges (user_id, badge_id, earned_at) VALUES (?, ?, NOW())")
+                           ->execute([$userId, $badgeId]);
+                    }
+                }
             } catch (\PDOException $e) {
                 // Ignorer les doublons
             }
@@ -231,9 +256,30 @@ class GamificationController extends BaseController
             return [];
         }
 
-        $badgeStmt = $this->db->prepare("SELECT badge_key, awarded_at FROM user_badges WHERE user_id = ? ORDER BY awarded_at DESC");
-        $badgeStmt->execute([$userId]);
-        return $badgeStmt->fetchAll(\PDO::FETCH_ASSOC);
+        if ($this->dbHasColumn('user_badges', 'badge_key')) {
+            $badgeStmt = $this->db->prepare("SELECT badge_key, awarded_at FROM user_badges WHERE user_id = ? ORDER BY awarded_at DESC");
+            $badgeStmt->execute([$userId]);
+            return $badgeStmt->fetchAll(\PDO::FETCH_ASSOC);
+        }
+
+        if ($this->hasTable('badges') && $this->dbHasColumn('user_badges', 'badge_id')) {
+            $awardedColumn = $this->dbHasColumn('user_badges', 'earned_at') ? 'ub.earned_at' : 'NULL';
+            $badgeStmt = $this->db->prepare("
+                SELECT ub.badge_id, b.name AS label, b.icon, {$awardedColumn} AS awarded_at
+                FROM user_badges ub
+                LEFT JOIN badges b ON b.id = ub.badge_id
+                WHERE ub.user_id = ?
+                ORDER BY awarded_at DESC
+            ");
+            $badgeStmt->execute([$userId]);
+
+            return array_map(function (array $row): array {
+                $row['badge_key'] = self::canonicalBadgeKeyFromLabel($row['label'] ?? null, $row['badge_id'] ?? null);
+                return $row;
+            }, $badgeStmt->fetchAll(\PDO::FETCH_ASSOC));
+        }
+
+        return [];
     }
 
     private function computeEarnedBadges(int $incidents, int $votes, int $comments, int $resolved): array
@@ -307,6 +353,49 @@ class GamificationController extends BaseController
         } catch (\Throwable $e) {
             return false;
         }
+    }
+
+    private static function columnExists(\PDO $db, string $table, string $column): bool
+    {
+        try {
+            $stmt = $db->prepare(
+                'SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
+            );
+            $stmt->execute([$table, $column]);
+            return (int) $stmt->fetchColumn() > 0;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    private static function canonicalBadgeKeyFromLabel(?string $label, ?int $fallbackId = null): string
+    {
+        $normalized = trim((string)$label);
+        if ($normalized !== '') {
+            $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $normalized);
+            $ascii = $ascii === false ? $normalized : $ascii;
+            $key = strtolower(preg_replace('/[^a-z0-9]+/', '_', $ascii) ?? '');
+            $key = trim($key, '_');
+
+            if ($key !== '') {
+                return self::LEGACY_BADGE_NAME_MAP[$key] ?? $key;
+            }
+        }
+
+        return $fallbackId !== null ? 'badge_' . $fallbackId : 'badge';
+    }
+
+    private static function legacyBadgeIdForKey(\PDO $db, string $badgeKey): ?int
+    {
+        $stmt = $db->query('SELECT id, name FROM badges');
+        foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $badge) {
+            $candidateKey = self::canonicalBadgeKeyFromLabel($badge['name'] ?? null, isset($badge['id']) ? (int)$badge['id'] : null);
+            if ($candidateKey === $badgeKey) {
+                return isset($badge['id']) ? (int)$badge['id'] : null;
+            }
+        }
+
+        return null;
     }
 
     private function getNextBadge(

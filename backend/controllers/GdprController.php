@@ -71,9 +71,24 @@ class GdprController extends BaseController
     {
         $user   = $this->requireAuth();
         $userId = $this->getAuthUserId($user);
+        $filepath = $this->getExportDir() . basename($filename);
 
         if (!$this->hasTable('gdpr_export_requests')) {
-            $this->error('Historique des exports indisponible sur cette instance.', 503);
+            $expectedPrefix = (defined('APP_SLUG') ? APP_SLUG : 'ma_commune') . "_export_user_{$userId}_";
+            if (!str_starts_with(basename($filename), $expectedPrefix) || !file_exists($filepath)) {
+                $this->error('Fichier introuvable ou lien expiré.', 404);
+            }
+
+            $fileMtime = @filemtime($filepath);
+            if ($fileMtime === false || $fileMtime < strtotime('-7 days')) {
+                $this->error('Fichier introuvable ou lien expiré.', 404);
+            }
+
+            header('Content-Type: application/json');
+            header('Content-Disposition: attachment; filename="' . basename($filename) . '"');
+            header('Content-Length: ' . filesize($filepath));
+            readfile($filepath);
+            exit;
         }
 
         // Vérifier que le fichier appartient à cet utilisateur
@@ -89,7 +104,6 @@ class GdprController extends BaseController
             $this->error('Fichier introuvable ou lien expiré.', 404);
         }
 
-        $filepath = $this->getExportDir() . basename($filename);
         if (!file_exists($filepath)) {
             $this->error('Fichier introuvable.', 404);
         }
@@ -116,7 +130,8 @@ class GdprController extends BaseController
         }
 
         // Vérifier le mot de passe
-        $stmt = $this->db->prepare("SELECT password_hash FROM users WHERE id = ?");
+        $passwordColumn = $this->getUserPasswordColumnName();
+        $stmt = $this->db->prepare("SELECT {$passwordColumn} AS password_hash FROM users WHERE id = ?");
         $stmt->execute([$userId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -129,7 +144,7 @@ class GdprController extends BaseController
             UPDATE users SET
                 full_name = 'Utilisateur supprimé',
                 email     = CONCAT('deleted_', id, '@" . (defined('APP_SLUG') ? APP_SLUG : 'ma_commune') . ".deleted'),
-                password_hash = '',
+                {$passwordColumn} = '',
                 phone     = NULL,
                 is_active = 0
             WHERE id = ?
@@ -217,9 +232,10 @@ class GdprController extends BaseController
 
     private function getNotifications(int $userId): array
     {
+        $sentColumn = $this->dbHasColumn('notifications', 'sent_at') ? 'sent_at' : 'created_at';
         $stmt = $this->db->prepare("
-            SELECT id, title, body, type, is_read, sent_at
-            FROM notifications WHERE user_id = ? ORDER BY sent_at DESC
+            SELECT id, title, body, type, is_read, {$sentColumn} AS sent_at
+            FROM notifications WHERE user_id = ? ORDER BY {$sentColumn} DESC
         ");
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -239,11 +255,24 @@ class GdprController extends BaseController
         }
 
         if ($this->hasTable('user_badges')) {
-            $stmt2 = $this->db->prepare("
-                SELECT badge_key, awarded_at FROM user_badges WHERE user_id = ?
-            ");
-            $stmt2->execute([$userId]);
-            $gamif['badges'] = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+            if ($this->dbHasColumn('user_badges', 'badge_key')) {
+                $stmt2 = $this->db->prepare("
+                    SELECT badge_key, awarded_at FROM user_badges WHERE user_id = ?
+                ");
+                $stmt2->execute([$userId]);
+                $gamif['badges'] = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+            } elseif ($this->hasTable('badges') && $this->dbHasColumn('user_badges', 'badge_id')) {
+                $awardedColumn = $this->dbHasColumn('user_badges', 'earned_at') ? 'ub.earned_at' : 'NULL';
+                $stmt2 = $this->db->prepare("
+                    SELECT ub.badge_id, b.name AS label, b.icon, {$awardedColumn} AS awarded_at
+                    FROM user_badges ub
+                    LEFT JOIN badges b ON b.id = ub.badge_id
+                    WHERE ub.user_id = ?
+                    ORDER BY awarded_at DESC
+                ");
+                $stmt2->execute([$userId]);
+                $gamif['badges'] = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+            }
         }
 
         return $gamif;

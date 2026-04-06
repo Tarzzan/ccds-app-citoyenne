@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../core/BaseController.php';
 require_once __DIR__ . '/../core/Permissions.php';
 require_once __DIR__ . '/../config/PushNotificationService.php';
+require_once __DIR__ . '/../config/NotificationStore.php';
 require_once __DIR__ . '/../config/InterventionWorkflow.php';
 
 class NotificationController extends BaseController
@@ -49,12 +50,19 @@ class NotificationController extends BaseController
         $page   = max(1, (int)($_GET['page'] ?? 1));
         $limit  = 20;
 
+        $sentColumn = NotificationStore::timestampColumn($this->db);
+        $incidentExpr = NotificationStore::incidentIdExpression($this->db, 'n');
         $stmt = $this->db->prepare("
-            SELECT n.*, i.reference AS incident_reference, i.title AS incident_title
+            SELECT
+                n.*,
+                {$incidentExpr} AS derived_incident_id,
+                n.{$sentColumn} AS sent_at_value,
+                i.reference AS incident_reference,
+                i.title AS incident_title
             FROM notifications n
-            LEFT JOIN incidents i ON i.id = n.incident_id
+            LEFT JOIN incidents i ON i.id = {$incidentExpr}
             WHERE n.user_id = ?
-            ORDER BY n.sent_at DESC
+            ORDER BY n.{$sentColumn} DESC
         ");
         $stmt->execute([$userId]);
         $notifications = $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -68,8 +76,8 @@ class NotificationController extends BaseController
                 'title'                => $n['title'],
                 'body'                 => $n['body'],
                 'is_read'              => (bool)$n['is_read'],
-                'sent_at'              => $n['sent_at'],
-                'incident_id'          => isset($n['incident_id']) ? (int)$n['incident_id'] : null,
+                'sent_at'              => $n['sent_at_value'],
+                'incident_id'          => isset($n['derived_incident_id']) ? (int)$n['derived_incident_id'] : null,
                 'incident_reference'   => $n['incident_reference'],
                 'incident_title'       => $n['incident_title'],
                 'intervention_context' => $interventionContext,
@@ -249,22 +257,30 @@ class NotificationController extends BaseController
             $this->notFound('Notification introuvable.');
         }
 
-        $stmt = $this->db->prepare("
-            UPDATE notifications
-            SET is_read = 1
-            WHERE user_id = ?
-              AND type = ?
-              AND COALESCE(incident_id, 0) = COALESCE(?, 0)
-              AND title = ?
-              AND body = ?
-        ");
-        $stmt->execute([
+        $conditions = [
+            'user_id = ?',
+            'type = ?',
+            'title = ?',
+            'body = ?',
+        ];
+        $params = [
             $userId,
             $notification['type'],
-            $notification['incident_id'] ?? null,
             $notification['title'],
             $notification['body'],
-        ]);
+        ];
+
+        $incidentExpr = NotificationStore::incidentIdExpression($this->db);
+        if ($incidentExpr !== 'NULL') {
+            $conditions[] = "COALESCE({$incidentExpr}, 0) = COALESCE(?, 0)";
+            $params[] = $notification['incident_id'] ?? null;
+        }
+
+        $stmt = $this->db->prepare(sprintf(
+            'UPDATE notifications SET is_read = 1 WHERE %s',
+            implode(' AND ', $conditions)
+        ));
+        $stmt->execute($params);
 
         $this->success(['updated' => true]);
     }
@@ -286,8 +302,18 @@ class NotificationController extends BaseController
 
     private function findUserNotification(int $notifId, int $userId): ?array
     {
+        $sentColumn = NotificationStore::timestampColumn($this->db);
+        $incidentExpr = NotificationStore::incidentIdExpression($this->db);
         $stmt = $this->db->prepare("
-            SELECT id, user_id, incident_id, type, title, body, is_read, sent_at
+            SELECT
+                id,
+                user_id,
+                type,
+                title,
+                body,
+                is_read,
+                {$incidentExpr} AS incident_id,
+                {$sentColumn} AS sent_at
             FROM notifications
             WHERE id = ? AND user_id = ?
             LIMIT 1
@@ -340,11 +366,16 @@ class NotificationController extends BaseController
         $sent = 0;
         foreach ($tokens as $t) {
             if ($pushService->send($t['token'], $title, $message, ['incident_id' => $incidentId])) {
-                // Enregistrer en base
-                $this->db->prepare("
-                    INSERT INTO notifications (user_id, incident_id, type, title, body, is_read, sent_at)
-                    VALUES (?, ?, 'system', ?, ?, 0, NOW())
-                ")->execute([$t['user_id'], $incidentId, $title, $message]);
+                NotificationStore::insert(
+                    $this->db,
+                    (int) $t['user_id'],
+                    $incidentId,
+                    'system',
+                    $title,
+                    $message,
+                    ['audience' => $targetUser ? 'user' : 'voters'],
+                    0
+                );
                 $sent++;
             }
         }

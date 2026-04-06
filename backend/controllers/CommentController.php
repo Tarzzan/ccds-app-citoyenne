@@ -7,9 +7,13 @@
 require_once __DIR__ . '/../core/BaseController.php';
 require_once __DIR__ . '/../core/Permissions.php';
 require_once __DIR__ . '/../config/PushNotificationService.php';
+require_once __DIR__ . '/../config/ContentModerationService.php';
 
 class CommentController extends BaseController
 {
+    private ?bool $commentsHasIsEdited = null;
+    private ?bool $commentsHasModerationColumns = null;
+
     /**
      * GET /incidents/{id}/comments — Liste avec replies imbriquées (UX-05)
      */
@@ -20,9 +24,16 @@ class CommentController extends BaseController
         $role = $auth['role'] ?? 'citizen';
         $showInternal = in_array($role, ['agent', 'admin'], true);
 
+        $isEditedSelect = $this->commentsHasIsEdited()
+            ? 'c.is_edited'
+            : '0 AS is_edited';
+        $moderationSelect = $this->commentsHasModerationColumns()
+            ? 'c.moderation_status, c.moderation_reason'
+            : "'visible' AS moderation_status, NULL AS moderation_reason";
+
         // Commentaires racine
         $sql = "
-            SELECT c.id, c.comment, c.is_internal, c.is_edited,
+            SELECT c.id, c.comment, c.is_internal, {$isEditedSelect}, {$moderationSelect},
                    c.parent_id, c.created_at, c.updated_at,
                    u.id AS user_id, u.full_name AS author_name, u.role AS author_role
             FROM comments c
@@ -37,7 +48,7 @@ class CommentController extends BaseController
 
         // Réponses
         $sqlR = "
-            SELECT c.id, c.comment, c.is_internal, c.is_edited,
+            SELECT c.id, c.comment, c.is_internal, {$isEditedSelect}, {$moderationSelect},
                    c.parent_id, c.created_at, c.updated_at,
                    u.id AS user_id, u.full_name AS author_name, u.role AS author_role
             FROM comments c
@@ -52,6 +63,9 @@ class CommentController extends BaseController
 
         $roots = $this->sanitizeCommentsForAudience($roots, $auth);
         $allReplies = $this->sanitizeCommentsForAudience($allReplies, $auth);
+        $moderationService = new ContentModerationService($this->db);
+        $roots = array_map([$moderationService, 'publicCommentPayload'], $roots);
+        $allReplies = array_map([$moderationService, 'publicCommentPayload'], $allReplies);
 
         $repliesByParent = [];
         foreach ($allReplies as $r) { $repliesByParent[$r['parent_id']][] = $r; }
@@ -92,11 +106,19 @@ class CommentController extends BaseController
             if ($parent['parent_id'] !== null) { $this->error('Réponses imbriquées non autorisées.', 422); }
         }
 
-        $stmt = $this->db->prepare("
-            INSERT INTO comments (incident_id, user_id, parent_id, comment, is_internal, is_edited, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, 0, NOW(), NOW())
-        ");
-        $stmt->execute([$incidentId, $userId, $parentId, $comment, $isInternal ? 1 : 0]);
+        if ($this->commentsHasIsEdited()) {
+            $stmt = $this->db->prepare("
+                INSERT INTO comments (incident_id, user_id, parent_id, comment, is_internal, is_edited, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, 0, NOW(), NOW())
+            ");
+            $stmt->execute([$incidentId, $userId, $parentId, $comment, $isInternal ? 1 : 0]);
+        } else {
+            $stmt = $this->db->prepare("
+                INSERT INTO comments (incident_id, user_id, parent_id, comment, is_internal, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+            ");
+            $stmt->execute([$incidentId, $userId, $parentId, $comment, $isInternal ? 1 : 0]);
+        }
         $newId = (int)$this->db->lastInsertId();
 
         if (
@@ -134,8 +156,11 @@ class CommentController extends BaseController
             $this->error('Fenêtre d\'édition (24h) dépassée.', 422);
         }
 
-        $this->db->prepare("UPDATE comments SET comment = ?, is_edited = 1, updated_at = NOW() WHERE id = ?")
-                 ->execute([$comment, $commentId]);
+        $sql = $this->commentsHasIsEdited()
+            ? 'UPDATE comments SET comment = ?, is_edited = 1, updated_at = NOW() WHERE id = ?'
+            : 'UPDATE comments SET comment = ?, updated_at = NOW() WHERE id = ?';
+
+        $this->db->prepare($sql)->execute([$comment, $commentId]);
 
         $this->success(['updated' => true]);
     }
@@ -160,6 +185,22 @@ class CommentController extends BaseController
                  ->execute([$commentId, $commentId]);
 
         $this->success(['deleted' => true]);
+    }
+
+    /**
+     * DELETE /comments/{cid} — Supprimer sans incident_id explicite.
+     */
+    public function deleteStandalone(int $commentId): void
+    {
+        $stmt = $this->db->prepare('SELECT incident_id FROM comments WHERE id = ? LIMIT 1');
+        $stmt->execute([$commentId]);
+        $incidentId = (int)$stmt->fetchColumn();
+
+        if ($incidentId <= 0) {
+            $this->notFound('Commentaire introuvable.');
+        }
+
+        $this->delete($incidentId, $commentId);
     }
 
     // ── Helpers ───────────────────────────────────────────────
@@ -196,5 +237,43 @@ class CommentController extends BaseController
 
             return $comment;
         }, $comments);
+    }
+
+    private function commentsHasIsEdited(): bool
+    {
+        if ($this->commentsHasIsEdited !== null) {
+            return $this->commentsHasIsEdited;
+        }
+
+        try {
+            $stmt = $this->db->prepare(
+                'SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
+            );
+            $stmt->execute(['comments', 'is_edited']);
+            $this->commentsHasIsEdited = (int)$stmt->fetchColumn() > 0;
+        } catch (\Throwable $e) {
+            $this->commentsHasIsEdited = false;
+        }
+
+        return $this->commentsHasIsEdited;
+    }
+
+    private function commentsHasModerationColumns(): bool
+    {
+        if ($this->commentsHasModerationColumns !== null) {
+            return $this->commentsHasModerationColumns;
+        }
+
+        try {
+            $stmt = $this->db->prepare(
+                'SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
+            );
+            $stmt->execute(['comments', 'moderation_status']);
+            $this->commentsHasModerationColumns = (int)$stmt->fetchColumn() > 0;
+        } catch (\Throwable $e) {
+            $this->commentsHasModerationColumns = false;
+        }
+
+        return $this->commentsHasModerationColumns;
     }
 }

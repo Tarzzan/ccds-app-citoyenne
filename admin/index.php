@@ -31,6 +31,7 @@ $page_map = [
     'login'           => 'pages/login.php',
     'dashboard'       => 'pages/dashboard.php',
     'incidents'       => 'pages/incidents.php',
+    'ajax_incident_media' => 'pages/ajax_incident_media.php',
     'incident_detail' => 'pages/incident_detail.php',
     'users'           => 'pages/users.php',
     'services'        => 'pages/services.php',
@@ -39,6 +40,7 @@ $page_map = [
     'map'             => 'pages/map.php',
     'notifications'   => 'pages/notifications.php',
     'search'          => 'pages/search.php',
+    'visual_admin'    => 'pages/visual_admin.php',
     'moderation'           => 'pages/moderation.php',
     'audit_logs'           => 'pages/audit_logs.php',
     'realtime_dashboard'   => 'pages/realtime_dashboard.php',
@@ -58,7 +60,7 @@ if ($file && file_exists(__DIR__ . '/' . $file)) {
     $active_nav = '';
     require_once __DIR__ . '/includes/layout.php';
     echo '<div style="text-align:center;padding:80px 20px">
-            <div style="font-size:64px">🔍</div>
+            <div style="display:inline-flex;align-items:center;justify-content:center;min-width:84px;height:84px;padding:0 20px;border-radius:999px;background:#efe7d7;color:#355248;font-size:14px;font-weight:900;letter-spacing:.8px;text-transform:uppercase">Page</div>
             <h2 style="font-size:24px;font-weight:800;margin:16px 0 8px">Page introuvable</h2>
             <p style="color:#94a3b8">La page <strong>' . e($page) . '</strong> n\'existe pas.</p>
             <a href="/admin/?page=dashboard" class="btn btn-primary" style="margin-top:20px">← Retour au tableau de bord</a>

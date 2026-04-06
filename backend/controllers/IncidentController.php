@@ -15,9 +15,12 @@ require_once __DIR__ . '/../core/Permissions.php';
 require_once __DIR__ . '/../core/Security.php';
 require_once __DIR__ . '/../config/PushNotificationService.php';
 require_once __DIR__ . '/../config/InterventionWorkflow.php';
+require_once __DIR__ . '/../config/ContentModerationService.php';
 
 class IncidentController extends BaseController
 {
+    private const MAX_PHOTOS = 5;
+    private ?bool $photosHaveModerationColumns = null;
     // ----------------------------------------------------------------
     // GET /api/incidents — Liste avec recherche et filtres avancés (UX-01)
     // ----------------------------------------------------------------
@@ -99,6 +102,7 @@ class IncidentController extends BaseController
         $sortDir = strtoupper(Security::sanitizeString($_GET['dir'] ?? '')) === 'ASC' ? 'ASC' : 'DESC';
 
         $whereStr = implode(' AND ', $where);
+        $thumbnailModerationColumns = $this->thumbnailModerationColumns();
 
         // Compter le total
         $countStmt = $this->db->prepare("SELECT COUNT(*) FROM incidents i WHERE $whereStr");
@@ -119,7 +123,8 @@ class IncidentController extends BaseController
                 c.service AS category_service,
                 u.full_name AS reporter_name,
                 assignee.full_name AS assigned_to_name,
-                (SELECT file_path FROM photos WHERE incident_id = i.id ORDER BY id ASC LIMIT 1) AS thumbnail
+                (SELECT file_path FROM photos WHERE incident_id = i.id ORDER BY id ASC LIMIT 1) AS thumbnail,
+                {$thumbnailModerationColumns}
             FROM incidents i
             JOIN categories c ON c.id = i.category_id
             JOIN users      u ON u.id = i.user_id
@@ -131,11 +136,18 @@ class IncidentController extends BaseController
         $stmt->execute($params);
         $incidents = $stmt->fetchAll();
 
+        $moderationService = new ContentModerationService($this->db);
         foreach ($incidents as &$inc) {
             if ($inc['thumbnail']) {
-                $inc['thumbnail'] = UPLOAD_BASE_URL . $inc['thumbnail'];
+                $inc['thumbnail'] = $moderationService->publicPhotoPayload([
+                    'url' => $moderationService->uploadUrl($inc['thumbnail']),
+                    'moderation_status' => $inc['thumbnail_moderation_status'] ?? 'visible',
+                    'moderation_reason' => $inc['thumbnail_moderation_reason'] ?? null,
+                    'moderation_placeholder_key' => $inc['thumbnail_moderation_placeholder_key'] ?? null,
+                ])['url'];
             }
             $inc['votes_count'] = (int)$inc['votes_count'];
+            unset($inc['thumbnail_moderation_status'], $inc['thumbnail_moderation_reason'], $inc['thumbnail_moderation_placeholder_key']);
             $inc = $this->enrichIncidentWithInterventionContext($inc, []);
             $inc = $this->sanitizeIncidentForAudience($inc, $auth, false);
         }
@@ -176,13 +188,17 @@ class IncidentController extends BaseController
         }
 
         // Photos
+        $photoModerationColumns = $this->photoModerationColumnsSelect();
         $stmtP = $this->db->prepare(
-            'SELECT id, file_path, file_name, mime_type, file_size, uploaded_at FROM photos WHERE incident_id = ? ORDER BY id ASC'
+            "SELECT id, file_path, file_name, mime_type, file_size, uploaded_at, {$photoModerationColumns}
+             FROM photos WHERE incident_id = ? ORDER BY id ASC"
         );
         $stmtP->execute([$id]);
         $photos = $stmtP->fetchAll();
+        $moderationService = new ContentModerationService($this->db);
         foreach ($photos as &$p) {
-            $p['url'] = UPLOAD_BASE_URL . $p['file_path'];
+            $p['url'] = $moderationService->uploadUrl($p['file_path']);
+            $p = $moderationService->publicPhotoPayload($p);
         }
 
         // Historique des statuts
@@ -204,6 +220,45 @@ class IncidentController extends BaseController
         $incident = $this->sanitizeIncidentForAudience($incident, $auth, true);
 
         $this->success($incident);
+    }
+
+    private function photosHaveModerationColumns(): bool
+    {
+        if ($this->photosHaveModerationColumns !== null) {
+            return $this->photosHaveModerationColumns;
+        }
+
+        try {
+            $stmt = $this->db->prepare(
+                'SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
+            );
+            $stmt->execute(['photos', 'moderation_status']);
+            $this->photosHaveModerationColumns = (int)$stmt->fetchColumn() > 0;
+        } catch (\Throwable $e) {
+            $this->photosHaveModerationColumns = false;
+        }
+
+        return $this->photosHaveModerationColumns;
+    }
+
+    private function photoModerationColumnsSelect(): string
+    {
+        return $this->photosHaveModerationColumns()
+            ? 'moderation_status, moderation_reason, moderation_placeholder_key'
+            : "'visible' AS moderation_status, NULL AS moderation_reason, NULL AS moderation_placeholder_key";
+    }
+
+    private function thumbnailModerationColumns(): string
+    {
+        if (!$this->photosHaveModerationColumns()) {
+            return "'visible' AS thumbnail_moderation_status, NULL AS thumbnail_moderation_reason, NULL AS thumbnail_moderation_placeholder_key";
+        }
+
+        return "
+            (SELECT moderation_status FROM photos WHERE incident_id = i.id ORDER BY id ASC LIMIT 1) AS thumbnail_moderation_status,
+            (SELECT moderation_reason FROM photos WHERE incident_id = i.id ORDER BY id ASC LIMIT 1) AS thumbnail_moderation_reason,
+            (SELECT moderation_placeholder_key FROM photos WHERE incident_id = i.id ORDER BY id ASC LIMIT 1) AS thumbnail_moderation_placeholder_key
+        ";
     }
 
     // ----------------------------------------------------------------
@@ -258,22 +313,24 @@ class IncidentController extends BaseController
             'INSERT INTO status_history (incident_id, user_id, old_status, new_status, note) VALUES (?, ?, NULL, ?, ?)'
         )->execute([$incidentId, $auth['sub'], 'submitted', 'Signalement créé par le citoyen.']);
 
-        // Upload photo
         $uploadedPhotos = [];
-        if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
-            $photoPath = $this->uploadPhoto($_FILES['photo'], $incidentId);
-            if ($photoPath) {
-                $this->db->prepare(
-                    'INSERT INTO photos (incident_id, file_path, file_name, mime_type, file_size) VALUES (?, ?, ?, ?, ?)'
-                )->execute([
-                    $incidentId,
-                    $photoPath['path'],
-                    $photoPath['name'],
-                    $photoPath['mime'],
-                    $photoPath['size'],
-                ]);
-                $uploadedPhotos[] = UPLOAD_BASE_URL . $photoPath['path'];
+        $incomingPhotos = $this->normalizeIncomingPhotos();
+        if (count($incomingPhotos) > self::MAX_PHOTOS) {
+            $this->error('Nombre maximum de photos atteint (' . self::MAX_PHOTOS . ').', 422);
+        }
+
+        foreach ($incomingPhotos as $index => $file) {
+            $photoPath = $this->uploadPhoto($file, $incidentId);
+            if (!$photoPath) {
+                continue;
             }
+
+            $this->insertIncidentPhoto(
+                $incidentId,
+                $photoPath,
+                $this->photoSortOrderColumnExists() ? $index : null
+            );
+            $uploadedPhotos[] = UPLOAD_BASE_URL . $photoPath['path'];
         }
 
         $this->success([
@@ -482,6 +539,76 @@ class IncidentController extends BaseController
             'mime' => $mimeType,
             'size' => $file['size'],
         ];
+    }
+
+    private function normalizeIncomingPhotos(): array
+    {
+        $normalized = [];
+
+        if (!empty($_FILES['photos'])) {
+            $files = $_FILES['photos'];
+            $names = $files['name'] ?? [];
+            foreach ($names as $index => $name) {
+                $error = $files['error'][$index] ?? UPLOAD_ERR_NO_FILE;
+                if ($error !== UPLOAD_ERR_OK) {
+                    continue;
+                }
+
+                $normalized[] = [
+                    'name'     => $name,
+                    'type'     => $files['type'][$index] ?? null,
+                    'tmp_name' => $files['tmp_name'][$index] ?? null,
+                    'error'    => $error,
+                    'size'     => $files['size'][$index] ?? 0,
+                ];
+            }
+        }
+
+        if (!empty($_FILES['photo']) && ($_FILES['photo']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+            $normalized[] = $_FILES['photo'];
+        }
+
+        return $normalized;
+    }
+
+    private function insertIncidentPhoto(int $incidentId, array $photoPath, ?int $sortOrder = null): void
+    {
+        if ($this->photoSortOrderColumnExists()) {
+            $this->db->prepare(
+                'INSERT INTO photos (incident_id, file_path, file_name, mime_type, file_size, sort_order) VALUES (?, ?, ?, ?, ?, ?)'
+            )->execute([
+                $incidentId,
+                $photoPath['path'],
+                $photoPath['name'],
+                $photoPath['mime'],
+                $photoPath['size'],
+                $sortOrder ?? 0,
+            ]);
+            return;
+        }
+
+        $this->db->prepare(
+            'INSERT INTO photos (incident_id, file_path, file_name, mime_type, file_size) VALUES (?, ?, ?, ?, ?)'
+        )->execute([
+            $incidentId,
+            $photoPath['path'],
+            $photoPath['name'],
+            $photoPath['mime'],
+            $photoPath['size'],
+        ]);
+    }
+
+    private function photoSortOrderColumnExists(): bool
+    {
+        try {
+            $stmt = $this->db->prepare(
+                'SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
+            );
+            $stmt->execute(['photos', 'sort_order']);
+            return (int)$stmt->fetchColumn() > 0;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     private function enrichIncidentWithInterventionContext(array $incident, array $statusHistory): array

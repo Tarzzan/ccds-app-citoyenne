@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../core/BaseController.php';
+
 /**
  * Ma Commune — ReportController
  * Génération de rapports PDF pour les incidents.
@@ -8,9 +10,37 @@
  */
 class ReportController extends BaseController
 {
+    private function resolveAdminSessionAuth(): ?array
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $admin = $_SESSION['admin_user'] ?? null;
+        if (!is_array($admin)) {
+            return null;
+        }
+
+        $role = $admin['role'] ?? null;
+        $userId = (int)($admin['id'] ?? 0);
+        if (!in_array($role, ['agent', 'admin'], true) || $userId <= 0) {
+            return null;
+        }
+
+        return [
+            'sub' => $userId,
+            'role' => $role,
+            'email' => $admin['email'] ?? null,
+            'full_name' => $admin['full_name'] ?? null,
+        ];
+    }
+
     public function downloadPdf(int $incidentId): void
     {
-        $auth = $this->requireAuth();
+        $auth = $this->getOptionalAuth() ?? $this->resolveAdminSessionAuth();
+        if (!$auth) {
+            $this->error("Token d'authentification manquant.", 401);
+        }
         if (!in_array($auth['role'] ?? '', ['agent', 'admin'], true)) {
             $this->error('Accès réservé aux agents et administrateurs.', 403);
         }

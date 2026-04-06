@@ -4,13 +4,18 @@
  * Supporte les variables Railway (MYSQLHOST, MYSQLDATABASE...) et les variables standard (DB_HOST...)
  */
 
+$configFile = __DIR__ . '/config/config.php';
+if (is_file($configFile)) {
+    require_once $configFile;
+}
+
 // Railway: MYSQLHOST, MYSQLDATABASE, MYSQLUSER, MYSQLPASSWORD, MYSQLPORT
-// Dev local: DB_HOST, DB_NAME, DB_USER, DB_PASS, DB_PORT
-$dbHost = getenv('MYSQLHOST')     ?: getenv('DB_HOST') ?: 'localhost';
-$dbName = getenv('MYSQLDATABASE') ?: getenv('DB_NAME') ?: 'ma_commune_db';
-$dbUser = getenv('MYSQLUSER')     ?: getenv('DB_USER') ?: 'ma_commune_user';
-$dbPass = getenv('MYSQLPASSWORD') ?: getenv('DB_PASS') ?: 'ma_commune_pass';
-$dbPort = getenv('MYSQLPORT')     ?: getenv('DB_PORT') ?: '3306';
+// Dev local / VPS: DB_HOST, DB_NAME, DB_USER, DB_PASSWORD|DB_PASS, DB_PORT
+$dbHost = getenv('MYSQLHOST')     ?: getenv('DB_HOST') ?: (defined('DB_HOST') ? DB_HOST : 'localhost');
+$dbName = getenv('MYSQLDATABASE') ?: getenv('DB_NAME') ?: (defined('DB_NAME') ? DB_NAME : 'ma_commune_db');
+$dbUser = getenv('MYSQLUSER')     ?: getenv('DB_USER') ?: (defined('DB_USER') ? DB_USER : 'ma_commune_user');
+$dbPass = getenv('MYSQLPASSWORD') ?: getenv('DB_PASSWORD') ?: getenv('DB_PASS') ?: (defined('DB_PASSWORD') ? DB_PASSWORD : 'ma_commune_pass');
+$dbPort = getenv('MYSQLPORT')     ?: getenv('DB_PORT') ?: (defined('DB_PORT') ? DB_PORT : '3306');
 
 return [
     'paths' => [

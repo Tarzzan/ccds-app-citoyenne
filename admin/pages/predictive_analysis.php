@@ -1,17 +1,19 @@
 <?php
 /**
- * Ma Commune Back-Office — Analyse prédictive territoriale
+ * Ma Commune Back-Office — Analyse prédictive
  *
  * Cette vue ne prétend pas faire de "ML". Elle consolide des signaux simples
- * et utiles pour anticiper les zones à surveiller en Guyane.
+ * et utiles pour anticiper les zones a surveiller.
  */
 require_once __DIR__ . '/../includes/bootstrap.php';
 
 $admin = require_admin_auth();
 $page_title = 'Analyse prédictive';
 $active_nav = 'predictive_analysis';
+$themePalette = visual_admin_data_palette();
 
 $db = Database::getInstance();
+$lead_photo_select = admin_incident_first_photo_select($db, 'i');
 
 if (($admin['role'] ?? null) !== 'admin') {
     render_error(403, 'Accès réservé aux administrateurs.');
@@ -62,6 +64,44 @@ unset($hotspot);
 
 usort($hotspots, static fn(array $a, array $b): int => $b['risk_score'] <=> $a['risk_score']);
 
+$hotspotIncidentStmt = $db->prepare("
+    SELECT
+        i.id,
+        i.reference,
+        i.title,
+        i.description,
+        i.status,
+        i.priority,
+        i.created_at,
+        u.full_name AS reporter_name,
+        c.name AS category_name,
+        c.icon AS category_icon,
+        c.color AS category_color,
+        {$lead_photo_select}
+    FROM incidents i
+    JOIN users u ON u.id = i.user_id
+    JOIN categories c ON c.id = i.category_id
+    WHERE ROUND(i.latitude, 2) = ?
+      AND ROUND(i.longitude, 2) = ?
+      AND i.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    ORDER BY i.created_at DESC, i.votes_count DESC
+    LIMIT 1
+");
+
+foreach ($hotspots as &$hotspot) {
+    $hotspotIncidentStmt->execute([
+        (float)$hotspot['lat_zone'],
+        (float)$hotspot['lng_zone'],
+        $windowDays,
+    ]);
+    $sampleIncident = $hotspotIncidentStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    if ($sampleIncident) {
+        $sampleIncident['lead_photo'] = admin_incident_preview_photo($db, $sampleIncident);
+    }
+    $hotspot['sample_incident'] = $sampleIncident;
+}
+unset($hotspot);
+
 $trendStmt = $db->prepare("
     SELECT
         DATE_FORMAT(i.created_at, '%Y-%m') AS month_key,
@@ -90,6 +130,23 @@ $forecastStmt = $db->prepare("
 $forecastStmt->execute();
 $forecastSlots = $forecastStmt->fetchAll(PDO::FETCH_ASSOC);
 
+$topCategoriesStmt = $db->prepare("
+    SELECT c.name, c.color, c.icon, COUNT(i.id) AS incident_count
+    FROM categories c
+    JOIN incidents i ON i.category_id = c.id
+    WHERE i.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    GROUP BY c.id
+    ORDER BY incident_count DESC, c.name ASC
+    LIMIT 4
+");
+$topCategoriesStmt->execute([$windowDays]);
+$topCategories = $topCategoriesStmt->fetchAll(PDO::FETCH_ASSOC);
+foreach ($topCategories as &$topCategory) {
+    $visual = category_visual_resolve($topCategory['icon'] ?? null, $topCategory['name'] ?? null);
+    $topCategory['visual_description'] = $visual['description'] ?? '';
+}
+unset($topCategory);
+
 $servicePressureStmt = $db->prepare("
     SELECT
         c.service,
@@ -110,6 +167,10 @@ $servicePressure = $servicePressureStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $topSignal = $hotspots[0] ?? null;
 $daysFr = ['', 'Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+$predictiveHeroSceneAsset = visual_admin_slot_asset('predictive_scene', 'ILL-05') ?? visual_admin_slot_asset('predictive_scene', 'ILL-01');
+$predictiveHeroInsetAsset = visual_admin_slot_asset('predictive_inset', 'ILL-02') ?? visual_admin_slot_asset('predictive_inset', 'ILL-03');
+$predictiveHeroAgentAsset = visual_admin_slot_asset('predictive_agent', 'CHAR-04') ?? visual_admin_slot_asset('predictive_agent', 'CHAR-05');
+$predictiveHeroHasVisual = (bool)($predictiveHeroSceneAsset || $predictiveHeroInsetAsset || $predictiveHeroAgentAsset);
 
 function coord_label(float $value, string $positive, string $negative): string
 {
@@ -119,49 +180,122 @@ function coord_label(float $value, string $positive, string $negative): string
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
-<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
-  <div>
-    <div class="text-small" style="text-transform:uppercase;letter-spacing:.16em;color:#7c8b78;">Lecture prospective</div>
-    <h2 style="margin:6px 0 8px;font-size:28px;font-weight:800;">Zones à surveiller en priorité</h2>
-    <p class="text-muted" style="max-width:780px;margin:0;">
-      Cette vue transforme l'historique des signalements en signaux opérationnels.
-      Elle aide à anticiper les secteurs à forte récurrence et à prioriser l'action publique.
+<div class="page-async-scope" data-async-scope="predictive-admin">
+
+<div class="page-hero <?= $predictiveHeroHasVisual ? 'page-hero--with-visual' : '' ?>">
+  <div class="page-hero-copy">
+    <div class="page-hero-kicker">Lecture prospective</div>
+    <h2 class="page-hero-title">Zones à surveiller en priorité</h2>
+    <p class="page-hero-text">
+      Cette vue transforme l historique des signalements en signaux opérationnels.
+      Elle aide à anticiper les secteurs à forte récurrence et à prioriser l action publique.
     </p>
   </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <?php foreach ([30 => '30 j', 90 => '90 j', 180 => '180 j', 365 => '1 an'] as $option => $label): ?>
-      <a href="/admin/?page=predictive_analysis&window=<?= $option ?>"
-         class="btn btn-sm <?= $windowDays === $option ? 'btn-primary' : 'btn-outline' ?>">
-        <?= $label ?>
-      </a>
+  <div class="page-hero-metrics">
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= count($hotspots) ?></span>
+      <span class="hero-chip-label">zone(s) retenue(s)</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)count($servicePressure) ?></span>
+      <span class="hero-chip-label">service(s) sous tension</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$windowDays ?></span>
+      <span class="hero-chip-label">jours analyses</span>
+    </div>
+  </div>
+  <?php if ($predictiveHeroHasVisual): ?>
+    <div class="page-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero hero-visual-stack">
+        <?php if ($predictiveHeroSceneAsset): ?>
+          <?= generated_visual_html($predictiveHeroSceneAsset, ['class' => 'generated-visual generated-visual--cover hero-visual-stack-main', 'label' => 'Lecture prospective locale']) ?>
+        <?php endif; ?>
+        <?php if ($predictiveHeroInsetAsset): ?>
+          <?= generated_visual_html($predictiveHeroInsetAsset, ['class' => 'generated-visual generated-visual--cover hero-visual-stack-inset', 'label' => 'Categorie sous tension']) ?>
+        <?php endif; ?>
+        <?php if ($predictiveHeroAgentAsset): ?>
+          <?= generated_visual_html($predictiveHeroAgentAsset, ['class' => 'generated-visual generated-visual--portrait hero-visual-stack-agent', 'label' => 'Relais prospectif']) ?>
+        <?php endif; ?>
+        <div class="generated-visual-caption hero-visual-stack-copy">
+          <strong>Pression a venir lisible</strong>
+          <span>L analyse predictive revient vers un repere scene et agent pour lire les zones chaudes sans promettre une certitude artificielle.</span>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
+</div>
+
+<div class="predictive-window-toolbar">
+  <?php foreach ([30 => '30 j', 90 => '90 j', 180 => '180 j', 365 => '1 an'] as $option => $label): ?>
+    <a href="/admin/?page=predictive_analysis&window=<?= $option ?>"
+       data-async-link
+       class="btn btn-sm <?= $windowDays === $option ? 'btn-primary' : 'btn-outline' ?>">
+      <?= $label ?>
+    </a>
+  <?php endforeach; ?>
+</div>
+
+<?php if (!empty($topCategories)): ?>
+  <div class="admin-category-strip admin-category-strip--spaced">
+    <?php foreach ($topCategories as $category): ?>
+      <div class="admin-category-pill">
+        <?= category_visual_html($category['icon'] ?? 'road', $category['name'], 'md', $category['color'] ?? null) ?>
+        <div class="admin-category-pill-copy">
+          <strong><?= e($category['name']) ?></strong>
+          <span><?= e($category['visual_description'] ?: 'Categorie dominante sur la fenetre analysee') ?></span>
+        </div>
+        <span class="admin-category-pill-count admin-category-pill-count--wide"><?= (int)$category['incident_count'] ?> cas</span>
+      </div>
     <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+
+<div class="card predictive-card-gap">
+  <div class="card-header">
+    <span class="card-title">Cockpit de pression a venir</span>
+    <span class="text-muted text-small">La lecture predictive doit d abord aider a voir ou la pression risque de retomber sur les services et les zones.</span>
+  </div>
+  <div class="services-mode-band services-mode-band--tight">
+    <div class="services-mode-card">
+      <strong><?= count($hotspots) ?></strong>
+      <span>zone(s) a surveiller</span>
+    </div>
+    <div class="services-mode-card">
+      <strong><?= (int)count($servicePressure) ?></strong>
+      <span>service(s) sous tension</span>
+    </div>
+    <div class="services-mode-card">
+      <strong><?= $topSignal ? (int)$topSignal['unresolved_count'] : 0 ?></strong>
+      <span>non resolu(s) sur le signal directeur</span>
+    </div>
   </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1.2fr .8fr;gap:24px;align-items:start;margin-bottom:24px;">
-  <div class="card" style="padding:24px;">
-    <div class="card-header" style="padding:0 0 12px;">
+<div class="predictive-top-grid predictive-top-grid-gap">
+  <div class="card">
+    <div class="card-header">
       <span class="card-title">Signal directeur</span>
       <span class="text-small text-muted">Fenêtre d'analyse : <?= $windowDays ?> jours</span>
     </div>
     <?php if ($topSignal): ?>
-      <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:16px;align-items:start;">
+      <div class="predictive-signal-grid">
         <div>
           <div class="text-small text-muted">Zone dominante</div>
-          <div style="font-size:18px;font-weight:800;margin-top:6px;">
+          <div class="predictive-signal-number">
             <?= coord_label((float)$topSignal['lat_zone'], 'N', 'S') ?> ·
             <?= coord_label((float)$topSignal['lng_zone'], 'E', 'W') ?>
           </div>
-          <div class="text-small text-muted" style="margin-top:6px;"><?= e($topSignal['categories']) ?></div>
+          <div class="text-small text-muted predictive-signal-copy"><?= e($topSignal['categories']) ?></div>
         </div>
         <div>
           <div class="text-small text-muted">Charge cumulée</div>
-          <div style="font-size:34px;font-weight:800;color:#9a3412;"><?= (int)$topSignal['risk_score'] ?></div>
+          <div class="predictive-signal-score predictive-signal-score--risk"><?= (int)$topSignal['risk_score'] ?></div>
           <div class="text-small text-muted">score de risque opérationnel</div>
         </div>
         <div>
           <div class="text-small text-muted">Dernière récurrence</div>
-          <div style="font-size:34px;font-weight:800;color:#0f766e;"><?= (int)$topSignal['days_since_last'] ?> j</div>
+          <div class="predictive-signal-score predictive-signal-score--cooldown"><?= (int)$topSignal['days_since_last'] ?> j</div>
           <div class="text-small text-muted">depuis le dernier incident</div>
         </div>
       </div>
@@ -170,23 +304,23 @@ require_once __DIR__ . '/../includes/layout.php';
     <?php endif; ?>
   </div>
 
-  <div class="card" style="padding:24px;">
-    <div class="card-header" style="padding:0 0 12px;">
+  <div class="card">
+    <div class="card-header">
       <span class="card-title">Services sous tension</span>
     </div>
-    <div style="display:grid;gap:10px;">
+    <div class="predictive-service-list">
       <?php if (empty($servicePressure)): ?>
         <div class="text-muted">Aucune pression notable détectée sur la période.</div>
       <?php else: ?>
         <?php foreach ($servicePressure as $service): ?>
-          <div style="padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.55);border:1px solid rgba(30,41,59,.06);">
-            <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+          <div class="predictive-service-item">
+            <div class="predictive-service-head">
               <strong><?= e($service['service']) ?></strong>
               <span class="badge <?= (int)$service['unresolved_count'] > 0 ? 'badge-yellow' : 'badge-green' ?>">
                 <?= (int)$service['unresolved_count'] ?> non résolu<?= (int)$service['unresolved_count'] > 1 ? 's' : '' ?>
               </span>
             </div>
-            <div class="text-small text-muted" style="margin-top:6px;">
+            <div class="text-small text-muted predictive-service-copy">
               <?= (int)$service['incident_count'] ?> signalement<?= (int)$service['incident_count'] > 1 ? 's' : '' ?> sur la fenêtre analysée
             </div>
           </div>
@@ -196,37 +330,57 @@ require_once __DIR__ . '/../includes/layout.php';
   </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1.2fr .8fr;gap:24px;align-items:start;margin-bottom:24px;">
+<div class="predictive-bottom-grid predictive-bottom-grid-gap">
   <div class="card">
     <div class="card-header">
       <span class="card-title">Hotspots territoriaux</span>
       <span class="text-small text-muted"><?= count($hotspots) ?> zones retenues</span>
     </div>
-    <div style="display:grid;gap:10px;">
+    <div class="predictive-hotspot-list">
       <?php if (empty($hotspots)): ?>
         <div class="text-muted">Aucune zone récurrente détectée avec le volume actuel.</div>
       <?php else: ?>
         <?php foreach ($hotspots as $index => $spot): ?>
-          <div style="display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px;border-radius:16px;background:rgba(255,255,255,.56);border:1px solid rgba(30,41,59,.06);border-left:5px solid <?= $spot['risk_level'] === 'critical' ? '#dc2626' : ($spot['risk_level'] === 'high' ? '#ea580c' : ($spot['risk_level'] === 'medium' ? '#ca8a04' : '#15803d')) ?>;">
-            <div style="font-size:24px;font-weight:800;color:#94a3b8;">#<?= $index + 1 ?></div>
+          <div class="predictive-hotspot-item predictive-hotspot-item--<?= e($spot['risk_level']) ?>">
+            <div class="predictive-hotspot-rank">#<?= $index + 1 ?></div>
             <div>
-              <div style="font-weight:800;">
+              <div class="predictive-hotspot-title">
                 <?= coord_label((float)$spot['lat_zone'], 'N', 'S') ?> ·
                 <?= coord_label((float)$spot['lng_zone'], 'E', 'W') ?>
               </div>
-              <div class="text-small text-muted" style="margin-top:4px;"><?= e($spot['categories']) ?></div>
-              <div class="text-small" style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;">
-                <span>📋 <?= (int)$spot['incident_count'] ?> cas</span>
-                <span>⚠️ <?= (int)$spot['unresolved_count'] ?> ouverts</span>
-                <span>👍 <?= number_format((float)$spot['avg_votes'], 1, ',', ' ') ?> votes moy.</span>
-                <span>🕒 <?= (int)$spot['days_since_last'] ?> j</span>
+              <div class="text-small text-muted predictive-hotspot-copy"><?= e($spot['categories']) ?></div>
+              <div class="text-small predictive-hotspot-meta">
+                <span><?= (int)$spot['incident_count'] ?> cas</span>
+                <span><?= (int)$spot['unresolved_count'] ?> ouverts</span>
+                <span><?= number_format((float)$spot['avg_votes'], 1, ',', ' ') ?> soutiens moy.</span>
+                <span><?= (int)$spot['days_since_last'] ?> j</span>
               </div>
+              <?php if (!empty($spot['sample_incident'])): ?>
+                <?php $sample = $spot['sample_incident']; ?>
+                <div class="predictive-hotspot-sample">
+                  <?php if (!empty($sample['lead_photo']['url'])): ?>
+                    <span class="admin-proof-thumb-wrap">
+                      <img src="<?= e($sample['lead_photo']['url']) ?>" alt="Preuve citoyenne" class="admin-proof-thumb admin-proof-thumb--small">
+                    </span>
+                  <?php endif; ?>
+                  <div class="predictive-hotspot-sample-copy">
+                    <strong><?= e($sample['reference']) ?> · <?= e($sample['title'] ?: 'Sans titre') ?></strong>
+                    <span><?= e($sample['reporter_name']) ?> · <?= e(status_label($sample['status'])) ?> · <?= e($sample['category_name']) ?></span>
+                    <?php if (!empty($sample['lead_photo']['moderation_message'])): ?>
+                      <span><?= e($sample['lead_photo']['moderation_message']) ?></span>
+                    <?php else: ?>
+                      <span>Dossier representatif de cette zone.</span>
+                    <?php endif; ?>
+                  </div>
+                  <a href="/admin/?page=incident_detail&id=<?= (int)$sample['id'] ?>" class="btn btn-outline btn-sm" data-async-link data-async-scope="admin-main">Ouvrir</a>
+                </div>
+              <?php endif; ?>
             </div>
-            <div style="text-align:right;">
+            <div class="predictive-score">
               <div class="badge <?= $spot['risk_level'] === 'critical' ? 'badge-red' : ($spot['risk_level'] === 'high' ? 'badge-yellow' : ($spot['risk_level'] === 'medium' ? 'badge-blue' : 'badge-green')) ?>">
                 <?= $spot['risk_level'] === 'critical' ? 'Critique' : ($spot['risk_level'] === 'high' ? 'Élevé' : ($spot['risk_level'] === 'medium' ? 'Modéré' : 'Faible')) ?>
               </div>
-              <div style="font-size:28px;font-weight:800;margin-top:6px;"><?= (int)$spot['risk_score'] ?></div>
+              <div class="predictive-score-value"><?= (int)$spot['risk_score'] ?></div>
               <div class="text-small text-muted">score</div>
             </div>
           </div>
@@ -240,20 +394,20 @@ require_once __DIR__ . '/../includes/layout.php';
       <span class="card-title">Créneaux à surveiller</span>
       <span class="text-small text-muted">Basés sur 90 jours</span>
     </div>
-    <div style="display:grid;gap:10px;">
+    <div class="predictive-slot-list">
       <?php if (empty($forecastSlots)): ?>
         <div class="text-muted">Pas assez de données pour estimer des créneaux récurrents.</div>
       <?php else: ?>
         <?php foreach ($forecastSlots as $slot): ?>
-          <div style="display:grid;grid-template-columns:78px 1fr 28px;gap:10px;align-items:center;">
-            <strong style="font-size:12px;color:#64748b;">
+          <div class="predictive-slot-item">
+            <strong class="predictive-slot-label">
               <?= $daysFr[(int)$slot['day_of_week']] ?>
               <?= str_pad((string)$slot['hour_of_day'], 2, '0', STR_PAD_LEFT) ?>h
             </strong>
-            <div style="height:10px;border-radius:999px;background:rgba(30,41,59,.08);overflow:hidden;">
-              <div style="height:100%;width:<?= min(100, (int)$slot['total'] * 10) ?>%;background:linear-gradient(90deg,#1d4ed8,#0f766e);"></div>
+            <div class="predictive-slot-track">
+              <div class="predictive-slot-fill" style="--slot-fill:<?= min(100, (int)$slot['total'] * 10) ?>%;"></div>
             </div>
-            <span style="font-size:12px;font-weight:800;color:#1e3a8a;"><?= (int)$slot['total'] ?></span>
+            <span class="predictive-slot-value"><?= (int)$slot['total'] ?></span>
           </div>
         <?php endforeach; ?>
       <?php endif; ?>
@@ -266,16 +420,33 @@ require_once __DIR__ . '/../includes/layout.php';
     <span class="card-title">Tendance par catégorie</span>
     <span class="text-small text-muted">Six derniers mois</span>
   </div>
-  <div class="chart-container" style="height:340px;">
+  <div class="chart-container chart-container--lg">
     <canvas id="trendChart"></canvas>
   </div>
 </div>
 
 <script>
+(() => {
+const trendCanvas = document.getElementById('trendChart');
+if (!trendCanvas || typeof Chart === 'undefined') {
+  return;
+}
+
+Chart.getChart(trendCanvas)?.destroy();
+
 const trendRows = <?= json_encode($trendRows, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 const months = [...new Set(trendRows.map((row) => row.month_key))];
 const categories = [...new Set(trendRows.map((row) => row.category_name))];
-const palette = ['#1d4ed8', '#0f766e', '#b45309', '#be123c', '#4f46e5', '#15803d', '#334155'];
+const themePalette = <?= json_encode($themePalette, JSON_UNESCAPED_SLASHES) ?>;
+const palette = [
+  themePalette.primary,
+  themePalette.secondary,
+  themePalette.accent,
+  themePalette.danger,
+  themePalette.info,
+  themePalette.success,
+  themePalette.primary_dark
+];
 
 const datasets = categories.map((category, index) => ({
   label: category,
@@ -290,7 +461,7 @@ const datasets = categories.map((category, index) => ({
   fill: false,
 }));
 
-new Chart(document.getElementById('trendChart').getContext('2d'), {
+new Chart(trendCanvas.getContext('2d'), {
   type: 'line',
   data: { labels: months, datasets },
   options: {
@@ -309,6 +480,9 @@ new Chart(document.getElementById('trendChart').getContext('2d'), {
     },
   },
 });
+})();
 </script>
+
+</div>
 
 <?php require_once __DIR__ . '/../includes/layout_footer.php'; ?>

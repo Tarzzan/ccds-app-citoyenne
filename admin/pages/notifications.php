@@ -4,6 +4,7 @@
  * v1.1 : liste, envoi manuel, statistiques
  */
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../../backend/config/NotificationStore.php';
 $admin = require_admin_auth();
 $isAdmin = ($admin['role'] ?? '') === 'admin';
 
@@ -27,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notif_type = 'system';
 
         if (strlen($title) < 2 || strlen($body) < 2) {
-            $_SESSION['flash_error'] = 'Titre et message sont obligatoires.';
+            $_SESSION['flash_error'] = 'Titre et message sont obligatoires. L envoi ne part pas tant que l intention et la consigne ne sont pas lisibles.';
         } else {
             // Récupérer les tokens concernés
             if ($target === 'user' && $user_id > 0) {
@@ -39,17 +40,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $token_rows = $tokens_stmt->fetchAll(PDO::FETCH_ASSOC);
 
             if (empty($token_rows)) {
-                $_SESSION['flash_error'] = 'Aucun appareil enregistré pour cette cible.';
+                $_SESSION['flash_error'] = 'Aucun appareil enregistré pour cette cible. Vérifier qu au moins un citoyen actif possède un token push avant de relancer l envoi.';
             } else {
                 // Insérer les notifications en base
-                $insert_stmt = $db->prepare("
-                    INSERT INTO notifications (user_id, type, title, body, sent_at)
-                    VALUES (?, ?, ?, ?, NOW())
-                ");
                 $seen_users = [];
                 foreach ($token_rows as $row) {
                     if (!in_array($row['user_id'], $seen_users)) {
-                        $insert_stmt->execute([$row['user_id'], $notif_type, $title, $body]);
+                        NotificationStore::insert(
+                            $db,
+                            (int) $row['user_id'],
+                            null,
+                            $notif_type,
+                            $title,
+                            $body,
+                            ['source' => 'admin_manual'],
+                            0
+                        );
                         $seen_users[] = $row['user_id'];
                     }
                 }
@@ -76,10 +82,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 curl_close($ch);
 
                 if ($err) {
-                    $_SESSION['flash_error'] = "Erreur d'envoi : $err";
+                    $_SESSION['flash_error'] = "Erreur d'envoi : $err. Le message n a pas quitté le backoffice.";
                 } else {
                     $count = count($seen_users);
-                    $_SESSION['flash_success'] = "Notification envoyée à $count utilisateur(s).";
+                    $_SESSION['flash_success'] = "Notification envoyée à $count utilisateur(s). Vérifier ensuite l historique pour confirmer la bonne cible et l état de lecture.";
                 }
             }
         }
@@ -102,11 +108,12 @@ try {
 // --- Dernières notifications envoyées ---
 $recent_notifs = [];
 try {
+    $sentColumn = NotificationStore::timestampColumn($db);
     $recent_stmt = $db->query("
-        SELECT n.*, u.full_name AS user_name
+        SELECT n.*, n.{$sentColumn} AS sent_at, u.full_name AS user_name
         FROM notifications n
         JOIN users u ON u.id = n.user_id
-        ORDER BY n.sent_at DESC
+        ORDER BY n.{$sentColumn} DESC
         LIMIT 30
     ");
     $recent_notifs = $recent_stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -119,8 +126,7 @@ $page_title = 'Notifications Push';
 $active_nav = 'notifications';
 require_once __DIR__ . '/../includes/layout.php';
 ?>
-
-<div class="page-hero">
+<div class="page-hero page-hero--with-visual">
   <div class="page-hero-copy">
     <div class="page-hero-kicker">Lien citoyen</div>
     <h2 class="page-hero-title">Parler peu, mais au bon moment.</h2>
@@ -142,6 +148,17 @@ require_once __DIR__ . '/../includes/layout.php';
       <span class="hero-chip-label">encore non lue(s)</span>
     </div>
   </div>
+  <div class="page-hero-visual">
+    <div class="generated-visual-panel generated-visual-panel--hero hero-visual-stack">
+      <?= generated_visual_html('ILL-02', ['class' => 'generated-visual generated-visual--cover hero-visual-stack-main', 'label' => 'Signal diffusion']) ?>
+      <?= generated_visual_html('ILL-05', ['class' => 'generated-visual generated-visual--cover hero-visual-stack-inset', 'label' => 'Cadence utile']) ?>
+      <?= generated_visual_html('CHAR-05', ['class' => 'generated-visual generated-visual--portrait hero-visual-stack-agent', 'label' => 'Relais notifications']) ?>
+      <div class="generated-visual-caption hero-visual-stack-copy">
+        <strong>Canal utile</strong>
+        <span>Informer, remercier ou orienter sans transformer la pile en bruit permanent.</span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="admin-guidance-grid">
@@ -151,47 +168,93 @@ require_once __DIR__ . '/../includes/layout.php';
     <p>
       Une notification utile explique un changement, un commentaire ou une information municipale importante. Elle n existe pas pour remplir la pile.
     </p>
+    <div class="admin-guidance-visual">
+      <?= generated_visual_html('ILL-01', ['class' => 'generated-visual generated-visual--cover admin-proof-thumb admin-proof-thumb--small', 'label' => 'Info utile']) ?>
+      <div class="admin-guidance-visual-copy">
+        <strong>Informer sans saturer</strong>
+        <span>Un bon envoi doit laisser une impression de service attentif, pas une sensation de spam.</span>
+      </div>
+    </div>
   </div>
   <div class="admin-guidance-card">
     <div class="admin-guidance-kicker">Objectif produit</div>
     <h3>Transformer l alerte en signe de confiance.</h3>
     <p>
-      Chaque envoi doit renforcer l impression d une commune attentive, capable de remercier, d expliquer et d orienter sans sur-solliciter.
+      Chaque envoi doit renforcer l impression d un service attentif, capable de remercier, d expliquer et d orienter sans sur-solliciter.
     </p>
+    <div class="admin-guidance-visual">
+      <?= generated_visual_html('CHAR-04', ['class' => 'generated-visual generated-visual--portrait admin-proof-thumb admin-proof-thumb--small', 'label' => 'Relais citoyen']) ?>
+      <div class="admin-guidance-visual-copy">
+        <strong>Une parole municipale plus claire</strong>
+        <span>Le backoffice doit aider a choisir le bon ton, la bonne cible et le bon moment.</span>
+      </div>
+    </div>
   </div>
 </div>
 
+<div class="page-async-scope" data-async-scope="notifications-admin">
 <!-- Statistiques -->
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
-  <div class="card" style="text-align:center;padding:20px">
-    <div style="font-size:32px;font-weight:800;color:#1a7a42"><?= $stats['users_with_tokens'] ?></div>
+<div class="notifications-kpi-grid">
+  <div class="card notifications-kpi-card">
+    <div class="notifications-kpi-value notifications-kpi-value--green"><?= $stats['users_with_tokens'] ?></div>
     <div class="text-muted text-small">Appareils enregistrés</div>
   </div>
-  <div class="card" style="text-align:center;padding:20px">
-    <div style="font-size:32px;font-weight:800;color:#3b82f6"><?= $stats['total_tokens'] ?></div>
+  <div class="card notifications-kpi-card">
+    <div class="notifications-kpi-value notifications-kpi-value--blue"><?= $stats['total_tokens'] ?></div>
     <div class="text-muted text-small">Tokens actifs</div>
   </div>
-  <div class="card" style="text-align:center;padding:20px">
-    <div style="font-size:32px;font-weight:800;color:#8b5cf6"><?= $stats['total_notifs'] ?></div>
+  <div class="card notifications-kpi-card">
+    <div class="notifications-kpi-value notifications-kpi-value--violet"><?= $stats['total_notifs'] ?></div>
     <div class="text-muted text-small">Notifications envoyées</div>
   </div>
-  <div class="card" style="text-align:center;padding:20px">
-    <div style="font-size:32px;font-weight:800;color:#f59e0b"><?= $stats['unread_notifs'] ?></div>
+  <div class="card notifications-kpi-card">
+    <div class="notifications-kpi-value notifications-kpi-value--amber"><?= $stats['unread_notifs'] ?></div>
     <div class="text-muted text-small">Non lues</div>
   </div>
 </div>
 
 <?php if (!$isAdmin): ?>
-<div class="alert alert-warning" style="margin-bottom:24px">Cette page est en lecture seule pour votre role. Les envois manuels sont reserves aux administrateurs.</div>
+<div class="alert alert-warning notifications-readonly-alert">Cette page est en lecture seule pour votre role. Les envois manuels sont reserves aux administrateurs.</div>
 <?php endif; ?>
 
-<div style="<?= $isAdmin ? 'display:grid;grid-template-columns:1fr 1.5fr;gap:24px' : 'display:block' ?>">
+<div class="<?= $isAdmin ? 'notifications-layout' : '' ?>">
 
   <!-- Formulaire d'envoi manuel -->
   <?php if ($isAdmin): ?>
     <div class="card">
-      <div class="card-header"><span class="card-title">📤 Envoyer une notification</span></div>
-      <form method="POST" action="">
+      <div class="card-header card-header--split">
+        <div>
+          <span class="card-title">Envoyer une notification</span>
+          <p class="admin-section-note">Cadrer un message utile avant envoi : qui reçoit quoi, et dans quel contexte produit.</p>
+        </div>
+      </div>
+      <div class="admin-form-guide">
+        <strong>Ordre conseille</strong>
+        <div class="admin-form-guide-list">
+          <div class="admin-form-guide-item">
+            <span class="admin-form-guide-step">01</span>
+            <div>
+              <strong>Choisir la bonne cible</strong>
+              <span>Utiliser `Tous les citoyens` seulement pour une information transversale ou un changement de service large.</span>
+            </div>
+          </div>
+          <div class="admin-form-guide-item">
+            <span class="admin-form-guide-step">02</span>
+            <div>
+              <strong>Nommer l action</strong>
+              <span>Le titre doit annoncer le fait utile, pas seulement l intention municipale.</span>
+            </div>
+          </div>
+          <div class="admin-form-guide-item">
+            <span class="admin-form-guide-step">03</span>
+            <div>
+              <strong>Rester bref</strong>
+              <span>Le message doit expliquer quoi faire, quoi lire ou quel changement attendre, sans remplir la pile pour rien.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <form method="POST" action="" data-async-form>
         <input type="hidden" name="action" value="send_manual">
 
         <div class="form-group">
@@ -203,7 +266,7 @@ require_once __DIR__ . '/../includes/layout.php';
           </select>
         </div>
 
-        <div class="form-group" id="user-select" style="display:none">
+        <div class="form-group notifications-user-select" id="user-select">
           <label class="form-label">Citoyen</label>
           <select name="user_id" class="form-control">
             <option value="">-- Choisir --</option>
@@ -214,20 +277,22 @@ require_once __DIR__ . '/../includes/layout.php';
         </div>
 
         <div class="form-group">
-          <label class="form-label">Titre <span style="color:#ef4444">*</span></label>
+          <label class="form-label">Titre <span class="notifications-required">*</span></label>
           <input type="text" name="notif_title" class="form-control"
                  placeholder="Ex: Maintenance planifiée" maxlength="100" required>
+          <div class="admin-section-note">Formuler le fait saillant en premier : maintenance, fermeture, rappel, retour de service.</div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Message <span style="color:#ef4444">*</span></label>
+          <label class="form-label">Message <span class="notifications-required">*</span></label>
           <textarea name="notif_body" class="form-control" rows="3"
                     placeholder="Ex: Des travaux de maintenance auront lieu demain de 8h à 12h…"
                     maxlength="500" required></textarea>
+          <div class="admin-section-note">Garder un message actionnable : ce qui change, quand, et si l habitant doit faire quelque chose.</div>
         </div>
 
-        <button type="submit" class="btn btn-primary w-100" style="justify-content:center">
-          🔔 Envoyer la notification
+        <button type="submit" class="btn btn-primary w-100 notifications-submit">
+          Envoyer la notification
         </button>
       </form>
     </div>
@@ -235,12 +300,21 @@ require_once __DIR__ . '/../includes/layout.php';
 
   <!-- Historique des notifications -->
   <div class="card">
-    <div class="card-header"><span class="card-title">📋 Dernières notifications</span></div>
+    <div class="card-header card-header--split">
+      <div>
+        <span class="card-title">Dernières notifications</span>
+        <p class="admin-section-note">Lecture rapide des derniers envois pour vérifier le type de message, le destinataire et l’état de lecture.</p>
+      </div>
+      <span class="badge badge-gray"><?= count($recent_notifs) ?> envoi<?= count($recent_notifs) > 1 ? 's' : '' ?></span>
+    </div>
 
     <?php if (empty($recent_notifs)): ?>
-      <p class="text-muted text-small">Aucune notification envoyée pour l'instant.</p>
+      <div class="admin-empty-state">
+        <strong>Aucune notification envoyée pour l instant.</strong>
+        <span>La pile reste vide tant qu aucun message manuel ou événement produit n a déclenché d envoi. C est un état normal sur un canal peu sollicité.</span>
+      </div>
     <?php else: ?>
-      <div style="overflow-x:auto">
+      <div class="table-wrapper">
         <table class="table">
           <thead>
             <tr>
@@ -254,25 +328,25 @@ require_once __DIR__ . '/../includes/layout.php';
           <tbody>
             <?php foreach ($recent_notifs as $n):
               $type_icons = [
-                'status_change'  => '🔄',
-                'new_comment'    => '💬',
-                'vote_milestone' => '🎉',
-                'system'         => '📢',
+                'status_change'  => 'Statut',
+                'new_comment'    => 'Commentaire',
+                'vote_milestone' => 'Soutien',
+                'system'         => 'Systeme',
               ];
-              $icon = $type_icons[$n['type']] ?? '🔔';
+              $icon = $type_icons[$n['type']] ?? 'Info';
             ?>
             <tr>
-              <td><?= $icon ?> <?= e($n['type']) ?></td>
+              <td><?= $icon ?> · <?= e($n['type']) ?></td>
               <td><?= e($n['user_name']) ?></td>
-              <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+              <td class="notifications-title-cell"
                   title="<?= e($n['body']) ?>">
                 <?= e($n['title']) ?>
               </td>
               <td class="text-muted text-small"><?= format_date($n['sent_at']) ?></td>
               <td>
                 <?= $n['is_read']
-                  ? '<span style="color:#16a34a;font-size:16px">✓</span>'
-                  : '<span style="color:#94a3b8;font-size:16px">○</span>'
+                  ? '<span class="notifications-read-state notifications-read-state--read">Lu</span>'
+                  : '<span class="notifications-read-state notifications-read-state--pending">En attente</span>'
                 ?>
               </td>
             </tr>
@@ -283,6 +357,7 @@ require_once __DIR__ . '/../includes/layout.php';
     <?php endif; ?>
   </div>
 
+</div>
 </div>
 
 <?php require_once __DIR__ . '/../includes/layout_footer.php'; ?>

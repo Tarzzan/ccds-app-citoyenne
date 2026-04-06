@@ -16,6 +16,27 @@ require_once __DIR__ . '/../config/InterventionWorkflow.php';
 
 class AuthController extends BaseController
 {
+    private function getPasswordColumn(): string
+    {
+        try {
+            $check = $this->db->query("SHOW COLUMNS FROM users LIKE 'password_hash'");
+            if ($check && $check->fetch()) {
+                return 'password_hash';
+            }
+        } catch (Throwable $e) {
+            // Fall back to the legacy schema when the introspection query fails.
+        }
+
+        return 'password';
+    }
+
+    private function isGoogleAuthConfigured(): bool
+    {
+        return trim((string)getenv('GOOGLE_AUTH_ANDROID_CLIENT_ID')) !== ''
+            && trim((string)getenv('GOOGLE_AUTH_IOS_CLIENT_ID')) !== ''
+            && trim((string)getenv('GOOGLE_AUTH_WEB_CLIENT_ID')) !== '';
+    }
+
     // ----------------------------------------------------------------
     // POST /api/register
     // ----------------------------------------------------------------
@@ -43,8 +64,9 @@ class AuthController extends BaseController
 
         $hash = password_hash($body['password'], PASSWORD_BCRYPT, ['cost' => 12]);
 
+        $passwordColumn = $this->getPasswordColumn();
         $stmt = $this->db->prepare(
-            'INSERT INTO users (email, password_hash, full_name, phone) VALUES (?, ?, ?, ?)'
+            "INSERT INTO users (email, {$passwordColumn}, full_name, phone) VALUES (?, ?, ?, ?)"
         );
         $stmt->execute([
             $email,
@@ -86,8 +108,10 @@ class AuthController extends BaseController
 
         $email = strtolower(trim($body['email']));
 
+        $passwordSelect = $this->getPasswordColumn();
+
         $stmt = $this->db->prepare(
-            'SELECT id, email, password_hash, full_name, role, is_active FROM users WHERE email = ? LIMIT 1'
+            "SELECT id, email, {$passwordSelect} AS password_hash, full_name, role, is_active FROM users WHERE email = ? LIMIT 1"
         );
         $stmt->execute([$email]);
         $user = $stmt->fetch();
@@ -116,6 +140,47 @@ class AuthController extends BaseController
                 'role'      => $user['role'],
             ],
         ], 200, 'Connexion réussie.');
+    }
+
+    // ----------------------------------------------------------------
+    // POST /api/auth/google
+    // ----------------------------------------------------------------
+    public function googleLogin(): void
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->error('Méthode non autorisée.', 405);
+        }
+
+        $body = Security::getJsonBody();
+
+        $this->validate($body, [
+            'id_token' => 'required|min:32|max:4096',
+            'platform' => 'required|max:20',
+        ]);
+
+        $platform = strtolower(trim((string)($body['platform'] ?? '')));
+        if (!in_array($platform, ['android', 'ios'], true)) {
+            $this->error('Plateforme Google Auth invalide.', 422);
+        }
+
+        if (!$this->isGoogleAuthConfigured()) {
+            $this->error(
+                'La connexion Google n est pas encore configurée sur ce serveur.',
+                503,
+                [
+                    'google_auth' => [
+                        'GOOGLE_AUTH_ANDROID_CLIENT_ID',
+                        'GOOGLE_AUTH_IOS_CLIENT_ID',
+                        'GOOGLE_AUTH_WEB_CLIENT_ID',
+                    ],
+                ]
+            );
+        }
+
+        $this->error(
+            'La vérification serveur Google n est pas encore activée sur cette version.',
+            501
+        );
     }
 
     // ----------------------------------------------------------------
@@ -548,7 +613,8 @@ class AuthController extends BaseController
         ]);
 
         // Vérifier l'ancien mot de passe
-        $stmt = $this->db->prepare('SELECT password_hash FROM users WHERE id = ? LIMIT 1');
+        $passwordColumn = $this->getPasswordColumn();
+        $stmt = $this->db->prepare("SELECT {$passwordColumn} AS password_hash FROM users WHERE id = ? LIMIT 1");
         $stmt->execute([$auth['sub']]);
         $user = $stmt->fetch();
 
@@ -558,7 +624,7 @@ class AuthController extends BaseController
 
         $newHash = password_hash($body['new_password'], PASSWORD_BCRYPT, ['cost' => 12]);
 
-        $stmt = $this->db->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
+        $stmt = $this->db->prepare("UPDATE users SET {$passwordColumn} = ? WHERE id = ?");
         $stmt->execute([$newHash, $auth['sub']]);
 
         $this->success(['updated' => true], 200, 'Mot de passe modifié avec succès.');

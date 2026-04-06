@@ -5,8 +5,8 @@
  * Requiert $inc['id'] dans le contexte.
  */
 ?>
-<a href="/api/incidents/<?= (int)$inc['id'] ?>/report"
+<a href="/admin/?page=incident_detail&id=<?= (int)$inc['id'] ?>&export=pdf&t=<?= time() ?>"
    target="_blank"
-   style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#ef4444;color:#fff;border-radius:8px;text-decoration:none;font-size:.875rem;font-weight:500;">
-    📄 Exporter en PDF
+   class="btn btn-danger btn-sm pdf-export-btn">
+    Exporter en PDF
 </a>

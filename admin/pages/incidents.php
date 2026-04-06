@@ -8,6 +8,7 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 $admin      = require_admin_auth();
 $page_title = 'Signalements';
 $active_nav = 'incidents';
+$themePalette = visual_admin_data_palette();
 
 $db = Database::getInstance();
 $service_tables_ready = admin_db_has_table($db, 'services') && admin_db_has_table($db, 'service_category_map');
@@ -25,6 +26,7 @@ $f_cat      = $_GET['cat']       ?? '';
 $f_service  = $_GET['service']   ?? '';
 $f_plan     = $_GET['plan']      ?? '';
 $f_executor = $_GET['executor']  ?? '';
+$f_proof    = ($_GET['proof'] ?? '') === 'with_photo' ? 'with_photo' : '';
 $f_search   = trim($_GET['q']    ?? '');
 $f_priority = $_GET['priority']  ?? '';
 $f_date_from= trim($_GET['date_from'] ?? '');
@@ -62,6 +64,9 @@ if ($f_executor && $planning_tables_ready) {
     } elseif ($f_executor === 'provider') {
         $where[] = "latest_plan.source_type = 'provider'";
     }
+}
+if ($f_proof === 'with_photo') {
+    $where[] = 'EXISTS (SELECT 1 FROM photos ph WHERE ph.incident_id = i.id)';
 }
 if ($f_priority)  { $where[] = 'i.priority = ?';                                  $params[] = $f_priority; }
 if ($f_date_from) { $where[] = 'DATE(i.created_at) >= ?';                         $params[] = $f_date_from; }
@@ -108,6 +113,11 @@ $service_join_sql = $service_tables_ready
     ")
     : '';
 
+$service_name_select = $service_tables_ready
+    ? 'COALESCE(planned_service.name, resolved_service.name, c.service) AS service_name'
+    : 'c.service AS service_name';
+$lead_photo_select = admin_incident_first_photo_select($db, 'i');
+
 // Compter le total
 $count_stmt = $db->prepare("
     SELECT COUNT(*)
@@ -126,7 +136,7 @@ $sql = "
     SELECT i.id, i.reference, i.title, i.description, i.status, i.priority,
            i.votes_count, i.created_at, i.updated_at,
            c.name AS cat_name, c.color AS cat_color, c.icon AS cat_icon,
-           COALESCE(planned_service.name, resolved_service.name, c.service) AS service_name,
+           {$service_name_select},
            u.full_name AS reporter, u.email AS reporter_email,
            " . ($planning_tables_ready ? "
            latest_plan.id AS current_plan_id,
@@ -149,6 +159,7 @@ $sql = "
            NULL AS current_plan_provider_name,
            NULL AS current_plan_assignee
            ") . ",
+           {$lead_photo_select},
            (SELECT COUNT(*) FROM photos ph WHERE ph.incident_id = i.id) AS photo_count,
            (SELECT COUNT(*) FROM comments cm WHERE cm.incident_id = i.id AND cm.is_internal = 0) AS comment_count
     FROM incidents i
@@ -166,6 +177,79 @@ if (!$export_csv) {
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $incidents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+foreach ($incidents as &$incident) {
+    $incident['lead_photo'] = admin_incident_preview_photo($db, $incident);
+    if ((int)($incident['photo_count'] ?? 0) === 0 && !empty($incident['lead_photo']['url'])) {
+        $incident['photo_count'] = 1;
+    }
+}
+unset($incident);
+
+if ($f_proof === 'with_photo' && $total === 0) {
+    $fallbackWhere = array_values(array_filter(
+        $where,
+        static fn(string $clause): bool => $clause !== 'EXISTS (SELECT 1 FROM photos ph WHERE ph.incident_id = i.id)'
+    ));
+    $fallbackWhereSql = implode(' AND ', $fallbackWhere);
+
+    $fallbackSql = "
+        SELECT i.id, i.reference, i.title, i.description, i.status, i.priority,
+               i.votes_count, i.created_at, i.updated_at,
+               c.name AS cat_name, c.color AS cat_color, c.icon AS cat_icon,
+               {$service_name_select},
+               u.full_name AS reporter, u.email AS reporter_email,
+               " . ($planning_tables_ready ? "
+               latest_plan.id AS current_plan_id,
+               latest_plan.status AS current_plan_status,
+               latest_plan.scheduled_date AS current_plan_date,
+               latest_plan.time_window_start AS current_plan_time_start,
+               latest_plan.time_window_end AS current_plan_time_end,
+               latest_plan.citizen_message AS current_plan_message,
+               latest_plan.source_type AS current_plan_source_type,
+               latest_plan.provider_name AS current_plan_provider_name,
+               plan_assignee.full_name AS current_plan_assignee
+               " : "
+               NULL AS current_plan_id,
+               NULL AS current_plan_status,
+               NULL AS current_plan_date,
+               NULL AS current_plan_time_start,
+               NULL AS current_plan_time_end,
+               NULL AS current_plan_message,
+               NULL AS current_plan_source_type,
+               NULL AS current_plan_provider_name,
+               NULL AS current_plan_assignee
+               ") . ",
+               {$lead_photo_select},
+               (SELECT COUNT(*) FROM photos ph WHERE ph.incident_id = i.id) AS photo_count,
+               (SELECT COUNT(*) FROM comments cm WHERE cm.incident_id = i.id AND cm.is_internal = 0) AS comment_count
+        FROM incidents i
+        JOIN categories c ON c.id = i.category_id
+        JOIN users u ON u.id = i.user_id
+        $service_join_sql
+        WHERE $fallbackWhereSql
+        ORDER BY i.$f_sort $f_dir
+    ";
+
+    $fallbackStmt = $db->prepare($fallbackSql);
+    $fallbackStmt->execute($params);
+    $fallbackIncidents = $fallbackStmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($fallbackIncidents as &$fallbackIncident) {
+        $fallbackIncident['lead_photo'] = admin_incident_preview_photo($db, $fallbackIncident);
+        if ((int)($fallbackIncident['photo_count'] ?? 0) === 0 && !empty($fallbackIncident['lead_photo']['url'])) {
+            $fallbackIncident['photo_count'] = 1;
+        }
+    }
+    unset($fallbackIncident);
+
+    $fallbackIncidents = array_values(array_filter(
+        $fallbackIncidents,
+        static fn(array $incident): bool => !empty($incident['lead_photo']['url'])
+    ));
+
+    $total = count($fallbackIncidents);
+    $total_pages = max(1, (int)ceil($total / $per_page));
+    $incidents = $export_csv ? $fallbackIncidents : array_slice($fallbackIncidents, $offset, $per_page);
+}
 
 // --- Export CSV ---
 if ($export_csv) {
@@ -194,6 +278,18 @@ if ($agent_is_scoped && !empty($agent_service_scope_ids)) {
     $services = array_values(array_filter($services, static fn(array $service): bool => in_array((int)$service['id'], $agent_service_scope_ids, true)));
 }
 
+$proofScopeServiceIds = [];
+if ($f_service !== '') {
+    $proofScopeServiceIds = [(int)$f_service];
+} elseif ($agent_is_scoped) {
+    $proofScopeServiceIds = $agent_service_scope_ids;
+}
+$proofIncidents = admin_fetch_recent_proof_incidents($db, [
+    'limit' => 4,
+    'service_ids' => $proofScopeServiceIds,
+    'only_open' => true,
+]);
+
 require_once __DIR__ . '/../includes/layout.php';
 
 // Construire l'URL de base pour la pagination et le tri
@@ -204,6 +300,7 @@ $base_params = array_filter([
     'service'   => $f_service,
     'plan'      => $f_plan,
     'executor'  => $f_executor,
+    'proof'     => $f_proof,
     'priority'  => $f_priority,
     'q'         => $f_search,
     'date_from' => $f_date_from,
@@ -212,6 +309,9 @@ $base_params = array_filter([
     'dir'       => $f_dir,
 ]);
 $base_url = '/admin/?' . http_build_query($base_params);
+$proof_filter_params = $base_params;
+$proof_filter_params['proof'] = 'with_photo';
+$proof_filter_url = '/admin/?' . http_build_query($proof_filter_params);
 
 // Helper tri
 function sort_url(string $field, string $current_sort, string $current_dir, string $base): string {
@@ -219,7 +319,7 @@ function sort_url(string $field, string $current_sort, string $current_dir, stri
     return $base . '&sort=' . $field . '&dir=' . $new_dir;
 }
 function sort_icon(string $field, string $current_sort, string $current_dir): string {
-    if ($current_sort !== $field) return '<span style="opacity:.3">↕</span>';
+    if ($current_sort !== $field) return '<span class="incidents-sort-icon">↕</span>';
     return $current_dir === 'DESC' ? '↓' : '↑';
 }
 
@@ -296,9 +396,15 @@ function incident_plan_summary(array $incident): ?string
     return $message !== '' ? $message : null;
 }
 
-$active_filters = array_filter([$f_status, $f_cat, $f_service, $f_plan, $f_executor, $f_search, $f_priority, $f_date_from, $f_date_to]);
+$active_filters = array_filter([$f_status, $f_cat, $f_service, $f_plan, $f_executor, $f_proof, $f_search, $f_priority, $f_date_from, $f_date_to]);
 $open_count = 0;
 $resolved_count = 0;
+$plan_ready_count = 0;
+$plan_overdue_count = 0;
+$plan_unplanned_count = 0;
+$plan_in_progress_count = 0;
+$provider_count = 0;
+$categoryHighlights = [];
 foreach ($incidents as $inc) {
     if (in_array($inc['status'], ['submitted', 'acknowledged', 'in_progress'], true)) {
         $open_count++;
@@ -306,16 +412,71 @@ foreach ($incidents as $inc) {
     if ($inc['status'] === 'resolved') {
         $resolved_count++;
     }
+    $planState = incident_plan_state($inc);
+    if ($planState['label'] === 'Prévue') {
+        $plan_ready_count++;
+    } elseif ($planState['label'] === 'En retard') {
+        $plan_overdue_count++;
+    } elseif ($planState['label'] === 'A planifier') {
+        $plan_unplanned_count++;
+    } elseif ($planState['label'] === 'En intervention') {
+        $plan_in_progress_count++;
+    }
+    if (($inc['current_plan_source_type'] ?? '') === 'provider') {
+        $provider_count++;
+    }
+
+    $visual = category_visual_resolve($inc['cat_icon'] ?? 'road', $inc['cat_name'] ?? null);
+    $key = ($visual['key'] ?? 'road') . '::' . ($inc['cat_name'] ?? '');
+    if (!isset($categoryHighlights[$key])) {
+        $categoryHighlights[$key] = [
+            'key' => $visual['key'] ?? 'road',
+            'name' => $inc['cat_name'] ?? ($visual['label'] ?? 'Categorie'),
+            'short_label' => $visual['short_label'] ?? ($visual['label'] ?? 'Categorie'),
+            'description' => $visual['description'] ?? '',
+            'accent' => $visual['accent'] ?? ($inc['cat_color'] ?? ($themePalette['primary'] ?? '#355160')),
+            'icon' => $inc['cat_icon'] ?? 'road',
+            'count' => 0,
+        ];
+    }
+    $categoryHighlights[$key]['count']++;
 }
+uasort($categoryHighlights, static function (array $a, array $b): int {
+    return $b['count'] <=> $a['count'];
+});
+$categoryHighlights = array_slice(array_values($categoryHighlights), 0, 4);
+$incidentsHeroPortraits = array_values(array_filter([
+    [
+        'asset' => visual_admin_slot_asset('incidents_primary', 'CHAR-05'),
+        'label' => 'Arbitrage des signalements',
+        'title' => 'Lecture rapide',
+    ],
+    [
+        'asset' => visual_admin_slot_asset('incidents_secondary', 'CHAR-04'),
+        'label' => 'Pilotage terrain',
+        'title' => 'Ouverture dossier',
+    ],
+], static function (array $portrait): bool {
+    return !empty($portrait['asset']) && generated_visual_url($portrait['asset']) !== null;
+}));
 ?>
 
-<div class="page-hero">
+<div class="page-async-scope" data-async-scope="incidents-admin">
+<div class="page-hero <?= !empty($incidentsHeroPortraits) ? 'page-hero--with-visual' : '' ?>">
   <div class="page-hero-copy">
     <div class="page-hero-kicker">File de traitement</div>
     <h2 class="page-hero-title">Lire vite la pression terrain et ouvrir les bons dossiers.</h2>
+    <?php if ($isTrainingMode): ?>
     <p class="page-hero-text">
       Cette vue doit aider a filtrer le bruit, faire ressortir les urgences et donner un point d entree direct vers l action utile.
     </p>
+    <?php endif; ?>
+    <div class="page-hero-actions">
+      <a href="/admin/?page=incidents&export=csv" class="btn btn-outline btn-sm">Export CSV</a>
+      <a href="<?= e($proof_filter_url) ?>" class="btn btn-outline btn-sm" data-async-link data-async-scope="admin-main">Dossiers avec preuves</a>
+      <a href="/admin/?page=map" class="btn btn-outline btn-sm" data-async-link data-async-scope="admin-main">Voir la carte</a>
+      <a href="/admin/?page=dashboard" class="btn btn-primary btn-sm" data-async-link data-async-scope="admin-main">Retour cockpit</a>
+    </div>
   </div>
   <div class="page-hero-metrics">
     <div class="hero-chip">
@@ -331,20 +492,58 @@ foreach ($incidents as $inc) {
       <span class="hero-chip-label">filtre(s) actifs</span>
     </div>
   </div>
+  <?php if (!empty($incidentsHeroPortraits)): ?>
+    <div class="page-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero">
+        <div class="dashboard-hero-portraits">
+          <?php foreach ($incidentsHeroPortraits as $portrait): ?>
+            <figure class="dashboard-hero-portrait-card">
+              <?= generated_visual_html($portrait['asset'], ['class' => 'generated-visual generated-visual--portrait dashboard-hero-portrait', 'label' => $portrait['label']]) ?>
+              <figcaption><?= e($portrait['title']) ?></figcaption>
+            </figure>
+          <?php endforeach; ?>
+        </div>
+        <?php if ($isTrainingMode): ?>
+        <div class="generated-visual-caption">
+          <strong>Pression terrain lisible</strong>
+          <span>La file remet en avant le duo agents stylise pour lire les urgences et ouvrir le bon dossier.</span>
+        </div>
+        <?php endif; ?>
+      </div>
+    </div>
+  <?php endif; ?>
 </div>
 
-<!-- Filtres avancés v1.2 -->
-<div class="card" style="padding:16px 24px;margin-bottom:16px;">
+<!-- Filtres avancés v1.2 : Compact Toolbar -->
+<div class="card incidents-filter-card" style="padding: 12px; margin-bottom: 16px; border-radius: 12px;">
   <?php if ($scope_notice): ?>
-    <div class="alert alert-info" style="margin-bottom:12px"><?= e($scope_notice) ?></div>
+    <div class="alert alert-info incidents-scope-alert" style="padding: 8px 12px; font-size: 12px; margin-bottom: 12px;"><?= e($scope_notice) ?></div>
   <?php endif; ?>
-  <form method="GET" action="" id="filter-form">
+  
+  <form method="GET" action="" id="filter-form" data-async-form style="margin: 0;">
     <input type="hidden" name="page" value="incidents">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
-      <input type="text" name="q" class="form-control"
-             placeholder="🔍 Réf, titre, description, citoyen…"
-             value="<?= e($f_search) ?>" style="grid-column:span 2">
-      <select name="status" class="form-control">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <strong style="font-size: 14px; margin-right: 4px; color: #1e293b;">File d'intervention</strong>
+        <span class="badge badge-gray"><?= (int)count($active_filters ?? []) ?> filtre<?= count($active_filters ?? []) > 1 ? 's' : '' ?></span>
+        <span class="badge badge-gray"><?= (int)$open_count ?> dossier<?= (int)$open_count > 1 ? 's' : '' ?></span>
+        <?php if ((int)$plan_overdue_count > 0): ?>
+          <span class="badge badge-danger-soft"><?= (int)$plan_overdue_count ?> retards urgents</span>
+        <?php endif; ?>
+      </div>
+      <div style="display: flex; gap: 6px;">
+        <button type="submit" class="btn btn-primary btn-sm" style="padding: 4px 12px;">Appliquer</button>
+        <a href="/admin/?page=incidents" class="btn btn-outline btn-sm" data-async-link style="padding: 4px 12px;">Réinitialiser</a>
+        <a href="<?= $base_url ?>&export=csv" class="btn btn-outline btn-sm" style="padding: 4px 12px;">Export CSV</a>
+      </div>
+    </div>
+
+    <div class="incidents-filter-grid" style="gap: 8px; margin-bottom: 8px;">
+      <input type="text" name="q" class="form-control" style="font-size:13px; padding: 4px 8px; height:32px;"
+             placeholder="Mot-clé, référence..." value="<?= e($f_search) ?>">
+             
+      <select name="status" class="form-control" style="font-size:13px; padding: 4px 8px; height:32px;">
         <option value="">Tous les statuts</option>
         <option value="submitted"    <?= $f_status==='submitted'    ?'selected':'' ?>>Soumis</option>
         <option value="acknowledged" <?= $f_status==='acknowledged' ?'selected':'' ?>>Pris en charge</option>
@@ -352,14 +551,16 @@ foreach ($incidents as $inc) {
         <option value="resolved"     <?= $f_status==='resolved'     ?'selected':'' ?>>Résolus</option>
         <option value="rejected"     <?= $f_status==='rejected'     ?'selected':'' ?>>Rejetés</option>
       </select>
-      <select name="cat" class="form-control">
+      
+      <select name="cat" class="form-control" style="font-size:13px; padding: 4px 8px; height:32px;">
         <option value="">Toutes les catégories</option>
         <?php foreach ($categories as $cat): ?>
           <option value="<?= $cat['id'] ?>" <?= $f_cat==$cat['id']?'selected':'' ?>><?= e($cat['name']) ?></option>
         <?php endforeach; ?>
       </select>
+      
       <?php if ($service_tables_ready): ?>
-        <select name="service" class="form-control">
+        <select name="service" class="form-control" style="font-size:13px; padding: 4px 8px; height:32px;">
           <option value="">Tous les services</option>
           <?php foreach ($services as $service): ?>
             <option value="<?= (int)$service['id'] ?>" <?= (string)$f_service === (string)$service['id'] ? 'selected' : '' ?>>
@@ -368,40 +569,45 @@ foreach ($incidents as $inc) {
           <?php endforeach; ?>
         </select>
       <?php endif; ?>
+      
       <?php if ($planning_tables_ready): ?>
-        <select name="plan" class="form-control">
-          <option value="">Toutes les interventions</option>
-          <option value="unplanned" <?= $f_plan === 'unplanned' ? 'selected' : '' ?>>A planifier</option>
-          <option value="scheduled" <?= $f_plan === 'scheduled' ? 'selected' : '' ?>>Prevues</option>
+        <select name="plan" class="form-control" style="font-size:13px; padding: 4px 8px; height:32px;">
+          <option value="">Tous les plannings</option>
+          <option value="unplanned" <?= $f_plan === 'unplanned' ? 'selected' : '' ?>>À planifier</option>
+          <option value="scheduled" <?= $f_plan === 'scheduled' ? 'selected' : '' ?>>Prévues</option>
           <option value="overdue" <?= $f_plan === 'overdue' ? 'selected' : '' ?>>En retard</option>
           <option value="in_progress" <?= $f_plan === 'in_progress' ? 'selected' : '' ?>>En intervention</option>
-          <option value="completed" <?= $f_plan === 'completed' ? 'selected' : '' ?>>Terminees</option>
+          <option value="completed" <?= $f_plan === 'completed' ? 'selected' : '' ?>>Terminées</option>
         </select>
-        <select name="executor" class="form-control">
+        <select name="executor" class="form-control" style="font-size:13px; padding: 4px 8px; height:32px;">
           <option value="">Tous les intervenants</option>
-          <option value="internal" <?= $f_executor === 'internal' ? 'selected' : '' ?>>Equipe interne</option>
-          <option value="provider" <?= $f_executor === 'provider' ? 'selected' : '' ?>>Prestataire missionne</option>
+          <option value="internal" <?= $f_executor === 'internal' ? 'selected' : '' ?>>Équipe interne</option>
+          <option value="provider" <?= $f_executor === 'provider' ? 'selected' : '' ?>>Prestataire</option>
         </select>
       <?php endif; ?>
     </div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-      <select name="priority" class="form-control" style="width:160px">
-        <option value="">Toutes priorités</option>
-        <option value="critical" <?= $f_priority==='critical'?'selected':'' ?>>🔴 Critique</option>
-        <option value="high"     <?= $f_priority==='high'    ?'selected':'' ?>>🟠 Haute</option>
-        <option value="medium"   <?= $f_priority==='medium'  ?'selected':'' ?>>🟡 Normale</option>
-        <option value="low"      <?= $f_priority==='low'     ?'selected':'' ?>>🟢 Faible</option>
+    
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <select name="proof" class="form-control" style="font-size:13px; padding: 4px 8px; height:32px; max-width: 180px;">
+        <option value="">Toutes les preuves</option>
+        <option value="with_photo" <?= $f_proof === 'with_photo' ? 'selected' : '' ?>>Accompagné d'une photo</option>
       </select>
-      <input type="date" name="date_from" class="form-control" style="width:150px"
+      
+      <select name="priority" class="form-control" style="font-size:13px; padding: 4px 8px; height:32px; max-width: 150px;">
+        <option value="">Toutes priorités</option>
+        <option value="critical" <?= $f_priority==='critical'?'selected':'' ?>>Critique</option>
+        <option value="high"     <?= $f_priority==='high'    ?'selected':'' ?>>Haute</option>
+        <option value="medium"   <?= $f_priority==='medium'  ?'selected':'' ?>>Normale</option>
+        <option value="low"      <?= $f_priority==='low'     ?'selected':'' ?>>Faible</option>
+      </select>
+      
+      <input type="date" name="date_from" class="form-control" style="font-size:13px; padding: 4px 8px; height:32px; max-width: 140px;"
              value="<?= e($f_date_from) ?>" title="Date de début">
-      <input type="date" name="date_to" class="form-control" style="width:150px"
+      <input type="date" name="date_to" class="form-control" style="font-size:13px; padding: 4px 8px; height:32px; max-width: 140px;"
              value="<?= e($f_date_to) ?>" title="Date de fin">
-      <button type="submit" class="btn btn-primary">Filtrer</button>
-      <a href="/admin/?page=incidents" class="btn btn-outline">Réinitialiser</a>
-      <a href="<?= $base_url ?>&export=csv" class="btn btn-outline" style="margin-left:auto">
-        📥 Export CSV
-      </a>
     </div>
+  </form>
+</div>
   </form>
 </div>
 
@@ -422,15 +628,115 @@ foreach ($incidents as $inc) {
   </div>
 </div>
 
+<?php if (!empty($categoryHighlights)): ?>
+  <div class="admin-category-strip">
+    <?php foreach ($categoryHighlights as $index => $highlight): ?>
+      <div class="admin-category-pill <?= $index === 0 ? 'admin-category-pill--lead' : '' ?>" style="--category-accent:<?= e($highlight['accent']) ?>;">
+        <?= category_visual_html($highlight['icon'], $highlight['name'], 'md', $highlight['accent']) ?>
+        <div class="admin-category-pill-copy">
+          <small><?= $index === 0 ? 'Categorie dominante' : 'Categorie suivie' ?></small>
+          <strong><?= e($highlight['short_label']) ?></strong>
+          <span><?= e($highlight['description']) ?></span>
+        </div>
+        <span class="admin-category-pill-count <?= $index === 0 ? 'admin-category-pill-count--wide' : '' ?>">
+          <?= (int)$highlight['count'] ?> dossier<?= (int)$highlight['count'] > 1 ? 's' : '' ?>
+        </span>
+      </div>
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+
+<?php if (!empty($proofIncidents)): ?>
+  <div class="card dashboard-section-card">
+    <div class="card-header">
+      <span class="card-title">Dernières preuves citoyennes de la file</span>
+      <span class="text-muted text-small">Les derniers dossiers avec photo restent visibles ici, meme si la file courante est dominee par des signalements sans image.</span>
+    </div>
+    <div class="dashboard-proof-grid">
+      <?php foreach ($proofIncidents as $proofIncident): ?>
+        <a href="/admin/?page=incident_detail&id=<?= (int)$proofIncident['id'] ?>" class="dashboard-proof-card" data-async-link data-async-scope="admin-main">
+          <span class="dashboard-proof-card-media">
+            <?php if (!empty($proofIncident['lead_photo']['url'])): ?>
+              <img src="<?= e($proofIncident['lead_photo']['url']) ?>" alt="Preuve citoyenne" class="dashboard-proof-card-image">
+            <?php else: ?>
+              <span class="dashboard-proof-card-empty">Aucune photo</span>
+            <?php endif; ?>
+          </span>
+          <span class="dashboard-proof-card-copy">
+            <span class="dashboard-proof-card-topline">
+              <?= category_visual_html($proofIncident['cat_icon'] ?? 'road', $proofIncident['cat_name'], 'sm', $proofIncident['cat_color'] ?? null) ?>
+              <span class="dashboard-proof-card-meta">
+                <strong><?= e($proofIncident['cat_name']) ?></strong>
+                <span><?= e($proofIncident['reference']) ?> · <?= e($proofIncident['reporter']) ?></span>
+              </span>
+            </span>
+            <span class="dashboard-proof-card-description"><?= e($proofIncident['title'] ?: $proofIncident['description']) ?></span>
+            <span class="dashboard-proof-card-foot">
+              <?php if (!empty($proofIncident['service_name'])): ?>
+                <span class="badge badge-gray"><?= e($proofIncident['service_name']) ?></span>
+              <?php endif; ?>
+              <span class="badge badge-gray"><?= (int)$proofIncident['photo_count'] ?> photo<?= (int)$proofIncident['photo_count'] > 1 ? 's' : '' ?></span>
+              <?php if ((int)$proofIncident['comment_count'] > 0): ?>
+                <span class="badge badge-gray"><?= (int)$proofIncident['comment_count'] ?> commentaire<?= (int)$proofIncident['comment_count'] > 1 ? 's' : '' ?></span>
+              <?php endif; ?>
+              <span class="badge <?= status_class($proofIncident['status']) ?>"><?= status_label($proofIncident['status']) ?></span>
+            </span>
+          </span>
+        </a>
+      <?php endforeach; ?>
+    </div>
+  </div>
+<?php endif; ?>
+
+<div class="card dashboard-section-card">
+  <div class="card-header">
+    <span class="card-title">Lecture d execution</span>
+    <span class="text-muted text-small">Utiliser d abord cette vue pour ouvrir les dossiers qui doivent passer a l action.</span>
+  </div>
+  <div class="services-mode-band services-mode-band--tight">
+    <div class="services-mode-card">
+      <strong><?= (int)$plan_unplanned_count ?></strong>
+      <span>a planifier</span>
+    </div>
+    <div class="services-mode-card">
+      <strong><?= (int)$plan_ready_count ?></strong>
+      <span>prevues</span>
+    </div>
+    <div class="services-mode-card">
+      <strong><?= (int)$plan_overdue_count ?></strong>
+      <span>en retard</span>
+    </div>
+  </div>
+  <div class="services-mode-band services-mode-band--spaced">
+    <div class="services-mode-card">
+      <strong><?= (int)$plan_in_progress_count ?></strong>
+      <span>en intervention</span>
+    </div>
+    <div class="services-mode-card">
+      <strong><?= (int)$provider_count ?></strong>
+      <span>prestataire</span>
+    </div>
+    <div class="services-mode-card">
+      <strong><?= (int)$open_count ?></strong>
+      <span>dossiers ouverts</span>
+    </div>
+  </div>
+</div>
+
 <!-- Tableau -->
 <div class="card">
   <div class="card-header">
-    <span class="card-title">
-      <?= $total ?> signalement<?= $total > 1 ? 's' : '' ?>
-      <?php if ($f_status || $f_cat || $f_service || $f_plan || $f_executor || $f_search || $f_priority || $f_date_from || $f_date_to): ?>
-        <span class="badge badge-blue" style="margin-left:8px">Filtré</span>
-      <?php endif; ?>
-    </span>
+    <div>
+      <span class="card-title">
+        <?= $total ?> signalement<?= $total > 1 ? 's' : '' ?>
+        <?php if ($f_status || $f_cat || $f_service || $f_plan || $f_executor || $f_search || $f_priority || $f_date_from || $f_date_to): ?>
+        <span class="badge badge-blue incidents-filtered-badge">Filtré</span>
+        <?php endif; ?>
+      </span>
+      <p class="incidents-table-lead">
+        La table sert a arbitrer une file deja reduite. Ouvrir d abord les dossiers a forte priorite, avec preuve visible ou intervention en retard.
+      </p>
+    </div>
     <span class="text-muted text-small">
       <?= $resolved_count ?> resolu<?= $resolved_count > 1 ? 's' : '' ?> · <?= $open_count ?> encore ouvert<?= $open_count > 1 ? 's' : '' ?>
     </span>
@@ -439,21 +745,18 @@ foreach ($incidents as $inc) {
     <table>
       <thead>
         <tr>
-          <th><a href="<?= sort_url('created_at', $f_sort, $f_dir, $base_url) ?>" style="color:inherit;text-decoration:none">
-            Date <?= sort_icon('created_at', $f_sort, $f_dir) ?>
+          <th><a href="<?= sort_url('created_at', $f_sort, $f_dir, $base_url) ?>" class="incidents-sort-link" data-async-link>
+            Dossier & Catégorie <?= sort_icon('created_at', $f_sort, $f_dir) ?>
           </a></th>
-          <th>Référence</th>
           <th>Titre / Description</th>
-          <th>Catégorie</th>
           <th>Service</th>
           <th>Intervention</th>
-          <th>Statut</th>
-          <th>Priorité</th>
-          <th><a href="<?= sort_url('votes_count', $f_sort, $f_dir, $base_url) ?>" style="color:inherit;text-decoration:none">
-            👍 <?= sort_icon('votes_count', $f_sort, $f_dir) ?>
+          <th>État & Priorité</th>
+          <th><a href="<?= sort_url('votes_count', $f_sort, $f_dir, $base_url) ?>" class="incidents-sort-link" data-async-link>
+            Soutien <?= sort_icon('votes_count', $f_sort, $f_dir) ?>
           </a></th>
           <th>Citoyen</th>
-          <th>📷 💬</th>
+          <th>Preuves</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -462,63 +765,93 @@ foreach ($incidents as $inc) {
         <?php $planState = incident_plan_state($inc); ?>
         <?php $planSummary = incident_plan_summary($inc); ?>
         <tr>
-          <td class="text-muted text-small" style="white-space:nowrap"><?= format_date_short($inc['created_at']) ?></td>
-          <td><code style="font-size:11px"><?= e($inc['reference']) ?></code></td>
-          <td>
-            <div style="font-weight:600;font-size:13px;margin-bottom:2px">
-              <?= e($inc['title'] ?: 'Sans titre') ?>
+          <td style="min-width: 170px;">
+            <div class="admin-category-cell" style="--category-accent:<?= e($inc['cat_color'] ?: ($themePalette['primary'] ?? '#355160')) ?>; margin-bottom: 6px;">
+              <?= category_visual_html($inc['cat_icon'] ?? 'road', $inc['cat_name'], 'sm', $inc['cat_color'] ?? null) ?>
+              <div class="admin-category-cell-copy">
+                <span class="incidents-row-title" style="white-space: normal; line-height: 1.2;"><?= e($inc['cat_name']) ?></span>
+              </div>
             </div>
-            <div class="text-muted text-small truncate" title="<?= e($inc['description']) ?>" style="max-width:220px">
-              <?= e($inc['description']) ?>
+            <div class="text-muted text-small incidents-nowrap">
+              <code class="incidents-ref" style="display:inline-block; margin-right: 4px;"><?= e($inc['reference']) ?></code>
+              <?= format_date_short($inc['created_at']) ?>
             </div>
           </td>
           <td>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <?= category_visual_html($inc['cat_icon'] ?? 'road', $inc['cat_name'], 'sm', $inc['cat_color'] ?? null) ?>
-              <span class="badge" style="background:<?= e($inc['cat_color']) ?>22;color:<?= e($inc['cat_color']) ?>">
-                <?= e($inc['cat_name']) ?>
-              </span>
+            <div class="incidents-row-title">
+              <?= e($inc['title'] ?: 'Sans titre') ?>
+            </div>
+            <div class="text-muted text-small truncate-3-lines incidents-row-description" title="<?= e($inc['description']) ?>">
+              <?= e($inc['description']) ?>
             </div>
           </td>
           <td class="text-muted text-small"><?= e($inc['service_name'] ?: '—') ?></td>
           <td>
             <span class="badge <?= e($planState['class']) ?>"><?= e($planState['label']) ?></span>
             <?php if ($planSummary): ?>
-              <div class="text-muted text-small" style="margin-top:4px;max-width:180px">
+              <div class="text-muted text-small incidents-plan-meta">
                 <?= e($planSummary) ?>
               </div>
             <?php endif; ?>
             <?php if (($inc['current_plan_source_type'] ?? '') === 'provider' && !empty($inc['current_plan_provider_name'])): ?>
-              <div class="text-small" style="margin-top:4px;color:#7c3aed;font-weight:700;max-width:180px">
+              <div class="text-small incidents-plan-provider">
                 Prestataire missionne
               </div>
             <?php endif; ?>
           </td>
-          <td><span class="badge <?= status_class($inc['status']) ?>"><?= status_label($inc['status']) ?></span></td>
-          <td><span class="badge <?= priority_class($inc['priority'] ?? 'medium') ?>"><?= priority_label($inc['priority'] ?? 'medium') ?></span></td>
+          <td>
+            <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start;">
+              <span class="badge <?= status_class($inc['status']) ?>"><?= status_label($inc['status']) ?></span>
+              <span class="badge <?= priority_class($inc['priority'] ?? 'medium') ?>"><?= priority_label($inc['priority'] ?? 'medium') ?></span>
+            </div>
+          </td>
           <td class="text-center">
             <?php if ($inc['votes_count'] > 0): ?>
-              <span style="color:#f59e0b;font-weight:700">👍 <?= $inc['votes_count'] ?></span>
+              <span class="incidents-vote-copy"><?= $inc['votes_count'] ?> soutien<?= $inc['votes_count'] > 1 ? 's' : '' ?></span>
             <?php else: ?>
               <span class="text-muted">—</span>
             <?php endif; ?>
           </td>
           <td>
-            <div style="font-size:13px"><?= e($inc['reporter']) ?></div>
-            <div class="text-muted text-small"><?= e($inc['reporter_email']) ?></div>
-          </td>
-          <td class="text-center text-small">
-            <?= $inc['photo_count'] > 0 ? '📷 '.$inc['photo_count'] : '' ?>
-            <?= $inc['comment_count'] > 0 ? ' 💬 '.$inc['comment_count'] : '' ?>
-            <?= $inc['photo_count'] == 0 && $inc['comment_count'] == 0 ? '<span class="text-muted">—</span>' : '' ?>
+            <div class="incidents-row-title"><?= e($inc['reporter']) ?></div>
+            <div class="text-muted text-small truncate" style="max-width: 140px;" title="<?= e($inc['reporter_email']) ?>"><?= e($inc['reporter_email']) ?></div>
           </td>
           <td>
-            <a href="/admin/?page=incident_detail&id=<?= $inc['id'] ?>" class="btn btn-primary btn-sm">Traiter</a>
+            <div class="admin-proof-cell">
+              <?php if (!empty($inc['lead_photo']['url'])): ?>
+                <a href="/admin/?page=incident_detail&id=<?= (int)$inc['id'] ?>" class="admin-proof-thumb-link js-insta-preview" data-id="<?= (int)$inc['id'] ?>" data-async-link data-async-scope="admin-main" aria-label="Previsualiser la preuve citoyenne" title="Ouvrir la fenetre preuve">
+                  <span class="admin-proof-thumb-wrap">
+                    <img src="<?= e($inc['lead_photo']['url']) ?>" alt="Preuve citoyenne" class="admin-proof-thumb">
+                    <?php if ((int)$inc['photo_count'] > 1): ?>
+                      <span class="admin-proof-thumb-badge">+<?= (int)$inc['photo_count'] - 1 ?></span>
+                    <?php endif; ?>
+                  </span>
+                </a>
+              <?php else: ?>
+                <div class="admin-proof-thumb admin-proof-thumb--empty">Aucune</div>
+              <?php endif; ?>
+              <div class="admin-proof-copy">
+                <div class="admin-proof-counts">
+                  <?php if ((int)$inc['photo_count'] > 0): ?>
+                    <span class="badge badge-gray"><?= (int)$inc['photo_count'] ?> photo<?= (int)$inc['photo_count'] > 1 ? 's' : '' ?></span>
+                  <?php endif; ?>
+                  <?php if ((int)$inc['comment_count'] > 0): ?>
+                    <span class="badge badge-gray"><?= (int)$inc['comment_count'] ?> doc<?= (int)$inc['comment_count'] > 1 ? 's' : '' ?></span>
+                  <?php endif; ?>
+                </div>
+                <?php if (!empty($inc['lead_photo']['moderation_message'])): ?>
+                  <div class="admin-proof-note"><?= e($inc['lead_photo']['moderation_message']) ?></div>
+                <?php endif; ?>
+              </div>
+            </div>
+          </td>
+          <td>
+            <a href="/admin/?page=incident_detail&id=<?= $inc['id'] ?>" class="btn btn-primary btn-sm" data-async-link data-async-scope="admin-main">Traiter</a>
           </td>
         </tr>
         <?php endforeach; ?>
         <?php if (empty($incidents)): ?>
-        <tr><td colspan="12" class="text-center text-muted" style="padding:40px">
+        <tr><td colspan="12" class="text-center text-muted incidents-empty-row">
           <?= $f_search ? "Aucun résultat pour \"" . e($f_search) . "\"." : 'Aucun signalement trouvé.' ?>
         </td></tr>
         <?php endif; ?>
@@ -528,20 +861,26 @@ foreach ($incidents as $inc) {
 
   <!-- Pagination -->
   <?php if ($total_pages > 1): ?>
-  <div class="pagination" style="padding:16px 0 0;">
+  <div class="pagination incidents-pagination">
     <a href="<?= $base_url ?>&p=<?= max(1, $page_num-1) ?>"
+       data-async-link
        class="page-btn <?= $page_num <= 1 ? 'disabled' : '' ?>">← Préc.</a>
     <?php for ($i = max(1,$page_num-2); $i <= min($total_pages, $page_num+2); $i++): ?>
       <a href="<?= $base_url ?>&p=<?= $i ?>"
+         data-async-link
          class="page-btn <?= $i === $page_num ? 'active' : '' ?>"><?= $i ?></a>
     <?php endfor; ?>
     <a href="<?= $base_url ?>&p=<?= min($total_pages, $page_num+1) ?>"
+       data-async-link
        class="page-btn <?= $page_num >= $total_pages ? 'disabled' : '' ?>">Suiv. →</a>
-    <span class="text-muted text-small" style="margin-left:8px">
+    <span class="text-muted text-small incidents-pagination-summary">
       Page <?= $page_num ?> / <?= $total_pages ?> (<?= $total ?> résultats)
     </span>
   </div>
   <?php endif; ?>
 </div>
 
+</div>
+
+<?php require_once __DIR__ . '/../includes/insta_preview.php'; ?>
 <?php require_once __DIR__ . '/../includes/layout_footer.php'; ?>

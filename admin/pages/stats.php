@@ -9,6 +9,8 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 $admin      = require_admin_auth();
 $page_title = 'Statistiques';
 $active_nav = 'stats';
+$themePalette = visual_admin_data_palette();
+$statusPalette = visual_admin_status_palette();
 
 $db = Database::getInstance();
 $service_tables_ready = admin_db_has_table($db, 'services')
@@ -19,6 +21,8 @@ $agent_is_scoped = $service_tables_ready && admin_is_service_scoped_agent($admin
 $scope_notice = null;
 $incident_scope_join = '';
 $incident_scope_where = '';
+$execution_scope_where = '';
+$lead_photo_select = admin_incident_first_photo_select($db, 'i');
 
 if ($agent_is_scoped) {
     if (!empty($agent_service_scope_ids)) {
@@ -28,11 +32,13 @@ if ($agent_is_scoped) {
             JOIN service_category_map scoped_service_map ON scoped_service_map.category_id = scoped_category.id AND scoped_service_map.is_default = 1
         ";
         $incident_scope_where = " AND scoped_service_map.service_id IN ($safeServiceIds)";
+        $execution_scope_where = " AND COALESCE(latest_plan.service_id, scoped_service_map.service_id) IN ($safeServiceIds)";
         $scope_notice = $admin['primary_service_name']
             ? 'Les statistiques sont limitees au service ' . $admin['primary_service_name'] . '.'
             : 'Les statistiques sont limitees a vos services rattaches.';
     } else {
         $incident_scope_where = ' AND 1 = 0';
+        $execution_scope_where = ' AND 1 = 0';
         $scope_notice = 'Aucun service ne vous est encore attribue. Les statistiques resteront vides tant que le rattachement n est pas renseigne.';
     }
 }
@@ -145,6 +151,11 @@ $by_cat = $db->prepare("
 ");
 $by_cat->execute([$period]);
 $by_cat = $by_cat->fetchAll(PDO::FETCH_ASSOC);
+foreach ($by_cat as &$cat) {
+    $visual = category_visual_resolve($cat['icon'] ?? null, $cat['name'] ?? null);
+    $cat['visual_description'] = $visual['description'] ?? '';
+}
+unset($cat);
 
 // --- Top 5 zones ---
 $top_zones = $db->prepare("
@@ -197,7 +208,8 @@ foreach ($heatmap_raw->fetchAll(PDO::FETCH_ASSOC) as $row) {
 // --- Top 5 signalements les plus votés ---
 $top_voted = $db->prepare("
     SELECT i.reference, i.title, i.description, i.votes_count, i.status,
-           c.name AS cat_name, c.color AS cat_color, c.icon AS cat_icon
+           c.name AS cat_name, c.color AS cat_color, c.icon AS cat_icon,
+           {$lead_photo_select}
     FROM incidents i
     JOIN categories c ON c.id = i.category_id
     " . ($agent_is_scoped
@@ -213,55 +225,183 @@ $top_voted = $db->prepare("
 ");
 $top_voted->execute([$period]);
 $top_voted = $top_voted->fetchAll(PDO::FETCH_ASSOC);
+foreach ($top_voted as &$topIncident) {
+    $visual = category_visual_resolve($topIncident['cat_icon'] ?? null, $topIncident['cat_name'] ?? null);
+    $topIncident['cat_description'] = $visual['description'] ?? '';
+    $topIncident['lead_photo'] = admin_incident_preview_photo($db, $topIncident);
+}
+unset($topIncident);
+
+$execution_summary = null;
+if ($service_tables_ready) {
+    $executionSummaryStmt = $db->prepare("
+        SELECT
+            SUM(CASE WHEN i.status IN ('submitted','acknowledged','in_progress') AND latest_plan.id IS NOT NULL
+                AND COALESCE(latest_plan.status, '') NOT IN ('completed', 'cancelled')
+                AND COALESCE(latest_plan.source_type, 'internal') = 'internal' THEN 1 ELSE 0 END) AS internal_count,
+            SUM(CASE WHEN i.status IN ('submitted','acknowledged','in_progress') AND latest_plan.id IS NOT NULL
+                AND COALESCE(latest_plan.status, '') NOT IN ('completed', 'cancelled')
+                AND latest_plan.source_type = 'provider' THEN 1 ELSE 0 END) AS provider_count,
+            SUM(CASE WHEN i.status IN ('submitted','acknowledged','in_progress') AND latest_plan.id IS NULL THEN 1 ELSE 0 END) AS unplanned_count
+        FROM incidents i
+        JOIN categories scoped_category ON scoped_category.id = i.category_id
+        LEFT JOIN service_category_map scoped_service_map ON scoped_service_map.category_id = scoped_category.id AND scoped_service_map.is_default = 1
+        LEFT JOIN intervention_plans latest_plan ON latest_plan.id = (
+            SELECT p2.id
+            FROM intervention_plans p2
+            WHERE p2.incident_id = i.id
+            ORDER BY p2.created_at DESC, p2.id DESC
+            LIMIT 1
+        )
+        WHERE i.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+        $execution_scope_where
+    ");
+    $executionSummaryStmt->execute([$period]);
+    $execution_summary = $executionSummaryStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+$statsHeroSceneAsset = visual_admin_slot_asset('stats_scene', 'ILL-05') ?? visual_admin_slot_asset('stats_scene', 'ILL-01');
+$statsHeroInsetAsset = visual_admin_slot_asset('stats_inset', 'ILL-02') ?? visual_admin_slot_asset('stats_inset', 'ILL-03');
+$statsHeroAgentAsset = visual_admin_slot_asset('stats_agent', 'CHAR-04') ?? visual_admin_slot_asset('stats_agent', 'CHAR-05');
+$statsHeroHasVisual = (bool)($statsHeroSceneAsset || $statsHeroInsetAsset || $statsHeroAgentAsset);
 
 require_once __DIR__ . '/../includes/layout.php';
 ?>
 
+<div class="page-async-scope" data-async-scope="stats-admin">
+
 <?php if ($scope_notice): ?>
-  <div class="alert alert-info" style="margin-bottom:16px;"><?= e($scope_notice) ?></div>
+  <div class="alert alert-info stats-scope-alert"><?= e($scope_notice) ?></div>
+<?php endif; ?>
+
+<div class="page-hero <?= $statsHeroHasVisual ? 'page-hero--with-visual' : '' ?>">
+  <div class="page-hero-copy">
+    <div class="page-hero-kicker">Lecture analytique</div>
+    <h2 class="page-hero-title">Mesurer la charge, la résolution et l’engagement citoyen.</h2>
+    <p class="page-hero-text">
+      Cette vue consolide les volumes, la dynamique de résolution, les catégories dominantes et les zones de pression afin d’aider le pilotage local à arbitrer plus vite.
+    </p>
+  </div>
+  <div class="page-hero-metrics">
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$period ?></span>
+      <span class="hero-chip-label">jours analysés</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$kpis['total'] ?></span>
+      <span class="hero-chip-label">signalements sur la fenêtre</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= $resolution_rate ?>%</span>
+      <span class="hero-chip-label">taux de résolution</span>
+    </div>
+  </div>
+  <?php if ($statsHeroHasVisual): ?>
+    <div class="page-hero-visual">
+      <div class="generated-visual-panel generated-visual-panel--hero hero-visual-stack">
+        <?php if ($statsHeroSceneAsset): ?>
+          <?= generated_visual_html($statsHeroSceneAsset, ['class' => 'generated-visual generated-visual--cover hero-visual-stack-main', 'label' => 'Lecture analytique locale']) ?>
+        <?php endif; ?>
+        <?php if ($statsHeroInsetAsset): ?>
+          <?= generated_visual_html($statsHeroInsetAsset, ['class' => 'generated-visual generated-visual--cover hero-visual-stack-inset', 'label' => 'Categorie sous pression']) ?>
+        <?php endif; ?>
+        <?php if ($statsHeroAgentAsset): ?>
+          <?= generated_visual_html($statsHeroAgentAsset, ['class' => 'generated-visual generated-visual--portrait hero-visual-stack-agent', 'label' => 'Relais analytique']) ?>
+        <?php endif; ?>
+        <div class="generated-visual-caption hero-visual-stack-copy">
+          <strong>Statistiques lisibles</strong>
+          <span>La vue analytique remet un repere terrain et agent pour transformer les chiffres en lecture de charge, pas seulement en tableau.</span>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
+</div>
+
+<?php if (!empty($by_cat)): ?>
+  <div class="admin-category-strip admin-category-strip--spaced">
+    <?php foreach (array_slice($by_cat, 0, 4) as $cat): ?>
+      <div class="admin-category-pill">
+        <?= category_visual_html($cat['icon'] ?? 'road', $cat['name'], 'md', $cat['color'] ?? null) ?>
+        <div class="admin-category-pill-copy">
+          <strong><?= e($cat['name']) ?></strong>
+          <span><?= e($cat['visual_description'] ?: 'Categorie suivie dans les statistiques') ?></span>
+        </div>
+        <span class="admin-category-pill-count admin-category-pill-count--wide"><?= (int)$cat['cnt'] ?> signalements</span>
+      </div>
+    <?php endforeach; ?>
+  </div>
+<?php else: ?>
+  <div class="admin-empty-state admin-empty-state--spaced">
+    <strong>Aucune catégorie dominante sur la période.</strong>
+    <span>Étendre la fenêtre ou attendre davantage de signalements pour faire émerger une lecture métier utile.</span>
+  </div>
+<?php endif; ?>
+
+<?php if ($execution_summary): ?>
+  <div class="card stats-card-gap--compact">
+    <div class="card-header">
+      <span class="card-title">Cockpit d execution statistique</span>
+      <span class="text-muted text-small">La période doit d abord raconter comment les dossiers ouverts sont actuellement portes, pas seulement combien ils sont.</span>
+    </div>
+    <div class="services-mode-band services-mode-band--tight">
+      <div class="services-mode-card">
+        <strong><?= (int)($execution_summary['unplanned_count'] ?? 0) ?></strong>
+        <span>dossier(s) ouvert(s) encore sans plan visible</span>
+      </div>
+      <div class="services-mode-card">
+        <strong><?= (int)($execution_summary['internal_count'] ?? 0) ?></strong>
+        <span>dossier(s) actuellement portes en interne</span>
+      </div>
+      <div class="services-mode-card">
+        <strong><?= (int)($execution_summary['provider_count'] ?? 0) ?></strong>
+        <span>dossier(s) actuellement portes par un prestataire</span>
+      </div>
+    </div>
+  </div>
 <?php endif; ?>
 
 <!-- En-tête avec sélecteur de période et export -->
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
-  <div style="display:flex;align-items:center;gap:8px;">
-    <span class="fw-bold" style="font-size:14px">Période :</span>
+<div class="stats-toolbar">
+  <div class="stats-toolbar-group">
+    <span class="fw-bold text-small">Période :</span>
     <?php foreach ([7=>'7 jours', 30=>'30 jours', 90=>'3 mois', 365=>'1 an'] as $p => $label): ?>
       <a href="/admin/?page=stats&period=<?= $p ?>"
+         data-async-link
          class="btn btn-sm <?= $period === $p ? 'btn-primary' : 'btn-outline' ?>">
         <?= $label ?>
       </a>
     <?php endforeach; ?>
   </div>
   <a href="/admin/?page=stats&period=<?= $period ?>&export=csv" class="btn btn-outline btn-sm">
-    📥 Export CSV (<?= $period ?> jours)
+    Export CSV (<?= $period ?> jours)
   </a>
 </div>
 
 <!-- KPIs enrichis (7 cartes) -->
-<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
+<div class="stats-grid stats-kpi-grid--primary">
   <div class="stat-card">
-    <div class="stat-icon blue">📋</div>
+    <div class="stat-icon blue">SIG</div>
     <div>
       <div class="stat-value"><?= $kpis['total'] ?></div>
       <div class="stat-label">Signalements</div>
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon yellow">🔓</div>
+    <div class="stat-icon yellow">OUV</div>
     <div>
       <div class="stat-value"><?= $kpis['open'] ?></div>
       <div class="stat-label">Ouverts</div>
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon green">✅</div>
+    <div class="stat-icon green">OK</div>
     <div>
       <div class="stat-value"><?= $kpis['resolved'] ?></div>
       <div class="stat-label">Résolus (<?= $resolution_rate ?>%)</div>
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon blue">⏱️</div>
+    <div class="stat-icon blue">DEL</div>
     <div>
       <div class="stat-value">
         <?php
@@ -275,23 +415,23 @@ require_once __DIR__ . '/../includes/layout.php';
     </div>
   </div>
 </div>
-<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
+<div class="stats-grid stats-kpi-grid--secondary">
   <div class="stat-card">
-    <div class="stat-icon yellow">👍</div>
+    <div class="stat-icon yellow">SOU</div>
     <div>
       <div class="stat-value"><?= number_format((int)$kpis['total_votes']) ?></div>
       <div class="stat-label">Votes "Moi aussi"</div>
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon green">👤</div>
+    <div class="stat-icon green">USR</div>
     <div>
       <div class="stat-value"><?= $active_citizens ?></div>
       <div class="stat-label">Citoyens actifs</div>
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon red">❌</div>
+    <div class="stat-icon red">REF</div>
     <div>
       <div class="stat-value"><?= $kpis['rejected'] ?></div>
       <div class="stat-label">Rejetés</div>
@@ -300,10 +440,10 @@ require_once __DIR__ . '/../includes/layout.php';
 </div>
 
 <!-- Graphiques ligne 1 : Évolution + Statuts -->
-<div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;margin-bottom:24px;">
+<div class="stats-chart-grid stats-chart-grid--main stats-chart-grid--main-gap">
   <div class="card">
     <div class="card-header">
-      <span class="card-title">📈 Soumis vs Résolus (<?= $period ?> jours)</span>
+      <span class="card-title">Soumis vs Résolus (<?= $period ?> jours)</span>
     </div>
     <div class="chart-container">
       <canvas id="chartEvo"></canvas>
@@ -311,7 +451,7 @@ require_once __DIR__ . '/../includes/layout.php';
   </div>
   <div class="card">
     <div class="card-header">
-      <span class="card-title">🥧 Répartition par statut</span>
+      <span class="card-title">Répartition par statut</span>
     </div>
     <div class="chart-container">
       <canvas id="chartStatus"></canvas>
@@ -320,30 +460,39 @@ require_once __DIR__ . '/../includes/layout.php';
 </div>
 
 <!-- Graphiques ligne 2 : Catégories + Jours de la semaine -->
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+<div class="stats-chart-grid stats-chart-grid--split stats-card-gap">
   <div class="card">
     <div class="card-header">
-      <span class="card-title">🏷️ Signalements par catégorie</span>
+      <span class="card-title">Signalements par catégorie</span>
     </div>
     <div class="chart-container">
       <canvas id="chartCat"></canvas>
     </div>
-    <div style="display:grid;gap:10px;padding:4px 6px 0;">
+    <div class="stats-category-list stats-category-list--tight">
       <?php foreach ($by_cat as $cat): ?>
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #f1ece0;">
-          <?= category_visual_html($cat['icon'] ?? 'road', $cat['name'], 'sm', $cat['color'] ?? null) ?>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:700;color:#183229;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= e($cat['name']) ?></div>
-            <div class="text-small text-muted"><?= (int)$cat['cnt'] ?> signalement<?= ((int)$cat['cnt']) > 1 ? 's' : '' ?> · 👍 <?= (int)$cat['votes'] ?></div>
+        <div class="stats-category-row">
+          <?= category_visual_html($cat['icon'] ?? 'road', $cat['name'], 'md', $cat['color'] ?? null) ?>
+          <div class="stats-category-copy">
+            <div class="fw-bold text-truncate"><?= e($cat['name']) ?></div>
+            <div class="text-small text-muted"><?= (int)$cat['cnt'] ?> signalement<?= ((int)$cat['cnt']) > 1 ? 's' : '' ?> · <?= (int)$cat['votes'] ?> soutien<?= (int)$cat['votes'] > 1 ? 's' : '' ?></div>
+            <?php if (!empty($cat['visual_description'])): ?>
+              <div class="text-small text-muted stats-category-description"><?= e($cat['visual_description']) ?></div>
+            <?php endif; ?>
           </div>
-          <span class="badge" style="background:<?= e($cat['color']) ?>22;color:<?= e($cat['color']) ?>"><?= (int)$cat['cnt'] ?></span>
+          <span class="badge badge-tone" style="--badge-accent:<?= e($cat['color']) ?>"><?= (int)$cat['cnt'] ?></span>
         </div>
       <?php endforeach; ?>
+      <?php if (empty($by_cat)): ?>
+        <div class="admin-empty-state admin-empty-state--compact">
+          <strong>Aucune catégorie à comparer sur la période.</strong>
+          <span>Le graphique restera vide tant que la fenêtre choisie ne contient pas assez de dossiers catégorisés.</span>
+        </div>
+      <?php endif; ?>
     </div>
   </div>
   <div class="card">
     <div class="card-header">
-      <span class="card-title">📅 Activité par jour de la semaine</span>
+      <span class="card-title">Activité par jour de la semaine</span>
     </div>
     <div class="chart-container">
       <canvas id="chartWeekday"></canvas>
@@ -352,17 +501,17 @@ require_once __DIR__ . '/../includes/layout.php';
 </div>
 
 <!-- Carte de chaleur horaire (ADMIN-01) -->
-<div class="card" style="margin-bottom:24px;">
+<div class="card stats-card-gap">
   <div class="card-header">
-    <span class="card-title">🌡️ Carte de chaleur — Heure × Jour de la semaine</span>
+    <span class="card-title">Carte de chaleur — Heure × Jour de la semaine</span>
   </div>
-  <div style="padding:16px;overflow-x:auto;">
-    <table style="border-collapse:collapse;font-size:11px;width:100%">
+  <div class="stats-heatmap-shell">
+    <table class="stats-heatmap-table">
       <thead>
         <tr>
-          <th style="padding:4px 8px;text-align:left;color:#64748b">Heure</th>
+          <th class="stats-heatmap-head">Heure</th>
           <?php for ($h = 0; $h < 24; $h++): ?>
-            <th style="padding:4px 2px;text-align:center;color:#64748b;min-width:28px"><?= sprintf('%02d', $h) ?>h</th>
+            <th class="stats-heatmap-hour"><?= sprintf('%02d', $h) ?>h</th>
           <?php endfor; ?>
         </tr>
       </thead>
@@ -373,7 +522,7 @@ require_once __DIR__ . '/../includes/layout.php';
         for ($d = 0; $d < 7; $d++):
         ?>
         <tr>
-          <td style="padding:4px 8px;font-weight:600;color:#374151;white-space:nowrap"><?= $dow_labels[$d] ?></td>
+          <td class="stats-heatmap-day"><?= $dow_labels[$d] ?></td>
           <?php for ($h = 0; $h < 24; $h++):
             $v   = $heatmap[$d][$h];
             $pct = $max_heat > 0 ? $v / $max_heat : 0;
@@ -383,7 +532,7 @@ require_once __DIR__ . '/../includes/layout.php';
             $bg  = "rgb($r,$g,$b)";
             $fg  = $pct > 0.5 ? '#fff' : '#374151';
           ?>
-            <td style="padding:4px 2px;text-align:center;background:<?= $bg ?>;color:<?= $fg ?>;border-radius:3px;cursor:default"
+            <td class="stats-heatmap-cell" style="--heatmap-bg:<?= $bg ?>;--heatmap-fg:<?= $fg ?>;"
                 title="<?= $dow_labels[$d] ?> <?= sprintf('%02d', $h) ?>h : <?= $v ?> signalement<?= $v>1?'s':'' ?>">
               <?= $v > 0 ? $v : '' ?>
             </td>
@@ -396,57 +545,116 @@ require_once __DIR__ . '/../includes/layout.php';
 </div>
 
 <!-- Top votés + Top zones -->
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+<div class="stats-bottom-grid stats-card-gap">
   <!-- Top 5 signalements les plus votés -->
   <?php if (!empty($top_voted)): ?>
   <div class="card">
-    <div class="card-header"><span class="card-title">👍 Top 5 signalements les plus votés</span></div>
+    <div class="card-header"><span class="card-title">Top 5 signalements les plus soutenus</span></div>
+    <div class="stats-ranked-list">
     <?php foreach ($top_voted as $i => $inc): ?>
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9">
-      <span style="width:24px;height:24px;border-radius:50%;background:#f59e0b;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px"><?= $i+1 ?></span>
-      <?= category_visual_html($inc['cat_icon'] ?? 'road', $inc['cat_name'], 'sm', $inc['cat_color'] ?? null) ?>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+    <div class="stats-ranked-item">
+      <span class="stats-rank-bullet stats-rank-bullet--amber"><?= $i+1 ?></span>
+      <div class="stats-ranked-visuals">
+        <?= category_visual_html($inc['cat_icon'] ?? 'road', $inc['cat_name'], 'md', $inc['cat_color'] ?? null) ?>
+        <?php if (!empty($inc['lead_photo']['url'])): ?>
+          <span class="admin-proof-thumb-wrap">
+            <img src="<?= e($inc['lead_photo']['url']) ?>" alt="Preuve citoyenne" class="admin-proof-thumb admin-proof-thumb--small">
+          </span>
+        <?php endif; ?>
+      </div>
+      <div class="stats-ranked-copy">
+        <div class="fw-bold text-truncate">
           <?= e($inc['title'] ?: substr($inc['description'], 0, 50)) ?>
         </div>
-        <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">
-          <span class="badge" style="background:<?= e($inc['cat_color']) ?>22;color:<?= e($inc['cat_color']) ?>;font-size:10px"><?= e($inc['cat_name']) ?></span>
-          <span class="badge <?= status_class($inc['status']) ?>" style="font-size:10px"><?= status_label($inc['status']) ?></span>
+        <div class="stats-ranked-meta">
+          <span class="badge badge-tone badge-xs" style="--badge-accent:<?= e($inc['cat_color']) ?>"><?= e($inc['cat_name']) ?></span>
+          <span class="badge badge-xs <?= status_class($inc['status']) ?>"><?= status_label($inc['status']) ?></span>
         </div>
+        <?php if (!empty($inc['cat_description'])): ?>
+          <div class="text-small text-muted stats-ranked-description"><?= e($inc['cat_description']) ?></div>
+        <?php endif; ?>
+        <?php if (!empty($inc['lead_photo']['moderation_message'])): ?>
+          <div class="text-small text-muted stats-ranked-description"><?= e($inc['lead_photo']['moderation_message']) ?></div>
+        <?php elseif (!empty($inc['lead_photo']['url'])): ?>
+          <div class="text-small text-muted stats-ranked-description">Preuve citoyenne visible dans le dossier.</div>
+        <?php endif; ?>
       </div>
-      <span style="color:#f59e0b;font-weight:800;font-size:16px;flex-shrink:0">👍 <?= $inc['votes_count'] ?></span>
+      <span class="stats-votes-count"><?= $inc['votes_count'] ?> soutien<?= $inc['votes_count'] > 1 ? 's' : '' ?></span>
     </div>
     <?php endforeach; ?>
+    </div>
+  </div>
+  <?php else: ?>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Top 5 signalements les plus soutenus</span></div>
+    <div class="admin-empty-state admin-empty-state--compact">
+      <strong>Aucun dossier soutenu sur la période.</strong>
+      <span>Cette surface se remplira dès qu un signalement recevra des soutiens citoyens dans la fenêtre analysée.</span>
+    </div>
   </div>
   <?php endif; ?>
 
   <!-- Top 5 zones -->
   <?php if (!empty($top_zones)): ?>
   <div class="card">
-    <div class="card-header"><span class="card-title">📍 Top 5 zones les plus signalées</span></div>
+    <div class="card-header"><span class="card-title">Top 5 zones les plus signalées</span></div>
+    <div class="stats-ranked-list">
     <?php foreach ($top_zones as $i => $zone): ?>
-    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9">
-      <span style="width:24px;height:24px;border-radius:50%;background:#1d4ed8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0"><?= $i+1 ?></span>
-      <span style="flex:1;font-size:13px;color:#1e293b"><?= e($zone['address']) ?></span>
-      <div style="text-align:right;flex-shrink:0">
+    <div class="stats-ranked-item">
+      <span class="stats-rank-bullet stats-rank-bullet--blue"><?= $i+1 ?></span>
+      <span class="stats-zone-address"><?= e($zone['address']) ?></span>
+      <div class="stats-zone-meta">
         <div class="badge badge-blue"><?= $zone['cnt'] ?> sign.</div>
         <?php if ($zone['votes'] > 0): ?>
-          <div style="font-size:11px;color:#f59e0b;margin-top:2px">👍 <?= $zone['votes'] ?></div>
+          <div class="stats-zone-votes"><?= $zone['votes'] ?> soutien<?= $zone['votes'] > 1 ? 's' : '' ?></div>
         <?php endif; ?>
       </div>
-      <div style="width:80px;height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden;flex-shrink:0">
-        <div style="width:<?= round($zone['cnt']/$top_zones[0]['cnt']*100) ?>%;height:100%;background:#1d4ed8;border-radius:3px"></div>
+      <div class="stats-zone-bar">
+        <div class="stats-zone-bar-fill" style="--zone-fill:<?= round($zone['cnt']/$top_zones[0]['cnt']*100) ?>%;"></div>
       </div>
     </div>
     <?php endforeach; ?>
+    </div>
+  </div>
+  <?php else: ?>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Top 5 zones les plus signalées</span></div>
+    <div class="admin-empty-state admin-empty-state--compact">
+      <strong>Aucune zone dominante à isoler.</strong>
+      <span>Quand plusieurs dossiers se concentreront sur une même adresse, cette vue aidera à visualiser la pression locale.</span>
+    </div>
   </div>
   <?php endif; ?>
 </div>
 
 <script>
-// --- Évolution soumis vs résolus ---
+(() => {
+const evoCanvas = document.getElementById('chartEvo');
+const statusCanvas = document.getElementById('chartStatus');
+const catCanvas = document.getElementById('chartCat');
+const weekdayCanvas = document.getElementById('chartWeekday');
+if (!evoCanvas || !statusCanvas || !catCanvas || !weekdayCanvas || typeof Chart === 'undefined') {
+  return;
+}
+
+const themePalette = <?= json_encode($themePalette, JSON_UNESCAPED_SLASHES) ?>;
+const statusPalette = <?= json_encode($statusPalette, JSON_UNESCAPED_SLASHES) ?>;
+
+function withAlpha(hex, alpha) {
+  const value = String(hex || '').replace('#', '');
+  if (value.length !== 6) return hex;
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+[evoCanvas, statusCanvas, catCanvas, weekdayCanvas].forEach((canvas) => {
+  Chart.getChart(canvas)?.destroy();
+});
+
 const evoData = <?= json_encode($evolution) ?>;
-new Chart(document.getElementById('chartEvo'), {
+new Chart(evoCanvas, {
   type: 'bar',
   data: {
     labels: evoData.map(d => {
@@ -457,13 +665,13 @@ new Chart(document.getElementById('chartEvo'), {
       {
         label: 'Soumis',
         data: evoData.map(d => d.submitted),
-        backgroundColor: 'rgba(29,78,216,.7)',
+        backgroundColor: withAlpha(themePalette.primary, 0.72),
         borderRadius: 4,
       },
       {
         label: 'Résolus',
         data: evoData.map(d => d.resolved),
-        backgroundColor: 'rgba(34,197,94,.7)',
+        backgroundColor: withAlpha(themePalette.success, 0.78),
         borderRadius: 4,
       }
     ]
@@ -472,24 +680,22 @@ new Chart(document.getElementById('chartEvo'), {
     responsive: true, maintainAspectRatio: false,
     plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } },
     scales: {
-      y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } },
+      y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: themePalette.grid } },
       x: { grid: { display: false } }
     }
   }
 });
 
-// --- Statuts ---
 const statusData = <?= json_encode($by_status) ?>;
-const statusColors = { submitted:'#94a3b8', acknowledged:'#3b82f6', in_progress:'#f59e0b', resolved:'#22c55e', rejected:'#ef4444' };
 const statusLabels = { submitted:'Soumis', acknowledged:'Pris en charge', in_progress:'En cours', resolved:'Résolu', rejected:'Rejeté' };
-new Chart(document.getElementById('chartStatus'), {
+new Chart(statusCanvas, {
   type: 'doughnut',
   data: {
     labels: statusData.map(s => statusLabels[s.status] || s.status),
     datasets: [{
       data: statusData.map(s => s.cnt),
-      backgroundColor: statusData.map(s => statusColors[s.status] || '#94a3b8'),
-      borderWidth: 2, borderColor: '#fff',
+      backgroundColor: statusData.map(s => statusPalette[s.status] || statusPalette.default),
+      borderWidth: 2, borderColor: themePalette.surface,
     }]
   },
   options: {
@@ -498,9 +704,8 @@ new Chart(document.getElementById('chartStatus'), {
   }
 });
 
-// --- Catégories ---
 const catData = <?= json_encode($by_cat) ?>;
-new Chart(document.getElementById('chartCat'), {
+new Chart(catCanvas, {
   type: 'bar',
   data: {
     labels: catData.map(c => c.name),
@@ -516,22 +721,23 @@ new Chart(document.getElementById('chartCat'), {
     responsive: true, maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: {
-      x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } },
+      x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: themePalette.grid } },
       y: { grid: { display: false } }
     }
   }
 });
 
-// --- Jours de la semaine ---
 const wdData = <?= json_encode($by_weekday_data) ?>;
-new Chart(document.getElementById('chartWeekday'), {
+new Chart(weekdayCanvas, {
   type: 'bar',
   data: {
     labels: wdData.map(d => d.day),
     datasets: [{
       label: 'Signalements',
       data: wdData.map(d => d.cnt),
-      backgroundColor: wdData.map((_, i) => i >= 1 && i <= 5 ? 'rgba(29,78,216,.7)' : 'rgba(148,163,184,.7)'),
+      backgroundColor: wdData.map((_, i) => i >= 1 && i <= 5
+        ? withAlpha(themePalette.primary, 0.72)
+        : withAlpha(themePalette.secondary, 0.58)),
       borderRadius: 6,
     }]
   },
@@ -539,11 +745,14 @@ new Chart(document.getElementById('chartWeekday'), {
     responsive: true, maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: {
-      y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } },
+      y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: themePalette.grid } },
       x: { grid: { display: false } }
     }
   }
 });
+})();
 </script>
+
+</div>
 
 <?php require_once __DIR__ . '/../includes/layout_footer.php'; ?>

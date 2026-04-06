@@ -19,6 +19,113 @@ declare(strict_types=1);
  */
 class TwoFactorController extends BaseController
 {
+    private function hasTwoFactorMethodColumn(): bool
+    {
+        return $this->dbHasColumn('users', 'two_factor_method');
+    }
+
+    private function hasTwoFactorEnabledColumn(): bool
+    {
+        return $this->dbHasColumn('users', 'two_factor_enabled');
+    }
+
+    private function getTwoFactorRecoveryCodesColumn(): ?string
+    {
+        if ($this->dbHasColumn('users', 'two_factor_recovery_codes')) {
+            return 'two_factor_recovery_codes';
+        }
+
+        if ($this->dbHasColumn('users', 'two_factor_backup_codes')) {
+            return 'two_factor_backup_codes';
+        }
+
+        return null;
+    }
+
+    private function twoFactorMethodSelectSql(): string
+    {
+        if ($this->hasTwoFactorMethodColumn()) {
+            return 'two_factor_method';
+        }
+
+        if ($this->hasTwoFactorEnabledColumn()) {
+            return "CASE
+                WHEN COALESCE(two_factor_enabled, 0) = 1 THEN 'totp'
+                WHEN COALESCE(two_factor_secret, '') <> '' AND LOCATE('|', two_factor_secret) > 0 THEN 'email'
+                WHEN COALESCE(two_factor_secret, '') <> '' THEN 'pending_totp'
+                ELSE 'none'
+            END";
+        }
+
+        return "'none'";
+    }
+
+    private function twoFactorRecoveryCodesSelectSql(): string
+    {
+        $column = $this->getTwoFactorRecoveryCodesColumn();
+        if ($column === null) {
+            return 'NULL AS two_factor_recovery_codes';
+        }
+
+        return "{$column} AS two_factor_recovery_codes";
+    }
+
+    private function fetchTwoFactorState(int $userId, string $extraSelect = ''): array
+    {
+        $select = array_filter([
+            'id',
+            'email',
+            'full_name',
+            'two_factor_secret',
+            $this->twoFactorMethodSelectSql() . ' AS two_factor_method',
+            $this->twoFactorRecoveryCodesSelectSql(),
+            trim($extraSelect),
+        ]);
+
+        $stmt = $this->db->prepare(
+            'SELECT ' . implode(', ', $select) . ' FROM users WHERE id = ?'
+        );
+        $stmt->execute([$userId]);
+
+        return $stmt->fetch() ?: [];
+    }
+
+    private function persistTwoFactorSecret(int $userId, ?string $secret, string $method): void
+    {
+        if ($this->hasTwoFactorMethodColumn()) {
+            $stmt = $this->db->prepare(
+                'UPDATE users SET two_factor_secret = ?, two_factor_method = ? WHERE id = ?'
+            );
+            $stmt->execute([$secret, $method, $userId]);
+            return;
+        }
+
+        if ($this->hasTwoFactorEnabledColumn()) {
+            $enabled = $method === 'totp' ? 1 : 0;
+            $stmt = $this->db->prepare(
+                'UPDATE users SET two_factor_secret = ?, two_factor_enabled = ? WHERE id = ?'
+            );
+            $stmt->execute([$secret, $enabled, $userId]);
+            return;
+        }
+
+        $stmt = $this->db->prepare('UPDATE users SET two_factor_secret = ? WHERE id = ?');
+        $stmt->execute([$secret, $userId]);
+    }
+
+    private function persistRecoveryCodes(int $userId, array $backupCodes): void
+    {
+        $column = $this->getTwoFactorRecoveryCodesColumn();
+        if ($column === null) {
+            return;
+        }
+
+        $stmt = $this->db->prepare(
+            "UPDATE users SET {$column} = ? WHERE id = ?"
+        );
+        $stmt->execute([json_encode($backupCodes), $userId]);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // GET /auth/2fa/status
     // ─────────────────────────────────────────────────────────────────────────
@@ -27,15 +134,12 @@ class TwoFactorController extends BaseController
     {
         $auth   = $this->requireAuth();
         $userId = (int) $auth['sub'];
-        $stmt = $this->db->prepare(
-            'SELECT two_factor_method, two_factor_secret FROM users WHERE id = ?'
-        );
-        $stmt->execute([$userId]);
-        $user = $stmt->fetch();
+        $user = $this->fetchTwoFactorState($userId);
+        $method = $user['two_factor_method'] ?? 'none';
 
         $this->success([
-            'two_factor_enabled' => $user['two_factor_method'] !== 'none',
-            'two_factor_method'  => $user['two_factor_method'] ?? 'none',
+            'two_factor_enabled' => $method !== 'none',
+            'two_factor_method'  => $method,
         ]);
     }
 
@@ -58,17 +162,14 @@ class TwoFactorController extends BaseController
         $secret = $this->generateTotpSecret();
 
         // Stocker le secret temporairement (non activé tant que verify() n'est pas appelé)
-        $stmt = $this->db->prepare(
-            'UPDATE users SET two_factor_secret = ?, two_factor_method = "pending_totp" WHERE id = ?'
-        );
-        $stmt->execute([$secret, $userId]);
+        $this->persistTwoFactorSecret($userId, $secret, 'pending_totp');
 
         // Générer les codes de récupération
         $backupCodes = $this->generateBackupCodes();
-        $stmt = $this->db->prepare(
-                'UPDATE users SET two_factor_recovery_codes = ? WHERE id = ?'
-            );
-            $stmt->execute([json_encode(array_map(fn($c) => password_hash($c, PASSWORD_BCRYPT), $backupCodes)), $userId]);
+        $this->persistRecoveryCodes(
+            $userId,
+            array_map(fn($c) => password_hash($c, PASSWORD_BCRYPT), $backupCodes)
+        );
 
         // URL otpauth:// pour le QR code
         $issuer   = urlencode(defined('APP_NAME') ? APP_NAME : 'Ma Commune');
@@ -100,11 +201,7 @@ class TwoFactorController extends BaseController
             return;
         }
 
-        $stmt = $this->db->prepare(
-            'SELECT two_factor_secret, two_factor_method FROM users WHERE id = ?'
-        );
-        $stmt->execute([$userId]);
-        $user = $stmt->fetch();
+        $user = $this->fetchTwoFactorState($userId);
 
         if ($user['two_factor_method'] !== 'pending_totp') {
             $this->error('Aucune configuration 2FA en attente.', 400);
@@ -116,10 +213,7 @@ class TwoFactorController extends BaseController
             return;
         }
 
-        $stmt = $this->db->prepare(
-            'UPDATE users SET two_factor_method = "totp" WHERE id = ?'
-        );
-        $stmt->execute([$userId]);
+        $this->persistTwoFactorSecret($userId, $user['two_factor_secret'], 'totp');
 
         $this->success(['enabled' => true, 'method' => 'totp']);
     }
@@ -134,8 +228,9 @@ class TwoFactorController extends BaseController
         $userId = (int) $auth['sub'];
         $body   = json_decode(file_get_contents('php://input'), true) ?? [];
 
+        $passwordColumn = $this->getUserPasswordColumnName();
         $stmt = $this->db->prepare(
-            'SELECT password_hash FROM users WHERE id = ?'
+            "SELECT {$passwordColumn} AS password_hash FROM users WHERE id = ?"
         );
         $stmt->execute([$userId]);
         $user = $stmt->fetch();
@@ -145,9 +240,21 @@ class TwoFactorController extends BaseController
             return;
         }
 
-        $stmt = $this->db->prepare(
-            'UPDATE users SET two_factor_method = "none", two_factor_secret = NULL, two_factor_recovery_codes = NULL WHERE id = ?'
-        );
+        $column = $this->getTwoFactorRecoveryCodesColumn();
+        if ($this->hasTwoFactorMethodColumn()) {
+            $sql = 'UPDATE users SET two_factor_method = "none", two_factor_secret = NULL';
+        } elseif ($this->hasTwoFactorEnabledColumn()) {
+            $sql = 'UPDATE users SET two_factor_enabled = 0, two_factor_secret = NULL';
+        } else {
+            $sql = 'UPDATE users SET two_factor_secret = NULL';
+        }
+
+        if ($column !== null) {
+            $sql .= ", {$column} = NULL";
+        }
+
+        $sql .= ' WHERE id = ?';
+        $stmt = $this->db->prepare($sql);
         $stmt->execute([$userId]);
 
         $this->success(['disabled' => true]);
@@ -172,10 +279,11 @@ class TwoFactorController extends BaseController
         $expires = date('Y-m-d H:i:s', time() + 600); // 10 minutes
 
         // Stocker le code haché avec expiration
-        $stmt = $this->db->prepare(
-            'UPDATE users SET two_factor_secret = ?, two_factor_method = "email" WHERE id = ?'
+        $this->persistTwoFactorSecret(
+            $userId,
+            password_hash($code, PASSWORD_BCRYPT) . '|' . $expires,
+            'email'
         );
-        $stmt->execute([password_hash($code, PASSWORD_BCRYPT) . '|' . $expires, $userId]);
 
         // Envoyer l'email
         $subject = '[' . (defined('APP_SHORT_NAME') ? APP_SHORT_NAME : 'MaCommune') . '] Votre code de vérification';
@@ -201,11 +309,7 @@ class TwoFactorController extends BaseController
             return;
         }
 
-        $stmt = $this->db->prepare(
-            'SELECT two_factor_method, two_factor_secret, two_factor_recovery_codes FROM users WHERE id = ?'
-        );
-        $stmt->execute([$userId]);
-        $user = $stmt->fetch();
+        $user = $this->fetchTwoFactorState($userId);
 
         $valid = false;
 
@@ -220,9 +324,9 @@ class TwoFactorController extends BaseController
                     $valid = true;
                     // Invalider le code après utilisation
                     $stmt = $this->db->prepare(
-                'UPDATE users SET two_factor_secret = NULL WHERE id = ?'
-            );
-            $stmt->execute([$userId]);
+                        'UPDATE users SET two_factor_secret = NULL WHERE id = ?'
+                    );
+                    $stmt->execute([$userId]);
                 }
                 break;
         }
@@ -235,10 +339,7 @@ class TwoFactorController extends BaseController
                     $valid = true;
                     // Supprimer le code utilisé
                     unset($backupCodes[$i]);
-                    $stmt = $this->db->prepare(
-                'UPDATE users SET two_factor_recovery_codes = ? WHERE id = ?'
-            );
-            $stmt->execute([json_encode(array_values($backupCodes)), $userId]);
+                    $this->persistRecoveryCodes($userId, array_values($backupCodes));
                     break;
                 }
             }

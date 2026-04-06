@@ -8,6 +8,7 @@ $admin      = require_admin_auth();
 $page_title = 'Utilisateurs';
 $active_nav = 'users';
 $db         = Database::getInstance();
+$lead_photo_select = admin_incident_first_photo_select($db, 'i');
 $usersPasswordColumn = admin_db_has_column($db, 'users', 'password_hash') ? 'password_hash' : 'password';
 $serviceTablesReady = admin_db_has_table($db, 'services') && admin_db_has_table($db, 'user_service_memberships');
 $serviceScopeReady = $serviceTablesReady
@@ -17,6 +18,7 @@ $agentServiceScopeIds = $serviceScopeReady ? admin_allowed_service_ids($admin) :
 $agentIsScoped = $serviceScopeReady && admin_is_service_scoped_agent($admin);
 $scopeNotice = null;
 $services = $serviceTablesReady ? intervention_get_services($db) : [];
+$gamificationReady = admin_db_has_table($db, 'user_gamification') && admin_db_has_column($db, 'user_gamification', 'points');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -29,15 +31,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $serviceId = $serviceTablesReady ? (int)($_POST['service_id'] ?? 0) : 0;
 
         if (!$fullName || !$email || !$password) {
-            $_SESSION['flash_error'] = 'Tous les champs sont obligatoires.';
+            $_SESSION['flash_error'] = 'Tous les champs sont obligatoires. Le compte n est pas créé tant que l identité, l email et le mot de passe temporaire restent incomplets.';
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $_SESSION['flash_error'] = 'Adresse email invalide.';
+            $_SESSION['flash_error'] = 'Adresse email invalide. Vérifier le format avant d ouvrir un nouveau compte.';
         } else {
             $exists = $db->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
             $exists->execute([$email]);
 
             if ($exists->fetch()) {
-                $_SESSION['flash_error'] = 'Cet email est déjà utilisé.';
+                $_SESSION['flash_error'] = 'Cet email est déjà utilisé. Réutiliser un compte existant évite de fragmenter le suivi agent.';
             } else {
                 $db->prepare("
                     INSERT INTO users (full_name, email, {$usersPasswordColumn}, role, is_active, created_at)
@@ -54,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         true
                     );
                 }
-                $_SESSION['flash_success'] = "Compte de {$fullName} créé avec succès.";
+                $_SESSION['flash_success'] = "Compte de {$fullName} créé. Le poste peut maintenant être rattaché à un service et intégré au suivi opérationnel.";
             }
         }
 
@@ -68,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($userId && $userId !== (int)$admin['id']) {
             $db->prepare('UPDATE users SET is_active = ? WHERE id = ?')->execute([$isActive, $userId]);
-            $_SESSION['flash_success'] = $isActive ? 'Compte activé.' : 'Compte désactivé.';
+            $_SESSION['flash_success'] = $isActive ? 'Compte activé. Le profil redevient utilisable dans le dispositif.' : 'Compte désactivé. Le profil reste visible en historique mais ne peut plus agir.';
         }
 
         $back = $_POST['back'] ?? '/admin/?page=users';
@@ -82,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($userId && $userId !== (int)$admin['id']) {
             $db->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$role, $userId]);
-            $_SESSION['flash_success'] = 'Rôle modifié.';
+            $_SESSION['flash_success'] = 'Rôle modifié. Vérifier ensuite le périmètre service et les droits induits par ce changement.';
         }
 
         header('Location: /admin/?page=users');
@@ -102,13 +104,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $membershipUser = $userStmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$membershipUser || !in_array($membershipUser['role'], ['agent', 'admin'], true)) {
-            $_SESSION['flash_error'] = 'Seuls les agents et administrateurs peuvent etre rattaches a un service.';
+            $_SESSION['flash_error'] = 'Seuls les agents et administrateurs peuvent etre rattaches a un service. Un compte citoyen reste hors de cette chaîne interne.';
         } elseif (!$serviceId || !intervention_get_service_by_id($db, $serviceId)) {
-            $_SESSION['flash_error'] = 'Service invalide.';
+            $_SESSION['flash_error'] = 'Service invalide. Choisir un service existant avant d enregistrer le rattachement.';
         } else {
             intervention_upsert_user_membership($db, $userId, $serviceId, $roleInService, $isPrimary);
             intervention_ensure_primary_membership($db, $userId);
-            $_SESSION['flash_success'] = 'Rattachement service enregistre.';
+            $_SESSION['flash_success'] = 'Rattachement service enregistré. Le compte est maintenant relié à la bonne file de traitement.';
         }
 
         header('Location: /admin/?page=users&detail=' . $userId);
@@ -120,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $serviceId = (int)($_POST['service_id'] ?? 0);
 
         intervention_remove_user_membership($db, $userId, $serviceId);
-        $_SESSION['flash_success'] = 'Rattachement service retire.';
+        $_SESSION['flash_success'] = 'Rattachement service retiré. Vérifier qu un autre point d entrée principal existe encore pour ce compte.';
 
         header('Location: /admin/?page=users&detail=' . $userId);
         exit;
@@ -134,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->prepare('UPDATE user_service_memberships SET is_primary = 1 WHERE user_id = ? AND service_id = ?')
             ->execute([$userId, $serviceId]);
         intervention_ensure_primary_membership($db, $userId);
-        $_SESSION['flash_success'] = 'Service principal mis a jour.';
+        $_SESSION['flash_success'] = 'Service principal mis à jour. Les prochaines lectures du compte partiront désormais de ce rattachement.';
 
         header('Location: /admin/?page=users&detail=' . $userId);
         exit;
@@ -216,18 +218,20 @@ $userMemberships = [];
 
 if (isset($_GET['detail'])) {
     $detailId = (int)$_GET['detail'];
+    $gamificationJoinSql = $gamificationReady ? 'LEFT JOIN user_gamification g ON g.user_id = u.id' : '';
+    $gamificationPointsSql = $gamificationReady ? 'COALESCE(g.points, 0)' : '0';
 
     $stmt = $db->prepare("
         SELECT u.*,
                COUNT(DISTINCT i.id)  AS incidents_count,
                COUNT(DISTINCT v.id)  AS votes_count,
                COUNT(DISTINCT c.id)  AS comments_count,
-               COALESCE(g.points, 0) AS gamification_points
+               {$gamificationPointsSql} AS gamification_points
         FROM users u
         LEFT JOIN incidents i ON i.user_id = u.id
         LEFT JOIN votes v ON v.user_id = u.id
         LEFT JOIN comments c ON c.user_id = u.id
-        LEFT JOIN user_gamification g ON g.user_id = u.id
+        {$gamificationJoinSql}
         WHERE u.id = ?
           AND {$userScopeSql}
         GROUP BY u.id
@@ -242,7 +246,8 @@ if (isset($_GET['detail'])) {
 
         $stmtInc = $db->prepare("
             SELECT i.id, i.reference, i.title, i.status, i.votes_count, i.created_at,
-                   cat.name AS category_name, cat.icon AS category_icon
+                   cat.name AS category_name, cat.icon AS category_icon,
+                   {$lead_photo_select}
             FROM incidents i
             JOIN categories cat ON cat.id = i.category_id
             LEFT JOIN service_category_map scoped_scm ON scoped_scm.category_id = i.category_id AND scoped_scm.is_default = 1
@@ -260,6 +265,10 @@ if (isset($_GET['detail'])) {
         ");
         $stmtInc->execute(array_merge([$detailId], $incidentScopeParams));
         $userIncidents = $stmtInc->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($userIncidents as &$incident) {
+            $incident['lead_photo'] = admin_incident_preview_photo($db, $incident);
+        }
+        unset($incident);
 
         $stmtAct = $db->prepare("
             (SELECT 'incident' AS type, i.reference AS ref, COALESCE(i.title, 'Sans titre') AS label, i.created_at AS date
@@ -408,25 +417,25 @@ $kpis = $stmtKpis->fetch(PDO::FETCH_ASSOC);
 function users_role_badge(string $role): string
 {
     return match ($role) {
-        'admin' => '<span class="users-badge" style="background:#edd7cf;color:#8d3f23">Administrateur</span>',
-        'agent' => '<span class="users-badge" style="background:#dce6ea;color:#2d6f86">Agent</span>',
-        default => '<span class="users-badge" style="background:#efe7d7;color:#5e6c67">Citoyen</span>',
+        'admin' => '<span class="users-badge users-badge--admin">Administrateur</span>',
+        'agent' => '<span class="users-badge users-badge--agent">Agent</span>',
+        default => '<span class="users-badge users-badge--citizen">Citoyen</span>',
     };
 }
 
 function users_status_badge(bool $isActive): string
 {
     return $isActive
-        ? '<span class="users-badge" style="background:#dcebdd;color:#2f7d50">Actif</span>'
-        : '<span class="users-badge" style="background:#efe7d7;color:#8d958f">Inactif</span>';
+        ? '<span class="users-badge users-badge--active">Actif</span>'
+        : '<span class="users-badge users-badge--inactive">Inactif</span>';
 }
 
 function users_activity_icon(string $type): string
 {
     return match ($type) {
-        'incident' => '📍',
-        'comment'  => '💬',
-        'vote'     => '👍',
+        'incident' => 'SIG',
+        'comment'  => 'COM',
+        'vote'     => 'SOU',
         default    => '•',
     };
 }
@@ -440,297 +449,86 @@ function users_sort_url(string $column, string $currentSort, string $currentDir,
 
 require_once __DIR__ . '/../includes/layout.php';
 ?>
-<style>
-.users-hero {
-  background: linear-gradient(135deg, #0e3127 0%, #174b3a 56%, #2d6f86 100%);
-  color: #fff;
-  border-radius: 28px;
-  padding: 28px;
-  margin-bottom: 24px;
-  box-shadow: 0 18px 38px rgba(14, 49, 39, .16);
-}
-.users-kicker {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: #f2d58c;
-  margin-bottom: 10px;
-}
-.users-title {
-  font-size: 30px;
-  font-family: 'Merriweather', serif;
-  font-weight: 900;
-  line-height: 1.15;
-  margin-bottom: 10px;
-}
-.users-text {
-  color: rgba(255,255,255,.84);
-  max-width: 640px;
-}
-.users-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.users-kpi {
-  background: rgba(255,253,248,.94);
-  border: 1px solid #ece4d5;
-  border-radius: 20px;
-  padding: 18px;
-  box-shadow: 0 10px 24px rgba(14, 49, 39, .06);
-}
-.users-kpi-value {
-  font-size: 28px;
-  font-weight: 900;
-  color: #183229;
-}
-.users-kpi-label {
-  font-size: 13px;
-  color: #5e6c67;
-  margin-top: 4px;
-}
-.users-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-.users-toolbar h2 {
-  font-size: 20px;
-  color: #183229;
-}
-.users-filters {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-}
-.users-filters input,
-.users-filters select {
-  min-width: 160px;
-}
-.users-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: rgba(255,253,248,.94);
-  border: 1px solid #ece4d5;
-  border-radius: 18px;
-  overflow: hidden;
-  box-shadow: 0 10px 24px rgba(14, 49, 39, .06);
-}
-.users-table th {
-  background: #f8f3e8;
-  padding: 12px 14px;
-  text-align: left;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: #5e6c67;
-}
-.users-table td {
-  padding: 12px 14px;
-  border-top: 1px solid #f2ebde;
-  vertical-align: middle;
-}
-.users-table tr:hover td {
-  background: #fbf7ef;
-}
-.users-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-}
-.users-pagination {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  margin-top: 20px;
-  flex-wrap: wrap;
-}
-.users-page {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 38px;
-  height: 38px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid #d8d0c2;
-  color: #183229;
-  background: #fffdf8;
-  text-decoration: none;
-}
-.users-page.active {
-  background: #174b3a;
-  border-color: #174b3a;
-  color: #fff;
-}
-.user-detail {
-  background: rgba(255,253,248,.94);
-  border: 1px solid #ece4d5;
-  border-radius: 22px;
-  padding: 22px;
-  box-shadow: 0 10px 24px rgba(14, 49, 39, .06);
-}
-.user-detail-head {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-.user-avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #dce6ea;
-  color: #174b3a;
-  font-size: 24px;
-  font-weight: 800;
-}
-.user-detail-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 10px;
-  margin: 16px 0 20px;
-}
-.user-detail-stat {
-  background: #f8f3e8;
-  border-radius: 16px;
-  padding: 14px;
-  text-align: center;
-}
-.user-detail-stat strong {
-  display: block;
-  font-size: 22px;
-  color: #183229;
-}
-.user-detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
-}
-.user-mini-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.user-mini-table td,
-.user-mini-table th {
-  padding: 6px 0;
-  border-bottom: 1px solid #f2ebde;
-  text-align: left;
-}
-.user-mini-table tr:last-child td,
-.user-mini-table tr:last-child th {
-  border-bottom: none;
-}
-.user-activity {
-  list-style: none;
-  padding: 0;
-}
-.user-activity li {
-  display: flex;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid #f2ebde;
-}
-.user-activity li:last-child {
-  border-bottom: none;
-}
-.users-modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, .45);
-  z-index: 1000;
-  align-items: center;
-  justify-content: center;
-}
-.users-modal-box {
-  width: 420px;
-  max-width: 92vw;
-  background: #fffdf8;
-  border-radius: 22px;
-  padding: 24px;
-  border: 1px solid #ece4d5;
-  box-shadow: 0 18px 38px rgba(14, 49, 39, .16);
-}
-.user-service-card {
-  background: rgba(255,253,248,.94);
-  border: 1px solid #ece4d5;
-  border-radius: 18px;
-  padding: 18px;
-  box-shadow: 0 10px 24px rgba(14, 49, 39, .06);
-}
-.user-service-list {
-  display: grid;
-  gap: 10px;
-  margin-top: 10px;
-}
-.user-service-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: #f8f3e8;
-  border: 1px solid #ece4d5;
-}
-.user-service-name {
-  font-weight: 800;
-  color: #183229;
-}
-.user-service-meta {
-  color: #5e6c67;
-  font-size: 12px;
-  margin-top: 4px;
-}
-@media (max-width: 768px) {
-  .user-detail-grid {
-    grid-template-columns: 1fr;
-  }
-}
-</style>
-
-<div class="users-hero">
-  <div class="users-kicker">Administration des comptes</div>
-  <div class="users-title"><?= $agentIsScoped ? 'Annuaire operationnel du service' : 'Suivre les citoyens, agents et administrateurs' ?></div>
-  <div class="users-text">
-    <?= $agentIsScoped
-        ? 'Cette vue rassemble les comptes utiles a votre perimetre de service. Elle reste consultative pour permettre un suivi terrain sans ouvrir la gouvernance globale.'
-        : 'Cette page centralise les comptes actifs du dispositif afin de verifier l activite, suivre l engagement et gerer les acces au service.' ?>
+<div class="page-hero page-hero--with-visual">
+  <div class="page-hero-copy">
+    <div class="page-hero-kicker">Administration des comptes</div>
+    <div class="page-hero-title"><?= $agentIsScoped ? 'Annuaire operationnel du service' : 'Suivre les citoyens, agents et administrateurs' ?></div>
+    <?php if ($isTrainingMode): ?>
+    <div class="page-hero-text">
+      <?= $agentIsScoped
+          ? 'Cette vue rassemble les comptes utiles a votre perimetre de service. Elle reste consultative pour permettre un suivi terrain sans ouvrir la gouvernance globale.'
+          : 'Cette page centralise les comptes actifs du dispositif afin de verifier l activite, suivre l engagement et gerer les acces au service.' ?>
+    </div>
+    <?php endif; ?>
+  </div>
+  <div class="page-hero-metrics">
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$kpis['total'] ?></span>
+      <span class="hero-chip-label">comptes visibles</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value"><?= (int)$kpis['active'] ?></span>
+      <span class="hero-chip-label">actifs</span>
+    </div>
+    <div class="hero-chip">
+      <span class="hero-chip-value">+<?= (int)$kpis['new_30d'] ?></span>
+      <span class="hero-chip-label">nouveaux sur 30 jours</span>
+    </div>
+  </div>
+  <div class="page-hero-visual">
+    <div class="generated-visual-panel generated-visual-panel--hero hero-visual-stack">
+      <?= generated_visual_html('ILL-05', ['class' => 'generated-visual generated-visual--cover hero-visual-stack-main', 'label' => 'Lecture annuaire']) ?>
+      <?= generated_visual_html('ILL-02', ['class' => 'generated-visual generated-visual--cover hero-visual-stack-inset', 'label' => 'Relais service']) ?>
+      <?= generated_visual_html('CHAR-04', ['class' => 'generated-visual generated-visual--portrait hero-visual-stack-agent', 'label' => 'Referent annuaire']) ?>
+      <?php if ($isTrainingMode): ?>
+      <div class="generated-visual-caption hero-visual-stack-copy">
+        <strong>Lecture des comptes</strong>
+        <span>Citoyens, agents et administrateurs restent lisibles dans une meme surface de pilotage.</span>
+      </div>
+      <?php endif; ?>
+    </div>
   </div>
 </div>
 
 <?php if ($scopeNotice): ?>
-  <div class="alert alert-info" style="margin-bottom:18px"><?= e($scopeNotice) ?></div>
+  <div class="alert alert-info users-scope-alert"><?= e($scopeNotice) ?></div>
 <?php endif; ?>
 
+<?php if ($isTrainingMode): ?>
+<div class="admin-guidance-grid">
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Lecture utile</div>
+    <h3>Verifier les acces sans perdre le contexte terrain.</h3>
+    <p>
+      Cette page sert a suivre les comptes actifs, repérer les agents rattaches aux services et garder une vision claire des profils qui font vivre le dispositif.
+    </p>
+  </div>
+  <div class="admin-guidance-card">
+    <div class="admin-guidance-kicker">Reflexe produit</div>
+    <h3>Traiter les comptes comme une file d exploitation, pas comme un simple CRUD.</h3>
+    <p>
+      Avant de modifier un role ou un statut, verifier le rattachement service, l activite recente et l impact sur la chaine de prise en charge.
+    </p>
+  </div>
+</div>
+<?php endif; ?>
+
+<div class="page-async-scope" data-async-scope="users-admin">
 <?php if ($detailUser): ?>
   <div class="user-detail">
     <div class="user-detail-head">
       <div class="user-avatar"><?= strtoupper(mb_substr($detailUser['full_name'], 0, 1)) ?></div>
       <div>
-        <h2 style="font-size:24px;color:#183229"><?= e($detailUser['full_name']) ?></h2>
-        <p style="color:#5e6c67;margin-top:4px"><?= e($detailUser['email']) ?></p>
-        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <h2 class="user-detail-name"><?= e($detailUser['full_name']) ?></h2>
+        <p class="user-detail-email"><?= e($detailUser['email']) ?></p>
+        <div class="users-inline-actions users-inline-actions--top">
           <?= users_role_badge($detailUser['role']) ?>
           <?= users_status_badge((bool)$detailUser['is_active']) ?>
         </div>
       </div>
-      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+        <div class="users-detail-actions users-detail-actions--push">
         <?php if ($admin['role'] === 'admin' && (int)$detailUser['id'] !== (int)$admin['id']): ?>
-          <form method="POST">
+          <form method="POST" data-async-form>
             <input type="hidden" name="action" value="toggle_active">
             <input type="hidden" name="user_id" value="<?= $detailUser['id'] ?>">
             <input type="hidden" name="is_active" value="<?= $detailUser['is_active'] ? 0 : 1 ?>">
@@ -740,7 +538,7 @@ require_once __DIR__ . '/../includes/layout.php';
             </button>
           </form>
         <?php endif; ?>
-        <a href="/admin/?page=users" class="btn btn-outline">Retour à la liste</a>
+        <a href="/admin/?page=users" class="btn btn-outline" data-async-link data-async-scope="admin-main">Retour à la liste</a>
       </div>
     </div>
 
@@ -755,11 +553,16 @@ require_once __DIR__ . '/../includes/layout.php';
     <div class="user-detail-grid">
       <div>
         <?php if ($serviceTablesReady && in_array($detailUser['role'], ['agent', 'admin'], true)): ?>
-          <div class="user-service-card" style="margin-bottom:18px">
-            <h3 style="margin-bottom:10px;color:#183229">Rattachement service</h3>
-            <p class="text-muted text-small" style="margin-bottom:12px">
-              Ce bloc fixe le service de rattachement de l agent et prepare la future chaine de prise en charge.
-            </p>
+          <div class="user-service-card user-service-card--spaced">
+            <div class="user-section-head">
+              <div>
+                <h3 class="user-section-title">Rattachement service</h3>
+                <p class="text-muted text-small user-service-card-copy">
+                  Ce bloc fixe le service de rattachement de l agent et prepare la future chaine de prise en charge.
+                </p>
+              </div>
+              <span class="badge badge-gray"><?= count($userMemberships) ?> rattachement<?= count($userMemberships) > 1 ? 's' : '' ?></span>
+            </div>
 
             <?php if ($userMemberships): ?>
               <div class="user-service-list">
@@ -773,16 +576,16 @@ require_once __DIR__ . '/../includes/layout.php';
                       </div>
                     </div>
                     <?php if ($admin['role'] === 'admin'): ?>
-                      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+                      <div class="users-inline-actions user-inline-actions--end">
                         <?php if (empty($membership['is_primary'])): ?>
-                          <form method="POST">
+                          <form method="POST" data-async-form>
                             <input type="hidden" name="action" value="set_primary_service">
                             <input type="hidden" name="user_id" value="<?= (int)$detailUser['id'] ?>">
                             <input type="hidden" name="service_id" value="<?= (int)$membership['service_id'] ?>">
                             <button type="submit" class="btn btn-outline btn-sm">Principal</button>
                           </form>
                         <?php endif; ?>
-                        <form method="POST" onsubmit="return confirm('Retirer ce rattachement service ?')">
+                        <form method="POST" onsubmit="return confirm('Retirer ce rattachement service ?')" data-async-form>
                           <input type="hidden" name="action" value="remove_service_membership">
                           <input type="hidden" name="user_id" value="<?= (int)$detailUser['id'] ?>">
                           <input type="hidden" name="service_id" value="<?= (int)$membership['service_id'] ?>">
@@ -794,11 +597,32 @@ require_once __DIR__ . '/../includes/layout.php';
                 <?php endforeach; ?>
               </div>
             <?php else: ?>
-              <p class="text-muted">Aucun service rattache pour l instant.</p>
+              <p class="text-muted">Aucun service rattaché pour l instant. Le compte existe, mais il n est pas encore branché à une file métier exploitable.</p>
             <?php endif; ?>
 
             <?php if ($admin['role'] === 'admin'): ?>
-              <form method="POST" style="margin-top:14px">
+              <?php if ($isTrainingMode): ?>
+              <div class="admin-form-guide">
+                <strong>Ordre conseille</strong>
+                <div class="admin-form-guide-list">
+                  <div class="admin-form-guide-item">
+                    <span class="admin-form-guide-step">01</span>
+                    <div>
+                      <strong>Choisir le bon service</strong>
+                      <span>Le rattachement fixe le point d entree du compte dans la chaine de traitement.</span>
+                    </div>
+                  </div>
+                  <div class="admin-form-guide-item">
+                    <span class="admin-form-guide-step">02</span>
+                    <div>
+                      <strong>Limiter le role au besoin reel</strong>
+                      <span>Utiliser `Responsable` seulement quand l agent doit piloter ou prioriser la file du service.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <?php endif; ?>
+              <form method="POST" class="user-membership-form" data-async-form>
                 <input type="hidden" name="action" value="save_service_membership">
                 <input type="hidden" name="user_id" value="<?= (int)$detailUser['id'] ?>">
                 <div class="form-group">
@@ -818,7 +642,7 @@ require_once __DIR__ . '/../includes/layout.php';
                     <option value="viewer">Lecture seule</option>
                   </select>
                 </div>
-                <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;color:#355248">
+                <label class="users-inline-actions user-service-toggle">
                   <input type="checkbox" name="is_primary" value="1">
                   Définir comme service principal
                 </label>
@@ -828,35 +652,61 @@ require_once __DIR__ . '/../includes/layout.php';
           </div>
         <?php endif; ?>
 
-        <h3 style="margin-bottom:10px;color:#183229">Derniers signalements</h3>
+        <div class="user-section-head">
+          <div>
+            <h3 class="user-section-title">Derniers signalements</h3>
+            <p class="admin-section-note">Remonter d abord les derniers dossiers visibles sur le périmètre de ce compte.</p>
+          </div>
+          <span class="badge badge-gray"><?= count($userIncidents) ?> dossier<?= count($userIncidents) > 1 ? 's' : '' ?></span>
+        </div>
         <?php if ($userIncidents): ?>
-          <table class="user-mini-table">
-            <thead>
-              <tr><th>Cat.</th><th>Réf.</th><th>Titre</th><th>Votes</th></tr>
-            </thead>
-            <tbody>
-              <?php foreach ($userIncidents as $incident): ?>
-                <tr>
-                  <td><?= category_visual_html($incident['category_icon'] ?? 'road', $incident['category_name'], 'sm') ?></td>
-                  <td><a href="/admin/?page=incident_detail&id=<?= $incident['id'] ?>"><?= e($incident['reference']) ?></a></td>
-                  <td><?= e(mb_strimwidth($incident['title'] ?: 'Sans titre', 0, 32, '...')) ?></td>
-                  <td><?= (int)$incident['votes_count'] ?></td>
-                </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
+          <div class="table-wrapper">
+            <table class="user-mini-table">
+              <thead>
+                <tr><th>Cat.</th><th>Réf.</th><th>Titre</th><th>Preuve</th><th>Votes</th></tr>
+              </thead>
+              <tbody>
+                <?php foreach ($userIncidents as $incident): ?>
+                  <tr>
+                    <td><?= category_visual_html($incident['category_icon'] ?? 'road', $incident['category_name'], 'md') ?></td>
+                    <td><a href="/admin/?page=incident_detail&id=<?= $incident['id'] ?>" data-async-link data-async-scope="admin-main"><?= e($incident['reference']) ?></a></td>
+                    <td><?= e(mb_strimwidth($incident['title'] ?: 'Sans titre', 0, 32, '...')) ?></td>
+                    <td>
+                      <?php if (!empty($incident['lead_photo']['url'])): ?>
+                        <span class="admin-proof-thumb-wrap">
+                          <img src="<?= e($incident['lead_photo']['url']) ?>" alt="Preuve citoyenne" class="admin-proof-thumb admin-proof-thumb--small">
+                        </span>
+                      <?php else: ?>
+                        <span class="text-muted text-small">—</span>
+                      <?php endif; ?>
+                    </td>
+                    <td><?= (int)$incident['votes_count'] ?></td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
         <?php else: ?>
-          <p class="text-muted">Aucun signalement.</p>
+          <div class="admin-empty-state">
+            <strong>Aucun signalement.</strong>
+            <span>Aucun dossier récent n est visible pour ce compte dans le périmètre courant.</span>
+          </div>
         <?php endif; ?>
       </div>
       <div>
-        <h3 style="margin-bottom:10px;color:#183229">Activité récente</h3>
+        <div class="user-section-head">
+          <div>
+            <h3 class="user-section-title">Activité récente</h3>
+            <p class="admin-section-note">Incidents, commentaires et soutiens remontent dans un seul flux lisible.</p>
+          </div>
+          <span class="badge badge-gray"><?= count($userActivity) ?> entree<?= count($userActivity) > 1 ? 's' : '' ?></span>
+        </div>
         <ul class="user-activity">
           <?php foreach ($userActivity as $activity): ?>
             <li>
               <span><?= users_activity_icon($activity['type']) ?></span>
               <div>
-                <div style="font-weight:700;color:#183229"><?= e(mb_strimwidth($activity['label'], 0, 52, '...')) ?></div>
+                <div class="user-activity-title"><?= e(mb_strimwidth($activity['label'], 0, 52, '...')) ?></div>
                 <div class="text-muted text-small"><?= e($activity['ref']) ?> · <?= format_date($activity['date']) ?></div>
               </div>
             </li>
@@ -885,8 +735,22 @@ require_once __DIR__ . '/../includes/layout.php';
     <?php endif; ?>
   </div>
 
-  <form method="GET" action="/admin/" class="users-filters">
+  <form method="GET" action="/admin/" class="users-filters" data-async-form>
     <input type="hidden" name="page" value="users">
+    <?php if ($isTrainingMode): ?>
+    <div class="admin-form-guide">
+      <strong>Lecture de la liste</strong>
+      <div class="admin-form-guide-list">
+        <div class="admin-form-guide-item">
+          <span class="admin-form-guide-step">01</span>
+          <div>
+            <strong>Filtrer avant de corriger</strong>
+            <span>Commencer par role ou statut pour eviter de modifier un compte hors contexte.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <?php endif; ?>
     <input type="text" name="q" class="form-control" placeholder="Nom, email, téléphone..." value="<?= e($search) ?>">
     <select name="role" class="form-control">
       <option value="">Tous les rôles</option>
@@ -901,7 +765,7 @@ require_once __DIR__ . '/../includes/layout.php';
     </select>
     <button type="submit" class="btn btn-primary">Filtrer</button>
     <?php if ($search || $roleFilt || $statFilt): ?>
-      <a href="/admin/?page=users" class="btn btn-outline">Réinitialiser</a>
+      <a href="/admin/?page=users" class="btn btn-outline" data-async-link>Réinitialiser</a>
     <?php endif; ?>
   </form>
 
@@ -911,14 +775,14 @@ require_once __DIR__ . '/../includes/layout.php';
     <table class="users-table">
       <thead>
         <tr>
-          <th><a href="<?= users_sort_url('full_name', $sort, $dir, $extra) ?>">Nom</a></th>
-          <th><a href="<?= users_sort_url('email', $sort, $dir, $extra) ?>">Email</a></th>
+          <th><a href="<?= users_sort_url('full_name', $sort, $dir, $extra) ?>" data-async-link>Nom</a></th>
+          <th><a href="<?= users_sort_url('email', $sort, $dir, $extra) ?>" data-async-link>Email</a></th>
           <th>Service</th>
           <th>Rôle</th>
           <th>Statut</th>
-          <th><a href="<?= users_sort_url('incidents_count', $sort, $dir, $extra) ?>">Signalements</a></th>
+          <th><a href="<?= users_sort_url('incidents_count', $sort, $dir, $extra) ?>" data-async-link>Signalements</a></th>
           <th>Votes</th>
-          <th><a href="<?= users_sort_url('created_at', $sort, $dir, $extra) ?>">Inscription</a></th>
+          <th><a href="<?= users_sort_url('created_at', $sort, $dir, $extra) ?>" data-async-link>Inscription</a></th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -926,7 +790,7 @@ require_once __DIR__ . '/../includes/layout.php';
         <?php foreach ($users as $user): ?>
           <tr>
             <td>
-              <a href="/admin/?page=users&detail=<?= $user['id'] ?>" style="font-weight:700;color:#183229"><?= e($user['full_name']) ?></a>
+              <a href="/admin/?page=users&detail=<?= $user['id'] ?>" class="users-row-link" data-async-link data-async-scope="admin-main"><?= e($user['full_name']) ?></a>
               <?php if ($user['phone']): ?>
                 <div class="text-muted text-small"><?= e($user['phone']) ?></div>
               <?php endif; ?>
@@ -939,10 +803,10 @@ require_once __DIR__ . '/../includes/layout.php';
             <td class="text-center"><?= (int)$user['votes_count'] ?></td>
             <td class="text-muted text-small"><?= format_date_short($user['created_at']) ?></td>
             <td>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <a href="/admin/?page=users&detail=<?= $user['id'] ?>" class="btn btn-outline btn-sm">Détail</a>
+              <div class="users-inline-actions">
+                <a href="/admin/?page=users&detail=<?= $user['id'] ?>" class="btn btn-outline btn-sm" data-async-link data-async-scope="admin-main">Détail</a>
                 <?php if ($admin['role'] === 'admin' && (int)$user['id'] !== (int)$admin['id']): ?>
-                  <form method="POST">
+                  <form method="POST" data-async-form>
                     <input type="hidden" name="action" value="toggle_active">
                     <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
                     <input type="hidden" name="is_active" value="<?= $user['is_active'] ? 0 : 1 ?>">
@@ -956,7 +820,7 @@ require_once __DIR__ . '/../includes/layout.php';
           </tr>
         <?php endforeach; ?>
         <?php if (empty($users)): ?>
-          <tr><td colspan="9" class="text-center text-muted" style="padding:32px">Aucun utilisateur trouvé.</td></tr>
+          <tr><td colspan="9" class="text-center text-muted users-empty-row">Aucun utilisateur trouvé. Élargir les filtres ou retirer la recherche pour relire l annuaire complet.</td></tr>
         <?php endif; ?>
       </tbody>
     </table>
@@ -968,7 +832,7 @@ require_once __DIR__ . '/../includes/layout.php';
         <?php if ($page === $curPage): ?>
           <span class="users-page active"><?= $page ?></span>
         <?php else: ?>
-          <a class="users-page" href="/admin/?page=users&q=<?= urlencode($search) ?>&role=<?= urlencode($roleFilt) ?>&status=<?= urlencode($statFilt) ?>&sort=<?= urlencode($sort) ?>&dir=<?= urlencode($dir) ?>&p=<?= $page ?>"><?= $page ?></a>
+          <a class="users-page" data-async-link href="/admin/?page=users&q=<?= urlencode($search) ?>&role=<?= urlencode($roleFilt) ?>&status=<?= urlencode($statFilt) ?>&sort=<?= urlencode($sort) ?>&dir=<?= urlencode($dir) ?>&p=<?= $page ?>"><?= $page ?></a>
         <?php endif; ?>
       <?php endfor; ?>
     </div>
@@ -977,8 +841,29 @@ require_once __DIR__ . '/../includes/layout.php';
   <?php if ($admin['role'] === 'admin'): ?>
     <div id="users-create-modal" class="users-modal">
       <div class="users-modal-box">
-        <h3 style="font-size:22px;color:#183229;margin-bottom:14px">Créer un compte agent</h3>
-        <form method="POST">
+        <h3 class="users-modal-title">Créer un compte agent</h3>
+        <?php if ($isTrainingMode): ?>
+        <div class="admin-form-guide">
+          <strong>Creation rapide</strong>
+          <div class="admin-form-guide-list">
+            <div class="admin-form-guide-item">
+              <span class="admin-form-guide-step">01</span>
+              <div>
+                <strong>Creer le compte minimal</strong>
+                <span>Nom, email, mot de passe et role suffisent pour ouvrir l acces.</span>
+              </div>
+            </div>
+            <div class="admin-form-guide-item">
+              <span class="admin-form-guide-step">02</span>
+              <div>
+                <strong>Associer le service si connu</strong>
+                <span>Renseigner le service principal tout de suite si le perimetre d action est deja defini.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <?php endif; ?>
+        <form method="POST" data-async-form>
           <input type="hidden" name="action" value="create_agent">
           <div class="form-group">
             <label class="form-label">Nom complet</label>
@@ -991,6 +876,7 @@ require_once __DIR__ . '/../includes/layout.php';
           <div class="form-group">
             <label class="form-label">Mot de passe</label>
             <input type="password" name="password" class="form-control" required minlength="8">
+            <div class="admin-section-note">Utiliser un mot de passe provisoire assez robuste, puis organiser une reprise propre par l agent.</div>
           </div>
           <div class="form-group">
             <label class="form-label">Rôle</label>
@@ -1010,7 +896,7 @@ require_once __DIR__ . '/../includes/layout.php';
               </select>
             </div>
           <?php endif; ?>
-          <div style="display:flex;justify-content:flex-end;gap:8px">
+          <div class="users-modal-actions">
             <button type="button" class="btn btn-outline" onclick="document.getElementById('users-create-modal').style.display='none'">Annuler</button>
             <button type="submit" class="btn btn-primary">Créer</button>
           </div>
@@ -1019,5 +905,6 @@ require_once __DIR__ . '/../includes/layout.php';
     </div>
   <?php endif; ?>
 <?php endif; ?>
+</div>
 
 <?php require_once __DIR__ . '/../includes/layout_footer.php'; ?>

@@ -114,10 +114,10 @@ switch ($resource) {
     // 2FA (SEC-03)
     // ----------------------------------------------------------------
     case 'auth':
-        require_once __DIR__ . '/controllers/TwoFactorController.php';
         $authSub = $segments[1] ?? '';
         $authAct = $segments[2] ?? '';
         if ($authSub === '2fa') {
+            require_once __DIR__ . '/controllers/TwoFactorController.php';
             $ctrl = new TwoFactorController();
             match(true) {
                 $method === 'GET'    && $authAct === 'status'     => $ctrl->getStatus(),
@@ -126,6 +126,13 @@ switch ($resource) {
                 $method === 'DELETE' && $authAct === 'disable'    => $ctrl->disable(),
                 $method === 'POST'   && $authAct === 'send-email' => $ctrl->sendEmailCode(),
                 $method === 'POST'   && $authAct === 'validate'   => $ctrl->validateCode(),
+                default => (function() { http_response_code(405); echo json_encode(['success' => false, 'message' => 'Méthode non autorisée.']); })()
+            };
+        } elseif ($authSub === 'google') {
+            require_once __DIR__ . '/controllers/AuthController.php';
+            $ctrl = new AuthController();
+            match(true) {
+                $method === 'POST' => $ctrl->googleLogin(),
                 default => (function() { http_response_code(405); echo json_encode(['success' => false, 'message' => 'Méthode non autorisée.']); })()
             };
         } else {
@@ -158,6 +165,7 @@ switch ($resource) {
         require_once __DIR__ . '/controllers/VoteController.php';
         require_once __DIR__ . '/controllers/PhotoController.php';
         require_once __DIR__ . '/controllers/ReportController.php';
+        require_once __DIR__ . '/controllers/ModerationController.php';
 
         if ($id && $sub === 'comments') {
             $ctrl = new CommentController();
@@ -174,11 +182,13 @@ switch ($resource) {
         } elseif ($id && $sub === 'photos') {
             $ctrl = new PhotoController();
             $pid  = (int)($segments[3] ?? 0);
+            $psub = $segments[4] ?? '';
             match(true) {
-                $method === 'GET'                  => $ctrl->list((int)$id),
-                $method === 'POST'                 => $ctrl->upload((int)$id),
-                $method === 'DELETE' && $pid > 0   => $ctrl->delete((int)$id, $pid),
-                default                            => http_response_code(405),
+                $method === 'GET'                                    => $ctrl->list((int)$id),
+                $method === 'POST' && $pid === 0                     => $ctrl->upload((int)$id),
+                $method === 'DELETE' && $pid > 0                     => $ctrl->delete((int)$id, $pid),
+                $method === 'POST' && $pid > 0 && $psub === 'report' => (new ModerationController())->reportPhoto((int)$id, $pid),
+                default                                              => http_response_code(405),
             };
         } elseif ($id && $sub === 'report' && $method === 'GET') {
             (new ReportController())->downloadPdf((int)$id);
@@ -220,7 +230,7 @@ switch ($resource) {
             (new ModerationController())->reportComment((int) $id);
         } elseif ($id && $method === 'DELETE') {
             $ctrl = new CommentController();
-            $ctrl->delete((int)$id);
+            $ctrl->deleteStandalone((int)$id);
         } else {
             http_response_code(405);
             echo json_encode(['success' => false, 'message' => 'Méthode non autorisée.']);

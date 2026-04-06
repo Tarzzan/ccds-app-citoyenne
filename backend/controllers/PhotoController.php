@@ -9,6 +9,8 @@
  *   POST   /incidents/{id}/photos         → Uploader une photo
  *   DELETE /incidents/{id}/photos/{pid}   → Supprimer une photo
  */
+require_once __DIR__ . '/../config/ContentModerationService.php';
+
 class PhotoController extends BaseController
 {
     private const MAX_PHOTOS     = 5;
@@ -16,30 +18,35 @@ class PhotoController extends BaseController
     private const ALLOWED_TYPES  = ['image/jpeg', 'image/png', 'image/webp'];
     private const UPLOAD_DIR     = __DIR__ . '/../uploads/incidents/';
     private ?bool $hasSortOrderColumn = null;
+    private ?bool $hasModerationColumns = null;
 
     // ── GET /incidents/{id}/photos ────────────────────────────
     public function list(int $incidentId): void
     {
         $auth = $this->requireAuth();
         $this->assertIncidentAccess($incidentId, $auth);
+        $moderationSelect = $this->photoModerationSelect();
 
         if ($this->hasSortOrderColumn()) {
             $stmt = $this->db->prepare("
-                SELECT id, file_path, file_name, mime_type, file_size, sort_order, uploaded_at AS created_at
+                SELECT id, file_path, file_name, mime_type, file_size, sort_order, uploaded_at AS created_at,
+                       {$moderationSelect}
                 FROM photos WHERE incident_id = ? ORDER BY sort_order, id
             ");
         } else {
             $stmt = $this->db->prepare("
-                SELECT id, file_path, file_name, mime_type, file_size, 0 AS sort_order, uploaded_at AS created_at
+                SELECT id, file_path, file_name, mime_type, file_size, 0 AS sort_order, uploaded_at AS created_at,
+                       {$moderationSelect}
                 FROM photos WHERE incident_id = ? ORDER BY id
             ");
         }
         $stmt->execute([$incidentId]);
         $photos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $base = rtrim($_ENV['APP_URL'] ?? (defined('APP_URL') ? APP_URL : 'https://api.netetfix.com'), '/');
+        $moderationService = new ContentModerationService($this->db);
         foreach ($photos as &$p) {
-            $p['url'] = $base . '/uploads/incidents/' . basename($p['file_path']);
+            $p['url'] = $moderationService->uploadUrl($p['file_path']);
+            $p = $moderationService->publicPhotoPayload($p);
         }
 
         $this->json(['success' => true, 'photos' => $photos]);
@@ -223,5 +230,31 @@ class PhotoController extends BaseController
         }
 
         return $this->hasSortOrderColumn;
+    }
+
+    private function hasModerationColumns(): bool
+    {
+        if ($this->hasModerationColumns !== null) {
+            return $this->hasModerationColumns;
+        }
+
+        try {
+            $stmt = $this->db->prepare(
+                'SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
+            );
+            $stmt->execute(['photos', 'moderation_status']);
+            $this->hasModerationColumns = (int)$stmt->fetchColumn() > 0;
+        } catch (\Throwable $e) {
+            $this->hasModerationColumns = false;
+        }
+
+        return $this->hasModerationColumns;
+    }
+
+    private function photoModerationSelect(): string
+    {
+        return $this->hasModerationColumns()
+            ? 'moderation_status, moderation_reason, moderation_placeholder_key'
+            : "'visible' AS moderation_status, NULL AS moderation_reason, NULL AS moderation_placeholder_key";
     }
 }

@@ -224,4 +224,22 @@ abstract class BaseController
             return false;
         }
     }
+
+    protected function dbHasColumn(string $tableName, string $columnName): bool
+    {
+        try {
+            $stmt = $this->db->prepare(
+                'SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
+            );
+            $stmt->execute([$tableName, $columnName]);
+            return (int) $stmt->fetchColumn() > 0;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
+    protected function getUserPasswordColumnName(): string
+    {
+        return $this->dbHasColumn('users', 'password_hash') ? 'password_hash' : 'password';
+    }
 }

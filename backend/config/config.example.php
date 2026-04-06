@@ -36,7 +36,15 @@ define('UPLOAD_BASE_URL', rtrim(getenv('APP_URL') ?: 'https://api.netetfix.com',
 define('APP_NAME',             getenv('APP_NAME')             ?: 'Ma Commune');
 define('APP_SHORT_NAME',       getenv('APP_SHORT_NAME')       ?: 'MaCommune');
 define('APP_SLUG',             getenv('APP_SLUG')             ?: 'ma_commune');
-define('APP_SUBTITLE',         getenv('APP_SUBTITLE')         ?: 'Votre commune — Administration');
+define('APP_SUBTITLE',         getenv('APP_SUBTITLE')         ?: 'Administration locale');
+define('APP_TERRITORY_LABEL',  getenv('APP_TERRITORY_LABEL')  ?: 'Territoire');
+define('APP_ADMIN_LOGIN_SUBTITLE', getenv('APP_ADMIN_LOGIN_SUBTITLE') ?: 'Territoire · poste de suivi public');
+define('APP_THEME_VARIANT',    getenv('APP_THEME_VARIANT')    ?: 'neutral-civic');
+define('APP_THEME_PRIMARY',    getenv('APP_THEME_PRIMARY')    ?: '#355160');
+define('APP_THEME_PRIMARY_DARK', getenv('APP_THEME_PRIMARY_DARK') ?: '#223743');
+define('APP_THEME_PRIMARY_LIGHT', getenv('APP_THEME_PRIMARY_LIGHT') ?: '#e7eef1');
+define('APP_THEME_SECONDARY',  getenv('APP_THEME_SECONDARY')  ?: '#718892');
+define('APP_THEME_ACCENT',     getenv('APP_THEME_ACCENT')     ?: '#c3a166');
 define('APP_REFERENCE_PREFIX', getenv('APP_REFERENCE_PREFIX') ?: 'MC');
 define('APP_EMAIL_FROM',       getenv('APP_EMAIL_FROM')       ?: 'noreply@netetfix.com');
 define('APP_VERSION', '1.2.0');

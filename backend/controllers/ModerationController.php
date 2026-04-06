@@ -9,6 +9,8 @@
  *   GET  /admin/moderation/stats            — Statistiques de modération
  */
 require_once __DIR__ . '/AuditLogController.php';
+require_once __DIR__ . '/../config/ContentModerationService.php';
+require_once __DIR__ . '/../config/NotificationStore.php';
 
 class ModerationController extends BaseController
 {
@@ -22,48 +24,65 @@ class ModerationController extends BaseController
         $user = $this->requireAuth();
         $userId = $this->getAuthUserId($user);
         $this->applyRateLimit('default', $userId);
+        $input = json_decode(file_get_contents('php://input'), true) ?: [];
+        $reason = Security::sanitizeString($input['reason'] ?? ContentModerationService::COMMENT_REASON_INAPPROPRIATE);
 
-        // Vérifier que le commentaire existe
-        $stmt = $this->db->prepare("SELECT id, user_id FROM comments WHERE id = ?");
-        $stmt->execute([$commentId]);
-        $comment = $stmt->fetch(\PDO::FETCH_ASSOC);
-        if (!$comment) {
-            $this->error('Commentaire introuvable.', 404);
+        try {
+            $result = (new ContentModerationService($this->db))->reportComment(
+                $commentId,
+                $userId,
+                $reason,
+                Security::sanitizeString($input['description'] ?? '')
+            );
+        } catch (\RuntimeException $e) {
+            $message = $e->getMessage();
+            $code = str_contains($message, 'déjà signalé') ? 409 : (str_contains($message, 'propre commentaire') ? 400 : 422);
+            $this->error($message, $code);
         }
 
-        // Un utilisateur ne peut pas signaler son propre commentaire
-        if ((int) $comment['user_id'] === $userId) {
-            $this->error('Vous ne pouvez pas signaler votre propre commentaire.', 400);
+        $this->success([
+            'message' => 'Commentaire signalé. Notre équipe va examiner votre signalement.',
+            'report_count' => $result['report_count'],
+            'threshold' => $result['threshold'],
+            'auto_hidden' => $result['auto_hidden'],
+        ], 201);
+    }
+
+    public function reportPhoto(int $incidentId, int $photoId): void
+    {
+        $user = $this->requireAuth();
+        $userId = $this->getAuthUserId($user);
+        $this->applyRateLimit('default', $userId);
+
+        $input = json_decode(file_get_contents('php://input'), true) ?: [];
+        $reason = Security::sanitizeString($input['reason'] ?? ContentModerationService::PHOTO_REASON_INAPPROPRIATE);
+
+        $photoStmt = $this->db->prepare('SELECT incident_id FROM photos WHERE id = ? LIMIT 1');
+        $photoStmt->execute([$photoId]);
+        $photoIncidentId = (int)($photoStmt->fetchColumn() ?: 0);
+        if ($photoIncidentId !== $incidentId) {
+            $this->error('Photo introuvable pour ce dossier.', 404);
         }
 
-        $input  = json_decode(file_get_contents('php://input'), true);
-        $reason = $input['reason'] ?? 'other';
-        $validReasons = ['spam', 'harassment', 'inappropriate', 'misinformation', 'other'];
-        if (!in_array($reason, $validReasons)) {
-            $this->error('Raison invalide. Valeurs acceptées : ' . implode(', ', $validReasons), 400);
+        try {
+            $result = (new ContentModerationService($this->db))->reportPhoto(
+                $photoId,
+                $userId,
+                $reason,
+                Security::sanitizeString($input['description'] ?? '')
+            );
+        } catch (\RuntimeException $e) {
+            $message = $e->getMessage();
+            $code = str_contains($message, 'déjà signalé') ? 409 : (str_contains($message, 'propre photo') ? 400 : 422);
+            $this->error($message, $code);
         }
 
-        // Vérifier si l'utilisateur a déjà signalé ce commentaire
-        $existingStmt = $this->db->prepare(
-            "SELECT id FROM comment_reports WHERE comment_id = ? AND reporter_id = ?"
-        );
-        $existingStmt->execute([$commentId, $userId]);
-        if ($existingStmt->fetch()) {
-            $this->error('Vous avez déjà signalé ce commentaire.', 409);
-        }
-
-        $insertStmt = $this->db->prepare("
-            INSERT INTO comment_reports (comment_id, reporter_id, reason, description, status, created_at)
-            VALUES (?, ?, ?, ?, 'pending', NOW())
-        ");
-        $insertStmt->execute([
-            $commentId,
-            $userId,
-            $reason,
-            Security::sanitizeString($input['description'] ?? ''),
-        ]);
-
-        $this->success(['message' => 'Commentaire signalé. Notre équipe va examiner votre signalement.'], 201);
+        $this->success([
+            'message' => 'Photo signalée. Notre équipe va examiner ce contenu.',
+            'report_count' => $result['report_count'],
+            'threshold' => $result['threshold'],
+            'auto_hidden' => $result['auto_hidden'],
+        ], 201);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -173,14 +192,16 @@ class ModerationController extends BaseController
             AuditLogController::log($this->db, $userId, 'comment_report.dismissed', 'comment_report', $reportId, $details);
         } elseif ($action === 'warn_author') {
             // Créer une notification pour l'auteur du commentaire
-            $notifStmt = $this->db->prepare("
-                INSERT INTO notifications (user_id, type, title, body, sent_at)
-                VALUES (?, 'moderation_warning', 'Avertissement de modération', ?, NOW())
-            ");
-            $notifStmt->execute([
-                $report['comment_author_id'],
+            NotificationStore::insert(
+                $this->db,
+                (int) $report['comment_author_id'],
+                null,
+                'moderation_warning',
+                'Avertissement de modération',
                 'Votre commentaire a été signalé et examiné par notre équipe de modération. Merci de respecter les règles de la communauté.',
-            ]);
+                ['comment_id' => (int) $report['comment_id']],
+                0
+            );
             $newStatus = 'actioned';
             AuditLogController::log($this->db, $userId, 'comment.author_warned', 'comment', (int) $report['comment_id'], $details);
         }
@@ -207,15 +228,16 @@ class ModerationController extends BaseController
 
         $stmt = $this->db->query("
             SELECT
-                COUNT(*) AS total,
-                SUM(status = 'pending')   AS pending,
-                SUM(status = 'reviewed')  AS reviewed,
-                SUM(status = 'dismissed') AS dismissed,
-                SUM(status = 'actioned')  AS actioned,
-                SUM(reason = 'spam')           AS spam_count,
-                SUM(reason = 'harassment')     AS harassment_count,
-                SUM(reason = 'inappropriate')  AS inappropriate_count,
-                SUM(reason = 'misinformation') AS misinformation_count
+                (SELECT COUNT(*) FROM comment_reports) AS total_comments,
+                (SELECT COUNT(*) FROM photo_reports) AS total_photos,
+                (SELECT COUNT(*) FROM comment_reports WHERE status = 'pending') AS pending_comments,
+                (SELECT COUNT(*) FROM photo_reports WHERE status = 'pending') AS pending_photos,
+                (SELECT COUNT(*) FROM comments WHERE moderation_status IN ('auto_hidden', 'hidden_by_admin')) AS hidden_comments,
+                (SELECT COUNT(*) FROM photos WHERE moderation_status IN ('auto_hidden', 'hidden_by_admin')) AS hidden_photos,
+                SUM(reason = 'spam_or_advertising') AS spam_count,
+                SUM(reason = 'insulting_or_aggressive') AS aggressive_count,
+                SUM(reason = 'inappropriate') AS inappropriate_count,
+                SUM(reason = 'personal_information') AS personal_info_count
             FROM comment_reports
         ");
         $stats = $stmt->fetch(\PDO::FETCH_ASSOC);

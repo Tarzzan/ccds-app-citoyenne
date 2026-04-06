@@ -151,11 +151,24 @@ class UserController extends BaseController
         // Badges
         $user['badges'] = [];
         if ($this->hasTable('user_badges')) {
-            $stmtBadges = $this->db->prepare("
-                SELECT badge_key, awarded_at FROM user_badges WHERE user_id = ? ORDER BY awarded_at DESC
-            ");
-            $stmtBadges->execute([$id]);
-            $user['badges'] = $stmtBadges->fetchAll();
+            if ($this->dbHasColumn('user_badges', 'badge_key')) {
+                $stmtBadges = $this->db->prepare("
+                    SELECT badge_key, awarded_at FROM user_badges WHERE user_id = ? ORDER BY awarded_at DESC
+                ");
+                $stmtBadges->execute([$id]);
+                $user['badges'] = $stmtBadges->fetchAll();
+            } elseif ($this->hasTable('badges') && $this->dbHasColumn('user_badges', 'badge_id')) {
+                $awardedColumn = $this->dbHasColumn('user_badges', 'earned_at') ? 'ub.earned_at' : 'NULL';
+                $stmtBadges = $this->db->prepare("
+                    SELECT ub.badge_id, b.name AS label, b.icon, {$awardedColumn} AS awarded_at
+                    FROM user_badges ub
+                    LEFT JOIN badges b ON b.id = ub.badge_id
+                    WHERE ub.user_id = ?
+                    ORDER BY awarded_at DESC
+                ");
+                $stmtBadges->execute([$id]);
+                $user['badges'] = $stmtBadges->fetchAll();
+            }
         }
 
         $this->success($user);

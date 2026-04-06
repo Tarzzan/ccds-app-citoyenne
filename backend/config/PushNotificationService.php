@@ -4,6 +4,8 @@
  * Documentation : https://docs.expo.dev/push-notifications/sending-notifications/
  * Ma Commune — service de notifications push
  */
+require_once __DIR__ . '/NotificationStore.php';
+
 class PushNotificationService
 {
     private const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
@@ -29,6 +31,11 @@ class PushNotificationService
         }
 
         return $this->sendBatch($tokens, $title, $body, $data);
+    }
+
+    public function send(string $token, string $title, string $body, array $data = []): bool
+    {
+        return $this->sendBatch([$token], $title, $body, $data);
     }
 
     /**
@@ -65,7 +72,11 @@ class PushNotificationService
         }
 
         // Enregistrer en base
-        if (!$this->saveNotification($incident['user_id'], $incident_id, 'status_change', $title, $body)) {
+        if (!$this->saveNotification($incident['user_id'], $incident_id, 'status_change', $title, $body, [
+            'reference' => $incident['reference'],
+            'new_status' => $new_status,
+            'note' => $note,
+        ])) {
             return;
         }
 
@@ -93,7 +104,9 @@ class PushNotificationService
         $title = "Nouveau commentaire sur votre signalement";
         $body  = "{$commenter_name} a commenté votre signalement \"{$incident['title']}\".";
 
-        if (!$this->saveNotification($incident['user_id'], $incident_id, 'new_comment', $title, $body)) {
+        if (!$this->saveNotification($incident['user_id'], $incident_id, 'new_comment', $title, $body, [
+            'commenter_name' => $commenter_name,
+        ])) {
             return;
         }
         $this->sendToUser($incident['user_id'], $title, $body, [
@@ -154,7 +167,16 @@ class PushNotificationService
 
         $body = implode(' ', array_filter($bodyParts));
 
-        if (!$this->saveNotification($incident['user_id'], $incident_id, 'intervention_plan', $title, $body)) {
+        if (!$this->saveNotification($incident['user_id'], $incident_id, 'intervention_plan', $title, $body, [
+            'reference' => $incident['reference'],
+            'service_name' => $serviceName,
+            'scheduled_date' => $plan['scheduled_date'] ?? null,
+            'time_window_start' => $plan['time_window_start'] ?? null,
+            'time_window_end' => $plan['time_window_end'] ?? null,
+            'citizen_message' => $plan['citizen_message'] ?? null,
+            'provider_name' => $plan['provider_name'] ?? null,
+            'is_reschedule' => $isReschedule,
+        ])) {
             return;
         }
         $this->sendToUser($incident['user_id'], $title, $body, [
@@ -232,7 +254,15 @@ class PushNotificationService
 
         $body = implode(' ', array_filter($bodyParts));
 
-        if (!$this->saveNotification($incident['user_id'], $incident_id, 'intervention_update', $title, $body)) {
+        if (!$this->saveNotification($incident['user_id'], $incident_id, 'intervention_update', $title, $body, [
+            'reference' => $incident['reference'],
+            'service_name' => $serviceName,
+            'plan_status' => $state,
+            'scheduled_date' => $plan['scheduled_date'] ?? null,
+            'time_window_start' => $plan['time_window_start'] ?? null,
+            'time_window_end' => $plan['time_window_end'] ?? null,
+            'provider_name' => $providerName !== '' ? $providerName : null,
+        ])) {
             return;
         }
         $this->sendToUser($incident['user_id'], $title, $body, [
@@ -286,36 +316,26 @@ class PushNotificationService
     /**
      * Sauvegarder une notification en base de données
      */
-    private function saveNotification(int $user_id, int $incident_id, string $type, string $title, string $body): bool
+    private function saveNotification(
+        int $user_id,
+        int $incident_id,
+        string $type,
+        string $title,
+        string $body,
+        array $data = []
+    ): bool
     {
         if ($this->notificationExistsRecently($user_id, $incident_id, $type, $title, $body)) {
             return false;
         }
 
-        $stmt = $this->db->prepare("
-            INSERT INTO notifications (user_id, incident_id, type, title, body)
-            VALUES (?, ?, ?, ?, ?)
-        ");
-        $stmt->execute([$user_id, $incident_id, $type, $title, $body]);
+        NotificationStore::insert($this->db, $user_id, $incident_id, $type, $title, $body, $data);
         return true;
     }
 
     private function notificationExistsRecently(int $user_id, int $incident_id, string $type, string $title, string $body): bool
     {
-        $stmt = $this->db->prepare("
-            SELECT 1
-            FROM notifications
-            WHERE user_id = ?
-              AND incident_id = ?
-              AND type = ?
-              AND title = ?
-              AND body = ?
-              AND sent_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
-            LIMIT 1
-        ");
-        $stmt->execute([$user_id, $incident_id, $type, $title, $body]);
-
-        return (bool)$stmt->fetchColumn();
+        return NotificationStore::existsRecently($this->db, $user_id, $incident_id, $type, $title, $body);
     }
 
     private function formatFrenchDate(?string $isoDate): ?string

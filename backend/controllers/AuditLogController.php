@@ -9,6 +9,8 @@
  * La méthode statique log() est appelée depuis les autres contrôleurs
  * pour enregistrer chaque action sensible.
  */
+require_once __DIR__ . '/../core/BaseController.php';
+
 class AuditLogController extends BaseController
 {
     // ─────────────────────────────────────────────────────────────────────────

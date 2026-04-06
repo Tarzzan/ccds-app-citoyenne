@@ -14,6 +14,8 @@ require_once __DIR__ . '/../core/Security.php';
 
 class CategoryController extends BaseController
 {
+    private ?bool $categoryHasSlug = null;
+
     // ----------------------------------------------------------------
     // GET /api/categories
     // ----------------------------------------------------------------
@@ -53,16 +55,28 @@ class CategoryController extends BaseController
             $this->error('Une catégorie avec ce nom existe déjà.', 409);
         }
 
-        $stmt = $this->db->prepare(
-            'INSERT INTO categories (name, icon, color, service, is_active) VALUES (?, ?, ?, ?, ?)'
-        );
-        $stmt->execute([
+        $columns = ['name', 'icon', 'color', 'service', 'is_active'];
+        $placeholders = ['?', '?', '?', '?', '?'];
+        $params = [
             Security::sanitizeString($body['name']),
             Security::sanitizeString($body['icon']),
             Security::sanitizeString($body['color']),
             Security::sanitizeString($body['service'] ?? ''),
             isset($body['is_active']) ? (int)(bool)$body['is_active'] : 1,
-        ]);
+        ];
+
+        if ($this->hasCategorySlug()) {
+            $columns[] = 'slug';
+            $placeholders[] = '?';
+            $params[] = $this->uniqueCategorySlug((string) $body['name']);
+        }
+
+        $stmt = $this->db->prepare(sprintf(
+            'INSERT INTO categories (%s) VALUES (%s)',
+            implode(', ', $columns),
+            implode(', ', $placeholders)
+        ));
+        $stmt->execute($params);
 
         $id = (int)$this->db->lastInsertId();
 
@@ -91,6 +105,10 @@ class CategoryController extends BaseController
         if (!empty($body['name'])) {
             $sets[]   = 'name = ?';
             $params[] = Security::sanitizeString($body['name']);
+            if ($this->hasCategorySlug()) {
+                $sets[] = 'slug = ?';
+                $params[] = $this->uniqueCategorySlug((string) $body['name'], $id);
+            }
         }
         if (!empty($body['icon'])) {
             $sets[]   = 'icon = ?';
@@ -151,5 +169,46 @@ class CategoryController extends BaseController
 
         $this->db->prepare('DELETE FROM categories WHERE id = ?')->execute([$id]);
         $this->success(['deleted' => true], 200, 'Catégorie supprimée.');
+    }
+
+    private function hasCategorySlug(): bool
+    {
+        return $this->categoryHasSlug ??= $this->dbHasColumn('categories', 'slug');
+    }
+
+    private function uniqueCategorySlug(string $name, ?int $excludeId = null): string
+    {
+        $baseSlug = $this->slugifyCategoryName($name);
+        $slug = $baseSlug;
+        $index = 2;
+
+        while (true) {
+            $sql = 'SELECT id FROM categories WHERE slug = ?';
+            $params = [$slug];
+            if ($excludeId !== null) {
+                $sql .= ' AND id <> ?';
+                $params[] = $excludeId;
+            }
+            $sql .= ' LIMIT 1';
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            if (!$stmt->fetch()) {
+                return $slug;
+            }
+
+            $slug = $baseSlug . '-' . $index;
+            $index++;
+        }
+    }
+
+    private function slugifyCategoryName(string $value): string
+    {
+        $normalized = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', trim(mb_strtolower($value)));
+        $normalized = $normalized === false ? trim(mb_strtolower($value)) : $normalized;
+        $slug = preg_replace('/[^a-z0-9]+/', '-', $normalized) ?? '';
+        $slug = trim($slug, '-');
+
+        return $slug !== '' ? $slug : 'categorie';
     }
 }
