@@ -141,7 +141,11 @@ function HeaderBackButton({ canGoBack }: { canGoBack: boolean }) {
       style={{ paddingVertical: 8, paddingLeft: 0, paddingRight: 16, justifyContent: 'center' }}
       hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
     >
-      <Text style={{ fontSize: 24, color: '#FFFFFF', fontWeight: '800', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' }}>←</Text>
+      <Image 
+        source={require('../../assets/nav-icons/back.png')} 
+        style={{ width: 28, height: 28 }} 
+        resizeMode="contain" 
+      />
     </TouchableOpacity>
   );
 }
