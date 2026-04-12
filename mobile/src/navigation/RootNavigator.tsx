@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { NavigationContainer }         from '@react-navigation/native';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator }  from '@react-navigation/native-stack';
 import { createBottomTabNavigator }    from '@react-navigation/bottom-tabs';
 import { ActivityIndicator, View, Text, Image, StyleSheet, TouchableOpacity, Platform } from 'react-native';
@@ -132,6 +132,20 @@ function AppTabs() {
   );
 }
 
+function HeaderBackButton({ canGoBack }: { canGoBack: boolean }) {
+  const navigation = useNavigation();
+  if (!canGoBack) return null;
+  return (
+    <TouchableOpacity
+      onPress={() => navigation.goBack()}
+      style={{ paddingVertical: 8, paddingLeft: 0, paddingRight: 16, justifyContent: 'center' }}
+      hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+    >
+      <Text style={{ fontSize: 24, color: '#FFFFFF', fontWeight: '800', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' }}>←</Text>
+    </TouchableOpacity>
+  );
+}
+
 // Stack principal
 function AppNavigator() {
   const headerStyle = { backgroundColor: BRAND.colors.canopyDeep };
@@ -142,16 +156,7 @@ function AppNavigator() {
     headerBackTitle:  'Retour',
     headerShadowVisible: false,
     headerBackTitleVisible: false,
-    headerLeft: ({ canGoBack, onPress }: any) =>
-      canGoBack ? (
-        <TouchableOpacity
-          onPress={onPress}
-          style={{ paddingVertical: 8, paddingLeft: 0, paddingRight: 16, justifyContent: 'center' }}
-          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-        >
-          <Text style={{ fontSize: 24, color: '#FFFFFF', fontWeight: '800', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' }}>←</Text>
-        </TouchableOpacity>
-      ) : null,
+    headerLeft: ({ canGoBack }: any) => <HeaderBackButton canGoBack={canGoBack} />,
   };
 
   return (
@@ -301,7 +306,7 @@ export default function RootNavigator() {
 
 function BrandHeaderTitle({ title, detail }: { title: string; detail: string }) {
   return (
-    <View style={styles.headerTitleWrap}>
+    <View style={styles.headerTitleWrap} pointerEvents="none">
       <Text style={styles.headerTitleEyebrow}>{BRAND.name}</Text>
       <Text style={styles.headerTitleMain}>{title}</Text>
       <Text style={styles.headerTitleDetail}>{detail}</Text>
