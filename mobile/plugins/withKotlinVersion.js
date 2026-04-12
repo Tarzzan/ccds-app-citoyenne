@@ -6,7 +6,7 @@ const path = require('path');
  * Config plugin that:
  * 1. Removes the deprecated 'enableBundleCompression' from app/build.gradle
  * 2. Forces Gradle wrapper to 8.13 (required by RN 0.81.5)
- * 3. Sets kotlinVersion=2.0.21 in gradle.properties (required by RN 0.81.5)
+ * 3. Sets kotlinVersion=2.1.20 in gradle.properties (required by RN 0.81.5 + expo-updates KSP)
  */
 function withFixBuildGradle(config) {
   // 1. Remove enableBundleCompression from app/build.gradle
@@ -43,17 +43,17 @@ function withFixBuildGradle(config) {
         console.log('[withFixBuildGradle] Forced Gradle 8.13');
       }
 
-      // Set kotlinVersion=2.0.21 in gradle.properties
+      // Set kotlinVersion=2.1.20 in gradle.properties
       // RN 0.81.5 requires Kotlin 2.0.x
       const gradlePropsPath = path.join(androidRoot, 'gradle.properties');
       if (fs.existsSync(gradlePropsPath)) {
         let contents = fs.readFileSync(gradlePropsPath, 'utf-8');
         // Remove any existing kotlinVersion line
         contents = contents.replace(/^kotlinVersion=.*$/m, '');
-        // Add kotlinVersion=2.0.21
-        contents = contents.trim() + '\nkotlinVersion=2.0.21\n';
+        // Add kotlinVersion=2.1.20
+        contents = contents.trim() + '\nkotlinVersion=2.1.20\n';
         fs.writeFileSync(gradlePropsPath, contents);
-        console.log('[withFixBuildGradle] Set kotlinVersion=2.0.21');
+        console.log('[withFixBuildGradle] Set kotlinVersion=2.1.20');
       }
 
       return config;
