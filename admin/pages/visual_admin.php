@@ -449,6 +449,9 @@ function visual_admin_create_auto_backup(PDO $db, array $admin, string $sourceAc
 }
 
 $slotGroups = [
+    'Companion et App Mobile' => [
+        'companion' => ['label' => 'Companion · Personnage', 'fallback' => 'CHAR-05'],
+    ],
     'Branding et shell' => [
         'login_scene' => ['label' => 'Login · scene principale', 'fallback' => 'ILL-05'],
         'login_inset' => ['label' => 'Login · vignette secondaire', 'fallback' => 'ILL-02'],
