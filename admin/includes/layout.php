@@ -85,6 +85,7 @@ $nav_context_map = [
     'visual_admin' => ['section' => 'Gestion', 'hint' => 'Studio visuel central', 'marker' => '09'],
     'moderation' => ['section' => 'Controle', 'hint' => 'Surfaces a verifier', 'marker' => '10'],
     'audit_logs' => ['section' => 'Controle', 'hint' => 'Traite des actions', 'marker' => '11'],
+    'gdpr'       => ['section' => 'Controle', 'hint' => 'Droits RGPD', 'marker' => '11b'],
     'stats' => ['section' => 'Analyse', 'hint' => 'Tendances et volumes', 'marker' => '12'],
     'realtime_dashboard' => ['section' => 'Analyse', 'hint' => 'Lecture temps reel', 'marker' => '13'],
     'predictive_analysis' => ['section' => 'Analyse', 'hint' => 'Projection et signaux', 'marker' => '14'],
@@ -275,6 +276,14 @@ $sidebar_agent_url = visual_admin_slot_url('sidebar_agent', 'CHAR-04') ?? visual
             <span class="nav-copy">
               <strong>Logs d'audit</strong>
               <small>Tracé des actions</small>
+            </span>
+          </a>
+
+          <a href="/admin/?page=gdpr" class="nav-item <?= $active_nav === 'gdpr' ? 'active' : '' ?>" data-async-link data-async-scope="admin-main">
+            <span class="nav-icon"><img src="<?= e(visual_admin_nav_icon_url('audit_logs')) ?>" alt=""></span>
+            <span class="nav-copy">
+              <strong>Conformité RGPD</strong>
+              <small>Exports et suppressions</small>
             </span>
           </a>
 

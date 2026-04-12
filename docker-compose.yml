@@ -35,6 +35,7 @@ services:
       - ./admin:/var/www/admin
       - ./tests:/var/www/tests:ro
       - uploads_data:/var/www/backend/uploads
+      - /home/tarzzan/codex/ccds-app-citoyenne-antigravity-20260323-restore/backend/uploads/demo-seed:/var/www/codex-demo-seed:ro
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
@@ -50,6 +51,7 @@ services:
     networks:
       - ma_commune_net
     restart: unless-stopped
+
 
   # ── MySQL 8.0 ─────────────────────────────────────────────
   mysql:

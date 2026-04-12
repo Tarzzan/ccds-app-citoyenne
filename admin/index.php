@@ -47,6 +47,7 @@ $page_map = [
     'predictive_analysis'  => 'pages/predictive_analysis.php',
     'polls'                => 'pages/polls_admin.php',
     'events'               => 'pages/events_admin.php',
+    'gdpr'                 => 'pages/gdpr.php',
 ];
 
 $file = $page_map[$page] ?? null;

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Ma Commune",
     "slug": "ma-commune-guyane",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,9 +20,10 @@
         "NSLocationWhenInUseUsageDescription": "Ma Commune utilise votre position pour localiser précisément les anomalies que vous signalez.",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "1"
+      "buildNumber": "2"
     },
     "android": {
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f4c2a"
@@ -33,7 +34,20 @@
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -43,7 +57,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Ma Commune a besoin d'acc\u00e9der \u00e0 votre cam\u00e9ra pour photographier les anomalies."
+          "cameraPermission": "Ma Commune a besoin d'accéder à votre caméra pour photographier les anomalies."
         }
       ],
       [
@@ -58,7 +72,7 @@
     "extra": {
       "API_BASE_URL": "https://api.netetfix.com/api",
       "APP_TERRITORY": "Kourou",
-      "APP_REGION": "Guyane Fran\u00e7aise",
+      "APP_REGION": "Guyane Française",
       "eas": {
         "projectId": "b3d38760-9ace-47eb-b84f-37419e550824"
       }
@@ -67,7 +81,7 @@
     "owner": "william.meri",
     "runtimeVersion": "exposdk:54.0.0",
     "updates": {
-      "url": "https://u.expo.dev/a7334d51-b12a-46eb-bc2d-c9b847551f66"
+      "url": "https://u.expo.dev/b3d38760-9ace-47eb-b84f-37419e550824"
     }
   }
 }

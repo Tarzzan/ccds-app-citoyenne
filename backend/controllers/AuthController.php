@@ -124,6 +124,34 @@ class AuthController extends BaseController
             $this->error("Ce compte a été désactivé. Contactez l'administration.", 403);
         }
 
+        // ── Vérification 2FA ─────────────────────────────────────────
+        // Déterminer la méthode 2FA active de l'utilisateur
+        $twoFactorMethod = 'none';
+        try {
+            if ($this->dbHasColumn('users', 'two_factor_method')) {
+                $stmt2 = $this->db->prepare('SELECT two_factor_method FROM users WHERE id = ?');
+                $stmt2->execute([$user['id']]);
+                $twoFactorMethod = (string)($stmt2->fetchColumn() ?? 'none');
+            } elseif ($this->dbHasColumn('users', 'two_factor_enabled')) {
+                $stmt2 = $this->db->prepare('SELECT two_factor_enabled FROM users WHERE id = ?');
+                $stmt2->execute([$user['id']]);
+                $twoFactorMethod = (bool)$stmt2->fetchColumn() ? 'totp' : 'none';
+            }
+        } catch (Throwable $e) {
+            $twoFactorMethod = 'none';
+        }
+
+        if ($twoFactorMethod !== 'none' && $twoFactorMethod !== 'pending_totp') {
+            // Retourner un challenge — pas de JWT encore
+            $this->success([
+                'two_factor_required' => true,
+                'two_factor_method'   => $twoFactorMethod,
+                'user_id'             => (int)$user['id'],
+            ], 200, 'Validation 2FA requise.');
+            return;
+        }
+        // ─────────────────────────────────────────────────────────────
+
         $token = jwt_encode([
             'sub'   => (int)$user['id'],
             'role'  => $user['role'],
