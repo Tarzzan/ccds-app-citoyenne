@@ -477,8 +477,8 @@ export default function MyIncidentsScreen() {
       <ScreenLoadingState
         title={isStaff ? 'La file terrain se met en place' : 'Vos dossiers se remettent en place'}
         body={isStaff
-          ? 'Awa rassemble les dossiers utiles pour vous laisser commencer par les priorites du terrain.'
-          : 'Awa regroupe vos signalements pour vous rendre la suite plus lisible dossier par dossier.'}
+          ? 'L'agent rassemble les dossiers utiles pour vous laisser commencer par les priorites du terrain.'
+          : 'L'agent regroupe vos signalements pour vous rendre la suite plus lisible dossier par dossier.'}
       />
     );
   }

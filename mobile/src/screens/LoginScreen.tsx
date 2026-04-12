@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../services/AuthContext';
+import { TwoFactorRequiredError } from '../services/AuthContext';
 import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { Button, Input, COLORS } from '../components/ui';
 import { AuthStackParamList } from '../navigation/RootNavigator';
@@ -38,6 +39,13 @@ export default function LoginScreen({ navigation }: Props) {
     try {
       await login(email.trim().toLowerCase(), password);
     } catch (err: any) {
+      if (err instanceof TwoFactorRequiredError) {
+        navigation.navigate('TwoFactorValidate', {
+          userId: err.userId,
+          method: err.method,
+        });
+        return;
+      }
       Alert.alert(
         `${BRAND.companion.name} n'a pas pu vous faire entrer`,
         err?.message ?? 'Vérifiez votre email et votre mot de passe, puis réessayez.'

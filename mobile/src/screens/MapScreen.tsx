@@ -9,9 +9,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
+  FlatList,
   RefreshControl,
   Platform,
+  Image,
 } from 'react-native';
 import MapView, { Marker, Region } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
@@ -134,15 +135,270 @@ export default function MapScreen() {
     return (
       <ScreenLoadingState
         title="La carte citoyenne se prepare"
-        body="Awa rassemble d abord les reperes utiles du territoire pour que la lecture reste simple des l ouverture."
+        body="L'agent rassemble d abord les reperes utiles du territoire pour que la lecture reste simple des l ouverture."
       />
     );
   }
 
+  const renderHeader = () => (
+    <>
+      <View style={styles.header}>
+        <Text style={styles.headerEyebrow}>Territoire observé</Text>
+        <Text style={styles.headerTitle}>Carte citoyenne de Kourou</Text>
+        <Text style={styles.headerSub}>
+          La carte s’ouvre sur Kourou puis laisse apparaître les points signalés sur le territoire.
+        </Text>
+      </View>
+
+      <View style={styles.stageWrap}>
+        <CivicCompanionStage
+          eyebrow="Agent · Lecture territoire"
+          title="Voir ou la vigilance doit produire une reponse."
+          body="La carte ne sert pas a collectionner des points. Elle sert a rendre visibles les zones a surveiller, les dossiers encore ouverts et les signaux deja traites."
+          aside="Commencez par le point mis en avant, puis descendez vers les autres reperes."
+          visualSource={COMPANION_VISUAL_SLOTS.map.source}
+        />
+      </View>
+
+      <View style={styles.missionCard}>
+        <Text style={styles.missionTitle}>Voir, situer, agir</Text>
+        <Text style={styles.missionText}>
+          La lecture géographique aide à repérer les zones où la vigilance citoyenne doit produire une réponse publique.
+        </Text>
+        <View style={styles.missionStats}>
+          <View style={styles.missionStat}>
+            <Text style={styles.missionStatValue}>{geolocatedIncidents.length}</Text>
+            <Text style={styles.missionStatLabel}>reperes visibles</Text>
+          </View>
+          <View style={styles.missionStat}>
+            <Text style={styles.missionStatValue}>{openIncidents.length}</Text>
+            <Text style={styles.missionStatLabel}>encore ouverts</Text>
+          </View>
+          <View style={styles.missionStat}>
+            <Text style={styles.missionStatValue}>{resolvedIncidents.length}</Text>
+            <Text style={styles.missionStatLabel}>deja resolus</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.mapCard}>
+        {canRenderNativeMap ? (
+          <>
+            <MapView
+              ref={mapRef}
+              style={styles.map}
+              initialRegion={KOUROU_REGION}
+              showsCompass
+              showsScale
+              toolbarEnabled={false}
+            >
+              {geolocatedIncidents.map((incident) => {
+                const color = STATUS_COLORS[incident.status] || '#6b7280';
+
+                return (
+                  <Marker
+                    key={incident.id}
+                    coordinate={{
+                      latitude: Number(incident.latitude),
+                      longitude: Number(incident.longitude),
+                    }}
+                    title={incident.title || 'Signalement citoyen'}
+                    description={incident.address || incident.description}
+                    pinColor={color}
+                    onPress={() => setSelectedIncidentId(incident.id)}
+                  />
+                );
+              })}
+            </MapView>
+
+            <View style={styles.mapOverlay}>
+              <View style={styles.mapBadge}>
+                <Text style={styles.mapBadgeText}>
+                  {geolocatedIncidents.length} repère(s) géolocalisé(s)
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.kourouButton} onPress={centerOnKourou}>
+                <Text style={styles.kourouButtonText}>Revenir sur Kourou</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          <View style={styles.mapFallback}>
+            <View style={styles.mapFallbackBadge}>
+              <Text style={styles.mapFallbackBadgeText}>Kourou, Guyane</Text>
+            </View>
+            <Text style={styles.mapFallbackTitle}>Plan du territoire</Text>
+            <Text style={styles.mapFallbackText}>
+              La carte interactive native nécessite une clé Google Maps. Les signalements ci-dessous restent disponibles.
+            </Text>
+            <View style={styles.mapFallbackStats}>
+              <View style={styles.mapFallbackStat}>
+                <Text style={styles.mapFallbackStatValue}>{geolocatedIncidents.length}</Text>
+                <Text style={styles.mapFallbackStatLabel}>points suivis</Text>
+              </View>
+              <View style={styles.mapFallbackDivider} />
+              <View style={styles.mapFallbackStat}>
+                <Text style={styles.mapFallbackStatValue}>5.1597</Text>
+                <Text style={styles.mapFallbackStatLabel}>latitude Kourou</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.mapFallbackButton}
+              onPress={() => {
+                if (selectedIncident) {
+                  navigation.navigate('IncidentDetail', { id: selectedIncident.id });
+                } else {
+                  navigation.navigate('CreateIncident');
+                }
+              }}
+            >
+              <Text style={styles.mapFallbackButtonText}>
+                {selectedIncident ? 'Ouvrir le dossier mis en avant' : 'Créer un signalement'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {selectedIncident ? (
+        <TouchableOpacity
+          style={styles.featuredCard}
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate('IncidentDetail', { id: selectedIncident.id })}
+        >
+          <View style={styles.featuredHeader}>
+            <View style={styles.featuredTitleWrap}>
+              <Text style={styles.featuredEyebrow}>Point suivi</Text>
+              <Text style={styles.featuredTitle} numberOfLines={2}>
+                {selectedIncident.title || 'Signalement citoyen'}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.statusBadge,
+                {
+                  backgroundColor:
+                    (STATUS_COLORS[selectedIncident.status] || '#6b7280') + '22',
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusBadgeText,
+                  { color: STATUS_COLORS[selectedIncident.status] || '#6b7280' },
+                ]}
+              >
+                {STATUS_LABELS[selectedIncident.status] || selectedIncident.status}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.featuredAddress}>
+            📍 {selectedIncident.address || 'Adresse non renseignée'}
+          </Text>
+          <Text style={styles.featuredDescription} numberOfLines={3}>
+            {selectedIncident.description}
+          </Text>
+
+          <View style={styles.featuredFooter}>
+            <View style={styles.categoryMeta}>
+              <CategoryMark
+                icon={selectedIncident.category_icon}
+                name={selectedIncident.category_name}
+                color={selectedIncident.category_color}
+                size={40}
+              />
+              <Text style={styles.featuredMeta}>{selectedIncident.category_name}</Text>
+            </View>
+            <Text style={styles.featuredMeta}>
+              👍 {selectedIncident.votes_count ?? 0}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyIcon}>🗺️</Text>
+          <Text style={styles.emptyTitle}>Aucun point géolocalisé pour l’instant</Text>
+          <Text style={styles.emptyText}>
+            Les futurs signalements situés sur le terrain apparaîtront ici, avec Kourou comme point de départ.
+          </Text>
+        </View>
+      )}
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Points récents à examiner</Text>
+        <Text style={styles.sectionHint}>Touchez une carte pour recentrer puis ouvrir le dossier.</Text>
+      </View>
+    </>
+  );
+
+  const renderIncident = ({ item: incident }: { item: Incident }) => (
+    <TouchableOpacity
+      style={[
+        styles.card,
+        selectedIncidentId === incident.id && styles.cardActive,
+      ]}
+      onPress={() => focusIncident(incident)}
+    >
+      <View style={styles.cardRow}>
+        <View
+          style={[
+            styles.statusDot,
+            { backgroundColor: STATUS_COLORS[incident.status] || '#6b7280' },
+          ]}
+        />
+        <Text style={styles.cardTitle} numberOfLines={1}>
+          {incident.title || 'Signalement citoyen'}
+        </Text>
+      </View>
+      <Text style={styles.cardMeta} numberOfLines={1}>
+        📍 {incident.address || 'Adresse non renseignée'}
+      </Text>
+      <View style={styles.cardFooter}>
+        <View style={styles.categoryMeta}>
+          <CategoryMark
+            icon={incident.category_icon}
+            name={incident.category_name}
+            color={incident.category_color}
+            size={34}
+          />
+          <Text style={styles.votes}>{incident.category_name}</Text>
+        </View>
+        <View
+          style={[
+            styles.badge,
+            {
+              backgroundColor:
+                (STATUS_COLORS[incident.status] || '#6b7280') + '22',
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.badgeText,
+              { color: STATUS_COLORS[incident.status] || '#6b7280' },
+            ]}
+          >
+            {STATUS_LABELS[incident.status] || incident.status}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.heroBackdrop} />
-      <ScrollView
+      <FlatList
+        data={geolocatedIncidents}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={renderIncident}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={
+          <View style={styles.emptyList}>
+            <Text style={styles.emptyListText}>Aucun signalement géolocalisé disponible.</Text>
+          </View>
+        }
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
@@ -153,256 +409,8 @@ export default function MapScreen() {
             }}
           />
         }
-      >
-        <View style={styles.header}>
-          <Text style={styles.headerEyebrow}>Territoire observé</Text>
-          <Text style={styles.headerTitle}>Carte citoyenne de Kourou</Text>
-          <Text style={styles.headerSub}>
-            La carte s’ouvre sur Kourou puis laisse apparaître les points signalés sur le territoire.
-          </Text>
-        </View>
+      />
 
-        <View style={styles.stageWrap}>
-          <CivicCompanionStage
-            eyebrow="Awa · Lecture territoire"
-            title="Voir ou la vigilance doit produire une reponse."
-            body="La carte ne sert pas a collectionner des points. Elle sert a rendre visibles les zones a surveiller, les dossiers encore ouverts et les signaux deja traites."
-            aside="Commencez par le point mis en avant, puis descendez vers les autres reperes."
-            visualSource={COMPANION_VISUAL_SLOTS.map.source}
-          />
-        </View>
-
-        <View style={styles.missionCard}>
-          <Text style={styles.missionTitle}>Voir, situer, agir</Text>
-          <Text style={styles.missionText}>
-            La lecture géographique aide à repérer les zones où la vigilance citoyenne doit produire une réponse publique.
-          </Text>
-          <View style={styles.missionStats}>
-            <View style={styles.missionStat}>
-              <Text style={styles.missionStatValue}>{geolocatedIncidents.length}</Text>
-              <Text style={styles.missionStatLabel}>reperes visibles</Text>
-            </View>
-            <View style={styles.missionStat}>
-              <Text style={styles.missionStatValue}>{openIncidents.length}</Text>
-              <Text style={styles.missionStatLabel}>encore ouverts</Text>
-            </View>
-            <View style={styles.missionStat}>
-              <Text style={styles.missionStatValue}>{resolvedIncidents.length}</Text>
-              <Text style={styles.missionStatLabel}>deja resolus</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.mapCard}>
-          {canRenderNativeMap ? (
-            <>
-              <MapView
-                ref={mapRef}
-                style={styles.map}
-                initialRegion={KOUROU_REGION}
-                showsCompass
-                showsScale
-                toolbarEnabled={false}
-              >
-                {geolocatedIncidents.map((incident) => {
-                  const color = STATUS_COLORS[incident.status] || '#6b7280';
-
-                  return (
-                    <Marker
-                      key={incident.id}
-                      coordinate={{
-                        latitude: Number(incident.latitude),
-                        longitude: Number(incident.longitude),
-                      }}
-                      title={incident.title || 'Signalement citoyen'}
-                      description={incident.address || incident.description}
-                      pinColor={color}
-                      onPress={() => setSelectedIncidentId(incident.id)}
-                    />
-                  );
-                })}
-              </MapView>
-
-              <View style={styles.mapOverlay}>
-                <View style={styles.mapBadge}>
-                  <Text style={styles.mapBadgeText}>
-                    {geolocatedIncidents.length} repère(s) géolocalisé(s)
-                  </Text>
-                </View>
-                <TouchableOpacity style={styles.kourouButton} onPress={centerOnKourou}>
-                  <Text style={styles.kourouButtonText}>Revenir sur Kourou</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          ) : (
-            <View style={styles.mapFallback}>
-              <View style={styles.mapFallbackBadge}>
-                <Text style={styles.mapFallbackBadgeText}>Kourou, Guyane</Text>
-              </View>
-              <Text style={styles.mapFallbackTitle}>Vue carte temporairement indisponible</Text>
-              <Text style={styles.mapFallbackText}>
-                Cette version continue de fonctionner sans planter. Les signalements géolocalisés
-                restent consultables ci-dessous pendant la préparation de la clé cartographique.
-              </Text>
-              <View style={styles.mapFallbackStats}>
-                <View style={styles.mapFallbackStat}>
-                  <Text style={styles.mapFallbackStatValue}>{geolocatedIncidents.length}</Text>
-                  <Text style={styles.mapFallbackStatLabel}>points suivis</Text>
-                </View>
-                <View style={styles.mapFallbackDivider} />
-                <View style={styles.mapFallbackStat}>
-                  <Text style={styles.mapFallbackStatValue}>5.1597</Text>
-                  <Text style={styles.mapFallbackStatLabel}>latitude Kourou</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={styles.mapFallbackButton}
-                onPress={() => {
-                  if (selectedIncident) {
-                    navigation.navigate('IncidentDetail', { id: selectedIncident.id });
-                  } else {
-                    navigation.navigate('CreateIncident');
-                  }
-                }}
-              >
-                <Text style={styles.mapFallbackButtonText}>
-                  {selectedIncident ? 'Ouvrir le dossier mis en avant' : 'Créer un signalement'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-
-        {selectedIncident ? (
-          <TouchableOpacity
-            style={styles.featuredCard}
-            activeOpacity={0.9}
-            onPress={() => navigation.navigate('IncidentDetail', { id: selectedIncident.id })}
-          >
-            <View style={styles.featuredHeader}>
-              <View style={styles.featuredTitleWrap}>
-                <Text style={styles.featuredEyebrow}>Point suivi</Text>
-                <Text style={styles.featuredTitle} numberOfLines={2}>
-                  {selectedIncident.title || 'Signalement citoyen'}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.statusBadge,
-                  {
-                    backgroundColor:
-                      (STATUS_COLORS[selectedIncident.status] || '#6b7280') + '22',
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.statusBadgeText,
-                    { color: STATUS_COLORS[selectedIncident.status] || '#6b7280' },
-                  ]}
-                >
-                  {STATUS_LABELS[selectedIncident.status] || selectedIncident.status}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={styles.featuredAddress}>
-              📍 {selectedIncident.address || 'Adresse non renseignée'}
-            </Text>
-            <Text style={styles.featuredDescription} numberOfLines={3}>
-              {selectedIncident.description}
-            </Text>
-
-            <View style={styles.featuredFooter}>
-              <View style={styles.categoryMeta}>
-                <CategoryMark
-                  icon={selectedIncident.category_icon}
-                  name={selectedIncident.category_name}
-                  color={selectedIncident.category_color}
-                  size={40}
-                />
-                <Text style={styles.featuredMeta}>{selectedIncident.category_name}</Text>
-              </View>
-              <Text style={styles.featuredMeta}>
-                👍 {selectedIncident.votes_count ?? 0}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>🗺️</Text>
-            <Text style={styles.emptyTitle}>Aucun point géolocalisé pour l’instant</Text>
-            <Text style={styles.emptyText}>
-              Les futurs signalements situés sur le terrain apparaîtront ici, avec Kourou comme point de départ.
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Points récents à examiner</Text>
-          <Text style={styles.sectionHint}>Touchez une carte pour recentrer puis ouvrir le dossier.</Text>
-        </View>
-
-        {geolocatedIncidents.length === 0 ? (
-          <View style={styles.emptyList}>
-            <Text style={styles.emptyListText}>Aucun signalement géolocalisé disponible.</Text>
-          </View>
-        ) : (
-          geolocatedIncidents.map((incident) => (
-            <TouchableOpacity
-              key={incident.id}
-              style={[
-                styles.card,
-                selectedIncidentId === incident.id && styles.cardActive,
-              ]}
-              onPress={() => focusIncident(incident)}
-            >
-              <View style={styles.cardRow}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    { backgroundColor: STATUS_COLORS[incident.status] || '#6b7280' },
-                  ]}
-                />
-                <Text style={styles.cardTitle} numberOfLines={1}>
-                  {incident.title || 'Signalement citoyen'}
-                </Text>
-              </View>
-              <Text style={styles.cardMeta} numberOfLines={1}>
-                📍 {incident.address || 'Adresse non renseignée'}
-              </Text>
-              <View style={styles.cardFooter}>
-                <View style={styles.categoryMeta}>
-                  <CategoryMark
-                    icon={incident.category_icon}
-                    name={incident.category_name}
-                    color={incident.category_color}
-                    size={34}
-                  />
-                  <Text style={styles.votes}>{incident.category_name}</Text>
-                </View>
-                <View
-                  style={[
-                    styles.badge,
-                    {
-                      backgroundColor:
-                        (STATUS_COLORS[incident.status] || '#6b7280') + '22',
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.badgeText,
-                      { color: STATUS_COLORS[incident.status] || '#6b7280' },
-                    ]}
-                  >
-                    {STATUS_LABELS[incident.status] || incident.status}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))
-        )}
 
         <TouchableOpacity
           style={styles.fab}
@@ -410,7 +418,7 @@ export default function MapScreen() {
         >
           <Text style={styles.fabText}>+ Nouveau signalement</Text>
         </TouchableOpacity>
-      </ScrollView>
+
     </View>
   );
 }

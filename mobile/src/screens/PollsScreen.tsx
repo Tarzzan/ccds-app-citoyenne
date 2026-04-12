@@ -158,7 +158,7 @@ export default function PollsScreen() {
     return (
       <ScreenLoadingState
         title="Les consultations se remettent en contexte"
-        body="Awa rassemble les sujets ouverts pour vous laisser lire d abord les choix utiles a la decision locale."
+        body="L'agent rassemble les sujets ouverts pour vous laisser lire d abord les choix utiles a la decision locale."
       />
     );
   }
@@ -195,7 +195,7 @@ export default function PollsScreen() {
 
             <View style={styles.stageWrap}>
               <CivicCompanionStage
-                eyebrow="Awa · Concertation locale"
+                eyebrow="Agent · Concertation locale"
                 title="Une consultation doit mener a une decision comprenable."
                 body="Retrouvez ici les sujets ouverts par la commune, votez une fois, puis revenez relire la tendance generale sans perdre le fil."
                 aside="Chaque consultation reste volontairement simple : un choix clair, un resultat lisible."

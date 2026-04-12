@@ -35,10 +35,15 @@ export default function TwoFactorScreen() {
   const loadStatus = async () => {
     try {
       setLoading(true);
-      const res = await authApi.setup2FA();
-      // Utiliser getStatus à la place
-      setEnabled(false);
-      setMethod('none');
+      const res = await authApi.getStatus2FA();
+      if (res.data) {
+        setEnabled(res.data.two_factor_enabled);
+        setMethod(
+          res.data.two_factor_method === 'totp' ? 'totp'
+          : res.data.two_factor_method === 'email' ? 'email'
+          : 'none'
+        );
+      }
       setStep('status');
     } catch {
       setEnabled(false);
@@ -118,7 +123,7 @@ export default function TwoFactorScreen() {
     return (
       <ScreenLoadingState
         title="La securite de votre compte se prepare"
-        body="Awa verifie d abord l etat actuel de la double authentification avant de vous proposer la bonne suite."
+        body="L'agent verifie d abord l etat actuel de la double authentification avant de vous proposer la bonne suite."
       />
     );
   }
@@ -137,7 +142,7 @@ export default function TwoFactorScreen() {
 
         <View style={styles.stageWrap}>
           <CivicCompanionStage
-            eyebrow="Awa · Protection du compte"
+            eyebrow="Agent · Protection du compte"
             title="La securite doit rester simple a comprendre."
             body="Activez une verification supplementaire pour proteger vos dossiers, vos echanges et vos informations personnelles sans alourdir le reste de l experience."
             aside="Vous pourrez revenir ici a tout moment pour verifier ou ajuster ce niveau de protection."
@@ -180,7 +185,7 @@ export default function TwoFactorScreen() {
       <ScrollView style={styles.container}>
         <View style={styles.stageWrap}>
           <CivicCompanionStage
-            eyebrow="Awa · Mise en place"
+            eyebrow="Agent · Mise en place"
             title="Associez une application d authentification en quelques etapes."
             body="Scannez le QR code, saisissez le code temporaire, puis gardez vos codes de secours dans un endroit sur."
           />
