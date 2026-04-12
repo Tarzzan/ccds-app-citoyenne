@@ -1,5 +1,6 @@
 import { ImageSourcePropType } from 'react-native';
 import { GENERATED_VISUAL_SOURCES } from './generatedVisualSources';
+import { getCompanionSkin } from '../services/CompanionService';
 
 export type CompanionAssetId =
   | 'CHAR-01'
@@ -21,22 +22,41 @@ export type CompanionVisualSlot = {
   source?: ImageSourcePropType;
 };
 
-// Les sources restent optionnelles tant qu'aucun drop visuel installe n'a ete branche.
-// Quand les assets seront valides et installes, chaque slot pourra recevoir un require(...)
-// vers mobile/assets/generated-visuals sans changer les ecrans.
+/**
+ * Retourne la source du companion : image chargée depuis le back-office
+ * (via CompanionService) ou fallback local si absente.
+ */
+function companionSource(): ImageSourcePropType {
+  const skin = getCompanionSkin();
+  return skin.source;
+}
+
+// Les MOM-* sont toujours locaux (scènes de moments, pas de skin)
+function momSource(key: string): ImageSourcePropType | undefined {
+  return GENERATED_VISUAL_SOURCES[key];
+}
+
 export const COMPANION_VISUAL_SLOTS: Record<string, CompanionVisualSlot> = {
-  login: { assetId: 'CHAR-05', label: 'Agent relation citoyenne', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
-  register: { assetId: 'CHAR-05', label: 'Agente relation usager', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
-  serverConfig: { assetId: 'CHAR-05', label: 'Agente relation usager', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
-  onboarding: { assetId: 'CHAR-05', label: 'Agent relation citoyenne', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
-  dashboard: { assetId: 'CHAR-04', label: 'Agent terrain', source: GENERATED_VISUAL_SOURCES['CHAR-04'] },
-  createIncident: { assetId: 'CHAR-05', label: 'Agent relation citoyenne', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
-  incidentDetail: { assetId: 'CHAR-04', label: 'Agent terrain', source: GENERATED_VISUAL_SOURCES['CHAR-04'] },
-  notifications: { assetId: 'CHAR-05', label: 'Agent relation citoyenne', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
-  impact: { assetId: 'CHAR-04', label: 'Agent terrain', source: GENERATED_VISUAL_SOURCES['CHAR-04'] },
-  profile: { assetId: 'CHAR-05', label: 'Agente relation usager', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
-  map: { assetId: 'CHAR-04', label: 'Agent terrain', source: GENERATED_VISUAL_SOURCES['CHAR-04'] },
-  events: { assetId: 'CHAR-05', label: 'Agent relation citoyenne', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
-  polls: { assetId: 'CHAR-05', label: 'Agent relation citoyenne', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
-  twoFactor: { assetId: 'CHAR-05', label: 'Agente relation usager', source: GENERATED_VISUAL_SOURCES['CHAR-05'] },
+  login:          { assetId: 'CHAR-05', label: 'Agent relation citoyenne',  source: companionSource() },
+  register:       { assetId: 'CHAR-05', label: 'Agente relation usager',    source: companionSource() },
+  serverConfig:   { assetId: 'CHAR-05', label: 'Agente relation usager',    source: companionSource() },
+  onboarding:     { assetId: 'CHAR-05', label: 'Agent relation citoyenne',  source: companionSource() },
+  dashboard:      { assetId: 'CHAR-04', label: 'Agent terrain',             source: companionSource() },
+  createIncident: { assetId: 'CHAR-05', label: 'Agent relation citoyenne',  source: companionSource() },
+  incidentDetail: { assetId: 'CHAR-04', label: 'Agent terrain',             source: companionSource() },
+  notifications:  { assetId: 'CHAR-05', label: 'Agent relation citoyenne',  source: companionSource() },
+  impact:         { assetId: 'CHAR-04', label: 'Agent terrain',             source: companionSource() },
+  profile:        { assetId: 'CHAR-05', label: 'Agente relation usager',    source: companionSource() },
+  map:            { assetId: 'CHAR-04', label: 'Agent terrain',             source: companionSource() },
+  events:         { assetId: 'CHAR-05', label: 'Agent relation citoyenne',  source: companionSource() },
+  polls:          { assetId: 'CHAR-05', label: 'Agent relation citoyenne',  source: companionSource() },
+  twoFactor:      { assetId: 'CHAR-05', label: 'Agente relation usager',    source: companionSource() },
+  // Moments (scènes fixes)
+  welcome:        { assetId: 'MOM-01', label: 'Accueil',                    source: momSource('MOM-01') },
+  afterReport:    { assetId: 'MOM-02', label: 'Après signalement',          source: momSource('MOM-02') },
+  inProgress:     { assetId: 'MOM-03', label: 'En cours',                   source: momSource('MOM-03') },
+  resolved:       { assetId: 'MOM-04', label: 'Résolu',                     source: momSource('MOM-04') },
+  noIncidents:    { assetId: 'MOM-05', label: 'Aucun signalement',          source: momSource('MOM-05') },
+  noNotifs:       { assetId: 'MOM-06', label: 'Aucune notification',        source: momSource('MOM-06') },
 };
+

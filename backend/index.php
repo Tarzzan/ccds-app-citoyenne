@@ -374,6 +374,69 @@ switch ($resource) {
         break;
 
     // ----------------------------------------------------------------
+    // Config publique (sans auth) — companion skin, etc.
+    // GET  /api/config/companion
+    // ----------------------------------------------------------------
+    case 'config':
+        $configSub = $segments[1] ?? '';
+        if ($configSub === 'companion' && $method === 'GET') {
+            // Lecture du companion actif depuis les settings visuels admin
+            $adminIncludesDir = dirname(__DIR__) . '/admin/includes';
+            if (!defined('UPLOAD_DIR') && is_file($adminIncludesDir . '/bootstrap.php')) {
+                // Chargement minimal : juste les helpers visuels
+                $configPhp = dirname(__DIR__) . '/backend/config/config.php';
+                if (is_file($configPhp)) {
+                    require_once $configPhp;
+                }
+            }
+            if (is_file($adminIncludesDir . '/generated_visuals.php')) {
+                require_once $adminIncludesDir . '/generated_visuals.php';
+            }
+
+            $companionAssetId = null;
+            $companionUrl     = null;
+
+            if (function_exists('visual_admin_settings')) {
+                $settings = visual_admin_settings();
+                $companionAssetId = $settings['slots']['companion'] ?? 'CHAR-05';
+            }
+
+            if ($companionAssetId && function_exists('generated_visual_url')) {
+                $companionUrl = generated_visual_url($companionAssetId);
+            }
+
+            // Fallback : URL directe sur le serveur de production
+            if (!$companionUrl && $companionAssetId) {
+                $charMap = [
+                    'CHAR-01' => 'char-01-mascot-m1-portrait-4x5.png',
+                    'CHAR-02' => 'char-02-mascot-m2-portrait-4x5.png',
+                    'CHAR-03' => 'char-03-mascot-m3-portrait-4x5.png',
+                    'CHAR-04' => 'char-04-agent-a1-bust-4x5.png',
+                    'CHAR-05' => 'char-05-agent-a2-bust-4x5.png',
+                    'CHAR-06' => 'char-06-duo-m1-a2-hero-16x9.png',
+                ];
+                if (isset($charMap[$companionAssetId])) {
+                    $companionUrl = '/admin/assets/img/generated-visuals/characters/' . $charMap[$companionAssetId];
+                }
+            }
+
+            $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+                . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+
+            echo json_encode([
+                'success'      => true,
+                'companion'    => [
+                    'asset_id' => $companionAssetId ?? 'CHAR-05',
+                    'url'      => $companionUrl ? $baseUrl . $companionUrl : null,
+                ],
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        } else {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Endpoint config introuvable.']);
+        }
+        break;
+
+    // ----------------------------------------------------------------
     // RGPD (v1.6)
     // POST   /api/gdpr/export
     // GET    /api/gdpr/download/{filename}

@@ -178,6 +178,8 @@ function visual_admin_default_settings(): array
             'topbar_agent' => null,
             'dashboard_primary' => null,
             'dashboard_secondary' => null,
+            // Companion mobile : personne virtuelle de l'app citoyenne
+            'companion' => 'CHAR-05',
         ],
         'category_badges' => [
             'road' => null,

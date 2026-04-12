@@ -14,7 +14,7 @@ import { RouteProp, useRoute } from '@react-navigation/native';
 import { incidentsApi, commentsApi, Incident, Comment } from '../services/api';
 import { StatusBadge, COLORS, STATUS_LABELS, STATUS_COLORS } from '../components/ui';
 import { CategoryMark } from '../components/CategoryMark';
-import { CategoryScenePanel } from '../components/CategoryScenePanel';
+
 import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { ScreenFeedbackState, ScreenLoadingState } from '../components/ScreenStatePanel';
 import { VoteButton } from '../components/VoteButton';
@@ -530,12 +530,7 @@ export default function IncidentDetailScreen() {
               Chaque mise à jour renforce la transparence entre citoyens, agents et décision publique locale.
             </Text>
           </View>
-          <CategoryScenePanel
-            icon={incident.category_icon}
-            name={incident.category_name}
-            title={`${incident.category_name} dans son contexte`}
-            body="Quand les scenes terrain validees seront installees, cette fiche pourra raconter le contexte reel du dossier sans perdre la lisibilite fonctionnelle."
-          />
+
 
           {incident.address && (
             <View style={styles.infoRow}>

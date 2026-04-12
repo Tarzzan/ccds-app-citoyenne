@@ -30,15 +30,17 @@ import DashboardScreen      from '../screens/DashboardScreen';
 import ImpactScreen         from '../screens/ImpactScreen';
 import EventsScreen         from '../screens/EventsScreen';
 import PollsScreen          from '../screens/PollsScreen';
+import TwoFactorValidateScreen from '../screens/TwoFactorValidateScreen';
 import { flushPendingNavigation, navigationRef } from './navigationRef';
 
 // ----------------------------------------------------------------
 // Types de navigation
 // ----------------------------------------------------------------
 export type AuthStackParamList = {
-  Login:    undefined;
-  Register: undefined;
-  ServerConfig: undefined;
+  Login:              undefined;
+  Register:           undefined;
+  ServerConfig:       undefined;
+  TwoFactorValidate:  { userId: number; method: string };
 };
 
 export type AppTabParamList = {
@@ -76,25 +78,29 @@ function AppTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor:   BRAND.colors.canopy,
-        tabBarInactiveTintColor: '#70817A',
+        tabBarActiveTintColor:   '#355160',
+        tabBarInactiveTintColor: '#718892',
         tabBarStyle: {
-          height: 74 + bottomInset,
-          paddingTop: 10,
-          paddingBottom: bottomInset,
-          backgroundColor: '#FFFDF8',
+          height: 80 + bottomInset,
+          paddingTop: 8,
+          paddingBottom: bottomInset + 8,
+          backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
-          borderTopColor: '#E6DCC8',
+          borderTopColor: 'rgba(53,81,96,0.10)',
+          elevation: 16,
+          shadowColor: '#223743',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.07,
+          shadowRadius: 12,
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '700',
-          letterSpacing: 0.2,
+          letterSpacing: 0.3,
+          marginTop: 2,
         },
         tabBarItemStyle: {
-          paddingVertical: 4,
-          borderRadius: 18,
-          marginHorizontal: 2,
+          paddingVertical: 2,
         },
         headerShown: false,
       }}
@@ -102,25 +108,25 @@ function AppTabs() {
       <Tab.Screen
         name="Map"
         component={MapScreen}
-        options={{ title: 'Carte', tabBarIcon: ({ color, focused }) => <TabIcon label="🗺️" color={color} focused={focused} /> }}
+        options={{ title: 'Carte', tabBarIcon: ({ focused }) => <TabIcon source={require('../../assets/nav-icons/map.png')} focused={focused} /> }}
       />
       <Tab.Screen
         name="MyIncidents"
         component={MyIncidentsScreen}
         options={{
           title: isStaff ? 'Terrain' : 'Suivi',
-          tabBarIcon: ({ color, focused }) => <TabIcon label="📋" color={color} focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon source={require('../../assets/nav-icons/incidents.png')} focused={focused} />,
         }}
       />
       <Tab.Screen
         name="Notifications"
         component={NotificationsScreen}
-        options={{ title: 'Alertes', tabBarIcon: ({ color, focused }) => <TabIcon label="🔔" color={color} focused={focused} /> }}
+        options={{ title: 'Alertes', tabBarIcon: ({ focused }) => <TabIcon source={require('../../assets/nav-icons/notifications.png')} focused={focused} /> }}
       />
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}
-        options={{ title: 'Bilan', tabBarIcon: ({ color, focused }) => <TabIcon label="📊" color={color} focused={focused} /> }}
+        options={{ title: 'Bilan', tabBarIcon: ({ focused }) => <TabIcon source={require('../../assets/nav-icons/dashboard.png')} focused={focused} /> }}
       />
     </Tab.Navigator>
   );
@@ -205,6 +211,11 @@ function AuthNavigator() {
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Login"    component={LoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
+      <AuthStack.Screen
+        name="TwoFactorValidate"
+        component={TwoFactorValidateScreen}
+        options={{ headerShown: false }}
+      />
       <AuthStack.Screen name="ServerConfig">
         {(props) => (
           <ServerConfigScreen
@@ -288,10 +299,17 @@ function BrandHeaderTitle({ title, detail }: { title: string; detail: string }) 
   );
 }
 
-function TabIcon({ label, color, focused }: { label: string; color: string; focused: boolean }) {
+function TabIcon({ source, focused }: { source: any; focused: boolean }) {
   return (
     <View style={[styles.tabIconWrap, focused && styles.tabIconWrapFocused]}>
-      <Text style={{ fontSize: 20, color }}>{label}</Text>
+      <Image
+        source={source}
+        style={[
+          styles.clayIcon,
+          focused ? { opacity: 1 } : { opacity: 0.5 }
+        ]}
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -322,14 +340,24 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   tabIconWrap: {
-    minWidth: 38,
-    height: 32,
-    paddingHorizontal: 10,
-    borderRadius: 16,
+    minWidth: 52,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 4,
+    borderCurve: 'continuous',
   },
   tabIconWrapFocused: {
-    backgroundColor: '#E7F0EA',
+    backgroundColor: '#E7EEF1', // primary_light du backoffice
+    shadowColor: '#223743',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  clayIcon: {
+    width: 28,
+    height: 28,
   },
 });

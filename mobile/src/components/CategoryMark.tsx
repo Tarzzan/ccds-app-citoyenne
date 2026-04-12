@@ -27,15 +27,12 @@ export function CategoryMark({
         framed && {
           width: size,
           height: size,
-          borderRadius,
-          backgroundColor: `${color || visual.accent}18`,
-          borderColor: `${color || visual.accent}44`,
         },
       ]}
     >
       <Image
         source={visual.source}
-        style={{ width: size * 0.92, height: size * 0.92 }}
+        style={{ width: size, height: size }}
         resizeMode="contain"
       />
     </View>
@@ -46,7 +43,6 @@ const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
     overflow: 'hidden',
   },
 });
