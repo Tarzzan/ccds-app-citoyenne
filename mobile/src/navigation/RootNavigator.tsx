@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer }         from '@react-navigation/native';
 import { createNativeStackNavigator }  from '@react-navigation/native-stack';
 import { createBottomTabNavigator }    from '@react-navigation/bottom-tabs';
-import { ActivityIndicator, View, Text, Image, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Text, Image, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BRAND } from '../theme/brand';
 
@@ -142,6 +142,16 @@ function AppNavigator() {
     headerBackTitle:  'Retour',
     headerShadowVisible: false,
     headerBackTitleVisible: false,
+    headerLeft: ({ canGoBack, onPress }: any) =>
+      canGoBack ? (
+        <TouchableOpacity
+          onPress={onPress}
+          style={{ paddingVertical: 8, paddingLeft: 0, paddingRight: 16, justifyContent: 'center' }}
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+        >
+          <Text style={{ fontSize: 24, color: '#FFFFFF', fontWeight: '800', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' }}>←</Text>
+        </TouchableOpacity>
+      ) : null,
   };
 
   return (
