@@ -427,7 +427,7 @@ switch ($resource) {
                 'success'      => true,
                 'companion'    => [
                     'asset_id' => $companionAssetId ?? 'CHAR-05',
-                    'url'      => $companionUrl ? $baseUrl . $companionUrl : null,
+                    'url'      => $companionUrl ? $baseUrl . $companionUrl . '?v=' . time() : null,
                 ],
             ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         } else {
