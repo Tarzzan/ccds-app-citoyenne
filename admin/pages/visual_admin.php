@@ -448,6 +448,8 @@ function visual_admin_create_auto_backup(PDO $db, array $admin, string $sourceAc
     return $snapshotId;
 }
 
+$activeCompanion = $settings['slots']['companion'] ?? 'CHAR-05';
+
 $slotGroups = [
     'Companion et App Mobile' => [
         'companion' => ['label' => 'Companion · Personnage', 'fallback' => 'CHAR-05'],
@@ -455,37 +457,37 @@ $slotGroups = [
     'Branding et shell' => [
         'login_scene' => ['label' => 'Login · scene principale', 'fallback' => 'ILL-05'],
         'login_inset' => ['label' => 'Login · vignette secondaire', 'fallback' => 'ILL-02'],
-        'login_agent' => ['label' => 'Login · agent', 'fallback' => 'CHAR-04'],
+        'login_agent' => ['label' => 'Login · agent', 'fallback' => $activeCompanion],
         'sidebar_scene' => ['label' => 'Sidebar · scene principale', 'fallback' => 'ILL-02'],
         'sidebar_inset' => ['label' => 'Sidebar · vignette secondaire', 'fallback' => 'ILL-05'],
-        'sidebar_agent' => ['label' => 'Sidebar · agent', 'fallback' => 'CHAR-04'],
+        'sidebar_agent' => ['label' => 'Sidebar · agent', 'fallback' => $activeCompanion],
         'topbar_scene' => ['label' => 'Topbar · scene principale', 'fallback' => 'ILL-01'],
         'topbar_inset' => ['label' => 'Topbar · vignette secondaire', 'fallback' => 'ILL-05'],
-        'topbar_agent' => ['label' => 'Topbar · agent', 'fallback' => 'CHAR-05'],
+        'topbar_agent' => ['label' => 'Topbar · agent', 'fallback' => $activeCompanion],
     ],
     'Heroes cockpit' => [
-        'dashboard_primary' => ['label' => 'Dashboard · portrait principal', 'fallback' => 'CHAR-04'],
-        'dashboard_secondary' => ['label' => 'Dashboard · portrait secondaire', 'fallback' => 'CHAR-05'],
-        'incidents_primary' => ['label' => 'Signalements · portrait principal', 'fallback' => 'CHAR-05'],
-        'incidents_secondary' => ['label' => 'Signalements · portrait secondaire', 'fallback' => 'CHAR-04'],
-        'services_primary' => ['label' => 'Services · portrait principal', 'fallback' => 'CHAR-04'],
-        'services_secondary' => ['label' => 'Services · portrait secondaire', 'fallback' => 'CHAR-05'],
-        'search_primary' => ['label' => 'Recherche · portrait principal', 'fallback' => 'CHAR-05'],
-        'search_secondary' => ['label' => 'Recherche · portrait secondaire', 'fallback' => 'CHAR-04'],
+        'dashboard_primary' => ['label' => 'Dashboard · portrait principal', 'fallback' => $activeCompanion],
+        'dashboard_secondary' => ['label' => 'Dashboard · portrait secondaire', 'fallback' => $activeCompanion],
+        'incidents_primary' => ['label' => 'Signalements · portrait principal', 'fallback' => $activeCompanion],
+        'incidents_secondary' => ['label' => 'Signalements · portrait secondaire', 'fallback' => $activeCompanion],
+        'services_primary' => ['label' => 'Services · portrait principal', 'fallback' => $activeCompanion],
+        'services_secondary' => ['label' => 'Services · portrait secondaire', 'fallback' => $activeCompanion],
+        'search_primary' => ['label' => 'Recherche · portrait principal', 'fallback' => $activeCompanion],
+        'search_secondary' => ['label' => 'Recherche · portrait secondaire', 'fallback' => $activeCompanion],
     ],
     'Analyse et cartes' => [
         'map_scene' => ['label' => 'Carte · scene principale', 'fallback' => 'ILL-01'],
         'map_inset' => ['label' => 'Carte · vignette secondaire', 'fallback' => 'ILL-05'],
-        'map_agent' => ['label' => 'Carte · agent', 'fallback' => 'CHAR-05'],
+        'map_agent' => ['label' => 'Carte · agent', 'fallback' => $activeCompanion],
         'stats_scene' => ['label' => 'Statistiques · scene principale', 'fallback' => 'ILL-05'],
         'stats_inset' => ['label' => 'Statistiques · vignette secondaire', 'fallback' => 'ILL-02'],
-        'stats_agent' => ['label' => 'Statistiques · agent', 'fallback' => 'CHAR-04'],
+        'stats_agent' => ['label' => 'Statistiques · agent', 'fallback' => $activeCompanion],
         'realtime_scene' => ['label' => 'Temps reel · scene principale', 'fallback' => 'ILL-02'],
         'realtime_inset' => ['label' => 'Temps reel · vignette secondaire', 'fallback' => 'ILL-05'],
-        'realtime_agent' => ['label' => 'Temps reel · agent', 'fallback' => 'CHAR-05'],
+        'realtime_agent' => ['label' => 'Temps reel · agent', 'fallback' => $activeCompanion],
         'predictive_scene' => ['label' => 'Predictif · scene principale', 'fallback' => 'ILL-05'],
         'predictive_inset' => ['label' => 'Predictif · vignette secondaire', 'fallback' => 'ILL-02'],
-        'predictive_agent' => ['label' => 'Predictif · agent', 'fallback' => 'CHAR-04'],
+        'predictive_agent' => ['label' => 'Predictif · agent', 'fallback' => $activeCompanion],
     ],
 ];
 
