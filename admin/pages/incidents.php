@@ -34,6 +34,68 @@ $f_date_to  = trim($_GET['date_to']   ?? '');
 $f_sort     = in_array($_GET['sort'] ?? '', ['votes_count','updated_at','created_at']) ? $_GET['sort'] : 'created_at';
 $f_dir      = ($_GET['dir'] ?? 'DESC') === 'ASC' ? 'ASC' : 'DESC';
 $export_csv = isset($_GET['export']) && $_GET['export'] === 'csv';
+$purge_message = '';
+$purge_error   = '';
+
+// --- Purge en masse (POST) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'bulk_delete') {
+    $purge_date = trim($_POST['purge_before_date'] ?? '');
+    $purge_token = trim($_POST['purge_token'] ?? '');
+
+    if ($purge_date === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $purge_date)) {
+        $purge_error = 'Date invalide.';
+    } elseif ($purge_token !== md5('purge_' . $purge_date . '_' . ($admin['id'] ?? 0))) {
+        $purge_error = 'Jeton de securite invalide. Veuillez recharger la page.';
+    } else {
+        try {
+            $db->beginTransaction();
+
+            // Compter les incidents concernés
+            $countStmt = $db->prepare('SELECT COUNT(*) FROM incidents WHERE created_at < ?');
+            $countStmt->execute([$purge_date . ' 00:00:00']);
+            $purge_count = (int)$countStmt->fetchColumn();
+
+            if ($purge_count === 0) {
+                $purge_error = 'Aucun dossier anterieur au ' . $purge_date . '.';
+                $db->rollBack();
+            } else {
+                // Suppression en cascade
+                $idStmt = $db->prepare('SELECT id FROM incidents WHERE created_at < ?');
+                $idStmt->execute([$purge_date . ' 00:00:00']);
+                $ids = $idStmt->fetchAll(PDO::FETCH_COLUMN);
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+                $db->prepare("DELETE FROM photos WHERE incident_id IN ($placeholders)")->execute($ids);
+                $db->prepare("DELETE FROM comments WHERE incident_id IN ($placeholders)")->execute($ids);
+                if (admin_db_has_table($db, 'intervention_plans')) {
+                    $db->prepare("DELETE FROM intervention_plans WHERE incident_id IN ($placeholders)")->execute($ids);
+                }
+                if (admin_db_has_table($db, 'votes')) {
+                    $db->prepare("DELETE FROM votes WHERE incident_id IN ($placeholders)")->execute($ids);
+                }
+                $db->prepare("DELETE FROM incidents WHERE id IN ($placeholders)")->execute($ids);
+
+                $db->commit();
+                $purge_message = $purge_count . ' dossier(s) anterieur(s) au ' . $purge_date . ' supprime(s) definitivement.';
+            }
+        } catch (Exception $e) {
+            if ($db->inTransaction()) { $db->rollBack(); }
+            $purge_error = 'Erreur lors de la purge : ' . $e->getMessage();
+        }
+    }
+}
+
+// --- Comptage AJAX pour la purge ---
+if (isset($_GET['ajax_purge_count']) && ($_GET['ajax_purge_count'] ?? '') !== '') {
+    $cDate = trim($_GET['ajax_purge_count']);
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $cDate)) {
+        $cStmt = $db->prepare('SELECT COUNT(*) FROM incidents WHERE created_at < ?');
+        $cStmt->execute([$cDate . ' 00:00:00']);
+        header('Content-Type: application/json');
+        echo json_encode(['count' => (int)$cStmt->fetchColumn(), 'token' => md5('purge_' . $cDate . '_' . ($admin['id'] ?? 0))]);
+        exit;
+    }
+}
 
 if ($agent_is_scoped && $f_service !== '' && !in_array((int)$f_service, $agent_service_scope_ids, true)) {
     $f_service = (string)($admin['primary_service_id'] ?? $agent_service_scope_ids[0] ?? '');
@@ -476,6 +538,61 @@ $incidentsHeroPortraits = array_values(array_filter([
       <a href="<?= e($proof_filter_url) ?>" class="btn btn-outline btn-sm" data-async-link data-async-scope="admin-main">Dossiers avec preuves</a>
       <a href="/admin/?page=map" class="btn btn-outline btn-sm" data-async-link data-async-scope="admin-main">Voir la carte</a>
       <a href="/admin/?page=dashboard" class="btn btn-primary btn-sm" data-async-link data-async-scope="admin-main">Retour cockpit</a>
+    </div>
+
+    <?php if ($purge_message): ?>
+      <div class="alert alert-success" style="margin-top:12px; padding:10px 14px; border-radius:8px; font-size:13px;">✅ <?= e($purge_message) ?></div>
+    <?php endif; ?>
+    <?php if ($purge_error): ?>
+      <div class="alert alert-danger" style="margin-top:12px; padding:10px 14px; border-radius:8px; font-size:13px;">❌ <?= e($purge_error) ?></div>
+    <?php endif; ?>
+
+    <div class="card" style="margin-top:12px; padding:14px 16px; border-radius:10px; border-left: 4px solid #dc3545;">
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <strong style="font-size:13px; color:#dc3545;">🗑 Purge en masse</strong>
+        <span class="text-muted text-small">Supprimer definitivement tous les dossiers anterieurs a une date.</span>
+      </div>
+      <form method="POST" id="purge-form" style="display:flex; align-items:center; gap:8px; margin-top:10px; flex-wrap:wrap;">
+        <input type="hidden" name="action" value="bulk_delete">
+        <input type="hidden" name="purge_token" id="purge-token" value="">
+        <label for="purge-date" style="font-size:13px; white-space:nowrap;">Anterieurs au :</label>
+        <input type="date" name="purge_before_date" id="purge-date" class="form-control" style="font-size:13px; padding:4px 8px; height:32px; max-width:160px;" required>
+        <span id="purge-count-label" class="badge badge-gray" style="font-size:12px;">—</span>
+        <a href="/admin/?page=incidents&export=csv" class="btn btn-outline btn-sm" style="font-size:12px; padding:3px 10px;">Exporter CSV d'abord</a>
+        <button type="submit" id="purge-btn" class="btn btn-sm" disabled style="background:#dc3545; color:#fff; padding:4px 14px; font-size:12px; border:none; border-radius:6px; cursor:pointer;">Purger</button>
+      </form>
+      <script>
+      (function(){
+        var dateInput = document.getElementById('purge-date');
+        var countLabel = document.getElementById('purge-count-label');
+        var tokenInput = document.getElementById('purge-token');
+        var purgeBtn = document.getElementById('purge-btn');
+        var purgeForm = document.getElementById('purge-form');
+        var debounceTimer;
+        dateInput.addEventListener('change', function(){
+          clearTimeout(debounceTimer);
+          var d = dateInput.value;
+          if (!d) { countLabel.textContent = '—'; purgeBtn.disabled = true; return; }
+          countLabel.textContent = '...';
+          debounceTimer = setTimeout(function(){
+            fetch('/admin/?page=incidents&ajax_purge_count=' + encodeURIComponent(d))
+              .then(function(r){ return r.json(); })
+              .then(function(data){
+                countLabel.textContent = data.count + ' dossier(s)';
+                tokenInput.value = data.token;
+                purgeBtn.disabled = data.count === 0;
+              })
+              .catch(function(){ countLabel.textContent = 'Erreur'; });
+          }, 300);
+        });
+        purgeForm.addEventListener('submit', function(e){
+          var count = countLabel.textContent;
+          if (!confirm('⚠️ ATTENTION\n\nVous allez supprimer DEFINITIVEMENT ' + count + ' avec toutes leurs photos, commentaires et plans d\'intervention.\n\nCette action est IRREVERSIBLE.\n\nContinuer ?')) {
+            e.preventDefault();
+          }
+        });
+      })();
+      </script>
     </div>
   </div>
   <div class="page-hero-metrics">
