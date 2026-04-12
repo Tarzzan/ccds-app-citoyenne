@@ -121,6 +121,10 @@ export interface AuthResponse {
   token: string;
   expires_in: number;
   user: User;
+  /** Présent uniquement quand la 2FA est active — pas de token dans ce cas */
+  two_factor_required?: boolean;
+  two_factor_method?: string;
+  user_id?: number;
 }
 
 export interface Category {
@@ -382,11 +386,18 @@ export const authApi = {
     request<{ updated: boolean }>('profile/password', { method: 'PUT', body: JSON.stringify(data) }),
 
   // v1.5 — 2FA
+  getStatus2FA: () =>
+    request<{ two_factor_enabled: boolean; two_factor_method: string }>('auth/2fa/status'),
+
   setup2FA: () =>
-    request<{ secret: string; qr_code_url: string; backup_codes: string[] }>('auth/2fa/setup'),
+    request<{ secret: string; qr_code_url: string; backup_codes: string[] }>('auth/2fa/setup', { method: 'POST' }),
 
   verify2FA: (data: { code: string }) =>
     request<{ enabled: boolean }>('auth/2fa/verify', { method: 'POST', body: JSON.stringify(data) }),
+
+  /** Valide le code 2FA au moment du login et retourne le JWT définitif */
+  validate2FA: (data: { user_id: number; code: string }) =>
+    request<{ token: string; expires_in: number; user: User }>('auth/2fa/validate', { method: 'POST', body: JSON.stringify(data) }, false),
 
   disable2FA: (data: { password: string }) =>
     request<{ disabled: boolean }>('auth/2fa/disable', { method: 'DELETE', body: JSON.stringify(data) }),
@@ -460,6 +471,20 @@ export const incidentsApi = {
       `incidents/${id}`,
       { method: 'PUT', body: JSON.stringify(data) }
     ),
+
+  /** Upload d'une photo vers un incident existant (UX-04) */
+  uploadPhoto: async (incidentId: number, formData: FormData) => {
+    const token   = await getToken();
+    const baseUrl = await getBaseUrl();
+    const response = await fetch(`${baseUrl}/incidents/${incidentId}/photos`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    const json = await parseApiBody<Photo>(response, `incidents/${incidentId}/photos`);
+    if (!response.ok) throw { status: response.status, ...json };
+    return json;
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

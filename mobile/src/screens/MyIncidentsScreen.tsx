@@ -18,6 +18,7 @@ import { CivicCompanionCard } from '../components/CivicCompanionCard';
 import { ScreenLoadingState } from '../components/ScreenStatePanel';
 import { AppStackParamList } from '../navigation/RootNavigator';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
+import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
 
 type NavProp = NativeStackNavigationProp<AppStackParamList>;
 
@@ -269,6 +270,7 @@ export default function MyIncidentsScreen() {
           tone={companionMessage.tone}
           title={companionMessage.title}
           body={companionMessage.body}
+          visualSource={COMPANION_VISUAL_SLOTS.dashboard.source}
           bullets={companionMessage.bullets}
         />
       </View>
@@ -477,8 +479,8 @@ export default function MyIncidentsScreen() {
       <ScreenLoadingState
         title={isStaff ? 'La file terrain se met en place' : 'Vos dossiers se remettent en place'}
         body={isStaff
-          ? 'L'agent rassemble les dossiers utiles pour vous laisser commencer par les priorites du terrain.'
-          : 'L'agent regroupe vos signalements pour vous rendre la suite plus lisible dossier par dossier.'}
+          ? "L'agent rassemble les dossiers utiles pour vous laisser commencer par les priorites du terrain."
+          : "L'agent regroupe vos signalements pour vous rendre la suite plus lisible dossier par dossier."}
       />
     );
   }

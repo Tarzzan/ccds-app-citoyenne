@@ -53,7 +53,7 @@ export const BRAND = {
     impactTitle: 'Ma part dans la vie communale',
     incidentTitle: 'Je veille sur mon quartier',
     companionOnboarding:
-      'L'agent vous accompagne pour remercier, expliquer la prochaine etape et rendre le suivi plus humain.',
+      "L'agent vous accompagne pour remercier, expliquer la prochaine etape et rendre le suivi plus humain.",
   },
 };
 

@@ -13,7 +13,7 @@ import { ServerConfig } from './ServerConfig';
 import { GENERATED_VISUAL_SOURCES } from '../theme/generatedVisualSources';
 
 const CACHE_KEY   = 'companion_skin_v1';
-const CACHE_TTL   = 3600 * 1000; // 1 heure en ms
+const CACHE_TTL   = __DEV__ ? 10 * 1000 : 3600 * 1000; // 10s en dev, 1h en prod
 
 export type CompanionSkin = {
   assetId: string;
