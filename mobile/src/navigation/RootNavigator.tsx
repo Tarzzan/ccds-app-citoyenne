@@ -30,6 +30,7 @@ import DashboardScreen      from '../screens/DashboardScreen';
 import ImpactScreen         from '../screens/ImpactScreen';
 import EventsScreen         from '../screens/EventsScreen';
 import PollsScreen          from '../screens/PollsScreen';
+import AboutScreen          from '../screens/AboutScreen';
 import TwoFactorValidateScreen from '../screens/TwoFactorValidateScreen';
 import { flushPendingNavigation, navigationRef } from './navigationRef';
 
@@ -59,6 +60,7 @@ export type AppStackParamList = {
   Impact:         undefined;
   Events:         undefined;
   Polls:          undefined;
+  About:          undefined;
   ServerConfig:   undefined;
 };
 
@@ -220,6 +222,11 @@ function AppNavigator() {
           />
         )}
       </AppStack.Screen>
+      <AppStack.Screen
+        name="About"
+        component={AboutScreen}
+        options={{ headerShown: true, headerTitle: () => <BrandHeaderTitle title="À propos" detail="Système D 3.0 × COSMOLAN" />, ...headerOpts }}
+      />
     </AppStack.Navigator>
   );
 }
