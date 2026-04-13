@@ -3,11 +3,11 @@
  * v1.1 : ajout du bouton "Moi aussi" (VoteButton)
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image,
   ActivityIndicator, Alert, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, Keyboard,
 } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
 
@@ -196,6 +196,7 @@ export default function IncidentDetailScreen() {
   const [newComment,  setNewComment]  = useState('');
   const [sending,     setSending]     = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
   const [staffStatus, setStaffStatus] = useState<StaffStatus>('acknowledged');
   const [staffNote, setStaffNote] = useState('');
   const [staffPriority, setStaffPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
@@ -350,8 +351,8 @@ export default function IncidentDetailScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
         {photos.length > 0 && (
           <View style={styles.photoSection}>
@@ -766,6 +767,7 @@ export default function IncidentDetailScreen() {
               onChangeText={setNewComment}
               multiline
               maxLength={2000}
+              onFocus={() => { setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300); }}
             />
             <TouchableOpacity
               style={[styles.sendBtn, (!newComment.trim() || sending) && { opacity: 0.5 }]}
