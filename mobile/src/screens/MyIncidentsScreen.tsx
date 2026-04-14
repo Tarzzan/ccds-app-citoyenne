@@ -264,16 +264,7 @@ export default function MyIncidentsScreen() {
         </View>
       </View>
 
-      <View style={styles.companionWrap}>
-        <CivicCompanionCard
-          compact
-          tone={companionMessage.tone}
-          title={companionMessage.title}
-          body={companionMessage.body}
-          visualSource={COMPANION_VISUAL_SLOTS.dashboard.source}
-          bullets={companionMessage.bullets}
-        />
-      </View>
+
 
       <View style={styles.userHeader}>
         <View>

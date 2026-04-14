@@ -186,18 +186,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.companionWrap}>
-          <CivicCompanionCard
-            compact
-            tone="status"
-            title={tabIntro.title}
-            body={tabIntro.body}
-            bullets={[
-              activeTab === 'profile' ? 'coordonnees faciles a tenir a jour' : activeTab === 'password' ? 'acces mieux protege' : 'alertes plus utiles au quotidien',
-              activeTab === 'notifications' ? 'moins de bruit, plus de repere' : 'une relation plus lisible avec la commune',
-            ]}
-          />
-        </View>
+
 
         {/* Onglets */}
         <View style={styles.tabs}>

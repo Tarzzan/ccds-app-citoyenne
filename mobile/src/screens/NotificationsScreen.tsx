@@ -267,16 +267,7 @@ export const NotificationsScreen: React.FC = () => {
         </View>
       </View>
 
-      <View style={styles.companionWrap}>
-        <CivicCompanionCard
-          tone={companion.tone}
-          title={companion.title}
-          body={companion.body}
-          visualSource={COMPANION_VISUAL_SLOTS.notifications.source}
-          bullets={companion.bullets}
-          compact
-        />
-      </View>
+
 
       <FlatList
         data={notifications}
