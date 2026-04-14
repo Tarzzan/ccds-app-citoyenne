@@ -27,6 +27,7 @@ import NotificationsScreen  from '../screens/NotificationsScreen';
 import EditIncidentScreen   from '../screens/EditIncidentScreen';
 import ProfileScreen        from '../screens/ProfileScreen';
 import DashboardScreen      from '../screens/DashboardScreen';
+import MoreScreen           from '../screens/MoreScreen';
 import ImpactScreen         from '../screens/ImpactScreen';
 import EventsScreen         from '../screens/EventsScreen';
 import PollsScreen          from '../screens/PollsScreen';
@@ -48,7 +49,7 @@ export type AppTabParamList = {
   Map:           undefined;
   MyIncidents:   undefined;
   Notifications: undefined;
-  Dashboard:     undefined;
+  More:          undefined;
 };
 
 export type AppStackParamList = {
@@ -58,6 +59,7 @@ export type AppStackParamList = {
   EditIncident:   { id: number };
   Profile:        undefined;
   Impact:         undefined;
+  Dashboard:      undefined;
   Events:         undefined;
   Polls:          undefined;
   About:          undefined;
@@ -126,9 +128,9 @@ function AppTabs() {
         options={{ title: 'Alertes', tabBarIcon: ({ focused }) => <TabIcon source={require('../../assets/nav-icons/notifications.png')} focused={focused} /> }}
       />
       <Tab.Screen
-        name="Dashboard"
-        component={DashboardScreen}
-        options={{ title: 'Bilan', tabBarIcon: ({ focused }) => <TabIcon source={require('../../assets/nav-icons/dashboard.png')} focused={focused} /> }}
+        name="More"
+        component={MoreScreen}
+        options={{ title: 'Plus', tabBarIcon: ({ focused }) => <TabIcon source={require('../../assets/nav-icons/dashboard.png')} focused={focused} /> }}
       />
     </Tab.Navigator>
   );
@@ -199,6 +201,11 @@ function AppNavigator() {
         name="Impact"
         component={ImpactScreen}
         options={{ headerShown: true, headerTitle: () => <BrandHeaderTitle title="Mon bilan citoyen" detail="Impact visible" />, ...headerOpts }}
+      />
+      <AppStack.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{ headerShown: true, headerTitle: () => <BrandHeaderTitle title="Tableau de bord" detail="Statistiques et suivi" />, ...headerOpts }}
       />
       <AppStack.Screen
         name="Events"
