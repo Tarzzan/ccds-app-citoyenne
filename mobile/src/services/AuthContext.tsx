@@ -4,6 +4,7 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { Platform } from 'react-native';
 import { authApi, getToken, getUser, saveToken, saveUser, removeToken, removeUser, User } from './api';
 import { loadCompanionSkin } from './CompanionService';
 
@@ -18,12 +19,13 @@ interface AuthState {
 }
 
 interface AuthContextType extends AuthState {
-  isStaff:        boolean;
-  login:          (email: string, password: string) => Promise<void>;
-  loginWithCode:  (userId: number, code: string) => Promise<void>;
-  register:       (data: { email: string; password: string; full_name: string }) => Promise<void>;
+  isStaff:           boolean;
+  login:             (email: string, password: string) => Promise<void>;
+  loginWithCode:     (userId: number, code: string) => Promise<void>;
+  loginWithGoogle:   (idToken: string) => Promise<void>;
+  register:          (data: { email: string; password: string; full_name: string }) => Promise<void>;
   updateCurrentUser: (patch: Partial<User>) => Promise<void>;
-  logout:         () => Promise<void>;
+  logout:            () => Promise<void>;
 }
 
 // Erreur structurée lancée quand la 2FA est requise
@@ -93,6 +95,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loginWithGoogle = async (idToken: string) => {
+    const res = await authApi.googleLogin({ id_token: idToken, platform: Platform.OS });
+    if (res.data?.token) {
+      await _applySession(res.data.token, res.data.user);
+    }
+  };
+
   const register = async (data: { email: string; password: string; full_name: string }) => {
     const res = await authApi.register(data);
     if (res.data) {
@@ -134,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isStaff: state.user?.role === 'admin' || state.user?.role === 'agent',
         login,
         loginWithCode,
+        loginWithGoogle,
         register,
         updateCurrentUser,
         logout,

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Tableau de bord — Ma Commune Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./admin/assets/css/admin.css">
+  <style>
+    :root {
+      --primary: #174b3a;
+      --secondary: #2d6f86;
+      --accent: #d2a13a;
+    }
+  </style>
+</head>
+<body class="admin-shell">
+<div class="layout">
+  <aside class="sidebar" id="appSidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon text-center" style="display:flex;align-items:center;justify-content:center;background:var(--white);color:var(--primary);font-weight:900;font-size:24px;border-radius:14px;width:48px;height:48px;">M</div>
+      <div>
+        <div class="brand-name">Ma Commune</div>
+        <div class="brand-sub">Administration territoriale</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Navigation</div>
+      <a href="#" class="nav-item active"><span class="nav-icon">📊</span><span>Tableau de bord</span></a>
+      <a href="#" class="nav-item"><span class="nav-icon">📋</span><span>Signalements</span><span class="nav-badge">3</span></a>
+      <a href="#" class="nav-item"><span class="nav-icon">🗺️</span><span>Carte</span></a>
+      <div class="nav-section-title" style="margin-top:8px">Gestion</div>
+      <a href="#" class="nav-item"><span class="nav-icon">👥</span><span>Utilisateurs</span></a>
+      <a href="#" class="nav-item"><span class="nav-icon">🏷️</span><span>Catégories</span></a>
+    </nav>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-heading">
+          <div class="topbar-kicker">Service public local</div>
+          <h1 class="topbar-title">Tableau de bord</h1>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <input type="text" class="quick-search-input" placeholder="Recherche rapide...">
+      </div>
+    </header>
+    <div class="page-content">
+      <div class="page-hero">
+        <div class="page-hero-copy">
+          <div class="page-hero-kicker">Pilotage territorial</div>
+          <h2 class="page-hero-title">Coordonner la réponse publique locale</h2>
+          <p class="page-hero-text">Ce tableau de bord rassemble les besoins remontés du terrain afin d'aider les agents à arbitrer, traiter et rendre visible l'action communale.</p>
+        </div>
+        <div class="page-hero-metrics">
+          <div class="hero-chip"><span class="hero-chip-value">42</span><span class="hero-chip-label">signalements sur 7 jours</span></div>
+          <div class="hero-chip"><span class="hero-chip-value">8</span><span class="hero-chip-label">à qualifier rapidement</span></div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon canopy">📋</div><div><div class="stat-value">124</div><div class="stat-label">Signalements enregistrés</div></div></div>
+        <div class="stat-card"><div class="stat-icon awara">🕐</div><div><div class="stat-value">8</div><div class="stat-label">À qualifier</div></div></div>
+        <div class="stat-card"><div class="stat-icon river">⚙️</div><div><div class="stat-value">15</div><div class="stat-label">En traitement</div></div></div>
+        <div class="stat-card"><div class="stat-icon leaf">✅</div><div><div class="stat-value">92</div><div class="stat-label">Résolus</div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">🕐 Derniers signalements</span></div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Référence</th><th>Description</th><th>Statut</th><th>Date</th></tr></thead>
+            <tbody>
+              <tr><td><code>MC-2023-01</code></td><td>Nid de poule rue Molière</td><td><span class="badge badge-yellow">En cours</span></td><td>Aujourd'hui</td></tr>
+              <tr><td><code>MC-2023-02</code></td><td>Éclairage défaillant</td><td><span class="badge badge-gray">Soumis</span></td><td>Hier</td></tr>
+              <tr><td><code>MC-2023-03</code></td><td>Dépôt sauvage</td><td><span class="badge badge-green">Résolu</span></td><td>12/10/2023</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

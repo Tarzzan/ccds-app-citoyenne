@@ -194,21 +194,133 @@ class AuthController extends BaseController
         if (!$this->isGoogleAuthConfigured()) {
             $this->error(
                 'La connexion Google n est pas encore configurée sur ce serveur.',
-                503,
-                [
-                    'google_auth' => [
-                        'GOOGLE_AUTH_ANDROID_CLIENT_ID',
-                        'GOOGLE_AUTH_IOS_CLIENT_ID',
-                        'GOOGLE_AUTH_WEB_CLIENT_ID',
-                    ],
-                ]
+                503
             );
         }
 
-        $this->error(
-            'La vérification serveur Google n est pas encore activée sur cette version.',
-            501
-        );
+        // ── Vérifier le token Google via tokeninfo ──────────────────
+        $idToken = trim((string)$body['id_token']);
+        $verifyUrl = 'https://oauth2.googleapis.com/tokeninfo?id_token=' . urlencode($idToken);
+
+        $ch = curl_init($verifyUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 10,
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200 || !$response) {
+            $this->error('Token Google invalide ou expiré.', 401);
+        }
+
+        $tokenData = json_decode($response, true);
+        if (!$tokenData || empty($tokenData['sub']) || empty($tokenData['email'])) {
+            $this->error('Données du token Google incomplètes.', 401);
+        }
+
+        // ── Vérifier l'audience (Client ID) ─────────────────────────
+        $expectedClientId = match ($platform) {
+            'android' => trim((string)getenv('GOOGLE_AUTH_ANDROID_CLIENT_ID')),
+            'ios'     => trim((string)getenv('GOOGLE_AUTH_IOS_CLIENT_ID')),
+            default   => '',
+        };
+        // Accept either the platform-specific or the web client ID
+        $webClientId = trim((string)getenv('GOOGLE_AUTH_WEB_CLIENT_ID'));
+        $aud = $tokenData['aud'] ?? '';
+
+        if ($aud !== $expectedClientId && $aud !== $webClientId) {
+            $this->error('Audience du token Google non reconnue.', 401);
+        }
+
+        // ── Lookup / création utilisateur ───────────────────────────
+        $googleSub   = (string)$tokenData['sub'];
+        $googleEmail = strtolower(trim((string)$tokenData['email']));
+        $googleName  = trim((string)($tokenData['name'] ?? $tokenData['email']));
+        $googlePic   = trim((string)($tokenData['picture'] ?? ''));
+
+        $passwordColumn = $this->getPasswordColumn();
+
+        // 1) Chercher par auth_provider_subject (utilisateur Google existant)
+        $user = null;
+        if ($this->dbHasColumn('users', 'auth_provider_subject')) {
+            $stmt = $this->db->prepare(
+                'SELECT id, email, full_name, role, is_active FROM users WHERE auth_provider_subject = ? LIMIT 1'
+            );
+            $stmt->execute([$googleSub]);
+            $user = $stmt->fetch();
+        }
+
+        // 2) Sinon chercher par email (lier un compte local existant)
+        if (!$user) {
+            $stmt = $this->db->prepare(
+                'SELECT id, email, full_name, role, is_active FROM users WHERE email = ? LIMIT 1'
+            );
+            $stmt->execute([$googleEmail]);
+            $user = $stmt->fetch();
+
+            // Lier le compte existant à Google
+            if ($user && $this->dbHasColumn('users', 'auth_provider')) {
+                $updateStmt = $this->db->prepare(
+                    'UPDATE users SET auth_provider = ?, auth_provider_subject = ?, avatar_url = COALESCE(avatar_url, ?) WHERE id = ?'
+                );
+                $updateStmt->execute(['google', $googleSub, $googlePic ?: null, $user['id']]);
+            }
+        }
+
+        // 3) Créer un nouvel utilisateur
+        if (!$user) {
+            $hasAuthProvider = $this->dbHasColumn('users', 'auth_provider');
+            $randomPassword = password_hash(bin2hex(random_bytes(32)), PASSWORD_BCRYPT);
+
+            if ($hasAuthProvider) {
+                $stmt = $this->db->prepare(
+                    "INSERT INTO users (email, {$passwordColumn}, full_name, role, auth_provider, auth_provider_subject, avatar_url)
+                     VALUES (?, ?, ?, 'citizen', 'google', ?, ?)"
+                );
+                $stmt->execute([$googleEmail, $randomPassword, $googleName, $googleSub, $googlePic ?: null]);
+            } else {
+                $stmt = $this->db->prepare(
+                    "INSERT INTO users (email, {$passwordColumn}, full_name, role) VALUES (?, ?, ?, 'citizen')"
+                );
+                $stmt->execute([$googleEmail, $randomPassword, $googleName]);
+            }
+
+            $userId = (int)$this->db->lastInsertId();
+            $user = [
+                'id'        => $userId,
+                'email'     => $googleEmail,
+                'full_name' => $googleName,
+                'role'      => 'citizen',
+                'is_active' => 1,
+            ];
+        }
+
+        // ── Vérifier que le compte est actif ────────────────────────
+        if (!(bool)($user['is_active'] ?? true)) {
+            $this->error("Ce compte a été désactivé. Contactez l'administration.", 403);
+        }
+
+        // ── Générer le JWT ──────────────────────────────────────────
+        $token = jwt_encode([
+            'sub'   => (int)$user['id'],
+            'role'  => $user['role'],
+            'email' => $user['email'],
+        ]);
+
+        $this->success([
+            'token'      => $token,
+            'expires_in' => JWT_EXPIRY,
+            'user'       => [
+                'id'        => (int)$user['id'],
+                'email'     => $user['email'],
+                'full_name' => $user['full_name'],
+                'role'      => $user['role'],
+                'avatar_url'=> $googlePic ?: null,
+            ],
+        ], 200, 'Connexion Google réussie.');
     }
 
     // ----------------------------------------------------------------

@@ -15,6 +15,7 @@ import { Button, Input, COLORS } from '../components/ui';
 import { AuthStackParamList } from '../navigation/RootNavigator';
 import { BRAND, BRAND_SHADOW } from '../theme/brand';
 import { COMPANION_VISUAL_SLOTS } from '../theme/companionVisualSlots';
+import { useGoogleAuth } from '../hooks/useGoogleAuth';
 
 type Props = { navigation: NativeStackNavigationProp<AuthStackParamList, 'Login'> };
 
@@ -24,6 +25,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
   const [errors,   setErrors]   = useState<Record<string, string>>({});
+  const google = useGoogleAuth();
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -130,6 +132,25 @@ export default function LoginScreen({ navigation }: Props) {
             loading={loading}
             style={{ marginTop: 8 }}
           />
+
+          {google.isConfigured && (
+            <>
+              <View style={styles.separator}>
+                <View style={styles.separatorLine} />
+                <Text style={styles.separatorText}>ou</Text>
+                <View style={styles.separatorLine} />
+              </View>
+
+              <TouchableOpacity
+                style={styles.googleBtn}
+                onPress={() => google.signIn()}
+                disabled={!google.isReady}
+              >
+                <Text style={styles.googleIcon}>G</Text>
+                <Text style={styles.googleBtnText}>Se connecter avec Google</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           <TouchableOpacity
             style={styles.linkRow}
@@ -291,5 +312,42 @@ const styles = StyleSheet.create({
   link: {
     color: COLORS.primary,
     fontWeight: '600',
+  },
+  separator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#DDD',
+  },
+  separatorText: {
+    marginHorizontal: 12,
+    fontSize: 13,
+    color: '#999',
+    fontWeight: '600',
+  },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF',
+    borderWidth: 1.5,
+    borderColor: '#DDD',
+    borderRadius: 14,
+    padding: 14,
+    gap: 10,
+  },
+  googleIcon: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#4285F4',
+  },
+  googleBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#333',
   },
 });

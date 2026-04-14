@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signalements — Ma Commune Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./admin/assets/css/admin.css">
+  <style>
+    :root { --primary: #174b3a; --secondary: #2d6f86; --accent: #d2a13a; }
+  </style>
+</head>
+<body class="admin-shell">
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon text-center" style="display:flex;align-items:center;justify-content:center;background:var(--white);color:var(--primary);font-weight:900;font-size:24px;border-radius:14px;width:48px;height:48px;">M</div>
+      <div><div class="brand-name">Ma Commune</div><div class="brand-sub">Administration territoriale</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Navigation</div>
+      <a href="#" class="nav-item"><span class="nav-icon">📊</span><span>Tableau de bord</span></a>
+      <a href="#" class="nav-item active"><span class="nav-icon">📋</span><span>Signalements</span><span class="nav-badge">3</span></a>
+      <a href="#" class="nav-item"><span class="nav-icon">🗺️</span><span>Carte</span></a>
+      <div class="nav-section-title" style="margin-top:8px">Gestion</div>
+      <a href="#" class="nav-item"><span class="nav-icon">👥</span><span>Utilisateurs</span></a>
+      <a href="#" class="nav-item"><span class="nav-icon">🏷️</span><span>Catégories</span></a>
+    </nav>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-heading">
+          <div class="topbar-kicker">Service public local</div>
+          <h1 class="topbar-title">Signalements</h1>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <input type="text" class="quick-search-input" placeholder="Recherche rapide...">
+      </div>
+    </header>
+    <div class="page-content">
+      <div class="page-hero">
+        <div class="page-hero-copy">
+          <div class="page-hero-kicker">File de traitement</div>
+          <h2 class="page-hero-title">Lire vite la pression terrain et ouvrir les bons dossiers.</h2>
+          <p class="page-hero-text">Cette vue doit aider a filtrer le bruit, faire ressortir les urgences et donner un point d entree direct vers l action utile.</p>
+        </div>
+        <div class="page-hero-metrics">
+          <div class="hero-chip"><span class="hero-chip-value">468</span><span class="hero-chip-label">dossiers visibles</span></div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:16px 24px;margin-bottom:16px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <input type="text" class="form-control" placeholder="🔍 Réf, titre, description..." style="width:250px;">
+          <select class="form-control"><option>Tous les statuts</option></select>
+          <select class="form-control"><option>Toutes les catégories</option></select>
+          <select class="form-control" style="width:160px"><option>Toutes priorités</option></select>
+          <button type="button" class="btn btn-primary">Filtrer</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">468 signalements</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>Date ↕</th><th>Référence</th><th>Titre / Description</th><th>Catégorie</th><th>Service</th><th>Statut</th><th>Priorité</th><th>👍 ↕</th><th>Citoyen</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="text-muted text-small">Aujourd'hui</td>
+                <td><code style="font-size:11px">MC-2023-145</code></td>
+                <td><div style="font-weight:600;font-size:13px;">Branche d'arbre sur la route</div><div class="text-muted text-small truncate">Blocage total de la voie après la tempête.</div></td>
+                <td><div style="display:flex;align-items:center;gap:10px;"><span class="badge" style="background:rgba(239,68,68,0.1);color:#ef4444">Voirie</span></div></td>
+                <td class="text-muted text-small">Services Techniques</td>
+                <td><span class="badge badge-gray">Soumis</span></td>
+                <td><span class="badge badge-red">Critique</span></td>
+                <td class="text-center"><span style="color:#f59e0b;font-weight:700">👍 12</span></td>
+                <td><div style="font-size:13px">Jean Dupont</div><div class="text-muted text-small">citoyen@test.fr</div></td>
+                <td><button class="btn btn-primary btn-sm">Traiter</button></td>
+              </tr>
+              <tr>
+                <td class="text-muted text-small">Hier</td>
+                <td><code style="font-size:11px">MC-2023-142</code></td>
+                <td><div style="font-weight:600;font-size:13px;">Lampadaire cassé</div><div class="text-muted text-small truncate">Rue des oliviers, le poteau ne s'allume plus.</div></td>
+                <td><div style="display:flex;align-items:center;gap:10px;"><span class="badge" style="background:rgba(245,158,11,0.1);color:#f59e0b">Éclairage</span></div></td>
+                <td class="text-muted text-small">Électricité Municipale</td>
+                <td><span class="badge badge-yellow">En cours</span></td>
+                <td><span class="badge badge-blue">Normale</span></td>
+                <td class="text-center"><span class="text-muted">—</span></td>
+                <td><div style="font-size:13px">Marie Martin</div><div class="text-muted text-small">marie.m@test.fr</div></td>
+                <td><button class="btn btn-primary btn-sm">Traiter</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

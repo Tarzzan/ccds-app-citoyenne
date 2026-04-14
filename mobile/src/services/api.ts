@@ -410,6 +410,10 @@ export const authApi = {
   searchUsers: (query: string) =>
     request<User[]>(`users/search?q=${encodeURIComponent(query)}`)
       .then(r => r.data ?? []),
+
+  // v1.7 — Google Auth
+  googleLogin: (data: { id_token: string; platform: string }) =>
+    request<AuthResponse>('auth/google', { method: 'POST', body: JSON.stringify(data) }, false),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

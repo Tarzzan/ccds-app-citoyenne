@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Catégories — Ma Commune Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./admin/assets/css/admin.css">
+  <style>
+    :root { --primary: #174b3a; --secondary: #2d6f86; --accent: #d2a13a; }
+  </style>
+</head>
+<body class="admin-shell">
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon text-center" style="display:flex;align-items:center;justify-content:center;background:var(--white);color:var(--primary);font-weight:900;font-size:24px;border-radius:14px;width:48px;height:48px;">M</div>
+      <div><div class="brand-name">Ma Commune</div><div class="brand-sub">Administration territoriale</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Navigation</div>
+      <a href="#" class="nav-item"><span class="nav-icon">📊</span><span>Tableau de bord</span></a>
+      <a href="#" class="nav-item"><span class="nav-icon">📋</span><span>Signalements</span></a>
+      <a href="#" class="nav-item"><span class="nav-icon">🗺️</span><span>Carte</span></a>
+      <div class="nav-section-title" style="margin-top:8px">Gestion</div>
+      <a href="#" class="nav-item"><span class="nav-icon">👥</span><span>Utilisateurs</span></a>
+      <a href="#" class="nav-item active"><span class="nav-icon">🏷️</span><span>Catégories</span></a>
+    </nav>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-heading">
+          <div class="topbar-title">Gestion des Catégories</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary">➕ Nouvelle catégorie</button>
+      </div>
+    </header>
+    <div class="page-content">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Catégories actives (Marque Blanche)</span></div>
+        <div class="category-preset-grid">
+          <div class="category-preset is-selected">
+            <div class="category-preset-top">
+              <div style="display:flex;gap:10px;align-items:center;">
+                <span class="category-mark category-mark--md" style="--category-accent:#ef4444; background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.2)">
+                  <span style="font-size:24px;">🚧</span>
+                </span>
+                <div>
+                  <div class="category-preset-title">Voirie & Espace public</div>
+                  <div class="category-preset-text">Nids de poule, trottoirs endommagés...</div>
+                </div>
+              </div>
+              <span class="badge badge-green">Actif</span>
+            </div>
+            <div class="category-scene-preview is-ready" style="display:grid;">
+              <div style="background:#f4f1e7;border-radius:12px;display:flex;justify-content:center;align-items:center;height:80px;font-size:32px;">🛣️</div>
+              <div class="category-scene-preview-copy">
+                <strong>Aperçu dynamique</strong>
+                <span>Prévisualisation ajustée selon les teintes de la commune.</span>
+              </div>
+            </div>
+          </div>
+          <div class="category-preset">
+            <div class="category-preset-top">
+              <div style="display:flex;gap:10px;align-items:center;">
+                <span class="category-mark category-mark--md" style="--category-accent:#f59e0b; background:rgba(245,158,11,0.1); border-color:rgba(245,158,11,0.2)">
+                  <span style="font-size:24px;">💡</span>
+                </span>
+                <div>
+                  <div class="category-preset-title">Éclairage public</div>
+                  <div class="category-preset-text">Lampadaires en panne, câbles...</div>
+                </div>
+              </div>
+              <span class="badge badge-gray">Inactif</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

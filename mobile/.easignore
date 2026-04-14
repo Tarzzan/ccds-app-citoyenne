@@ -1,0 +1,32 @@
+# Back-office et backend (inutiles pour le build mobile)
+admin/
+backend/
+.github/
+.tools/
+.agents/
+storage/
+
+# Fichiers à la racine du repo (pas pour le mobile)
+*.php
+*.pdf
+*.html
+*.sqlite
+Presentation_Backoffice.pdf
+mock_*.html
+tmp_admin_fix_stage/
+
+# Node modules (recréés par EAS)
+node_modules/
+
+# Expo local cache
+.expo/
+
+# Storybook & tests e2e
+.storybook/
+e2e/
+
+# Git
+.git/
+
+# Gros assets non utilisés
+mobile/assets/generated-visuals/terrain/

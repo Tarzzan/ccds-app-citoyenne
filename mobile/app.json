@@ -20,10 +20,10 @@
         "NSLocationWhenInUseUsageDescription": "Ma Commune utilise votre position pour localiser précisément les anomalies que vous signalez.",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "3"
+      "buildNumber": "4"
     },
     "android": {
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f4c2a"
@@ -66,7 +66,8 @@
           "locationAlwaysAndWhenInUsePermission": "Ma Commune utilise votre position pour localiser vos signalements."
         }
       ],
-      "./plugins/withKotlinVersion.js"
+      "./plugins/withKotlinVersion.js",
+      "expo-web-browser"
     ],
     "scheme": "macommune",
     "extra": {

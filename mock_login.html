@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Connexion — Ma Commune Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./admin/assets/css/admin.css">
+  <style>
+    :root {
+      --primary: #174b3a;
+      --secondary: #2d6f86;
+      --accent: #d2a13a;
+    }
+  </style>
+</head>
+<body>
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-kicker">Administration communale</div>
+    <div class="login-logo">
+      <div class="logo-icon text-center" style="display:flex;align-items:center;justify-content:center;background:var(--white);color:var(--primary);font-weight:900;font-size:36px;border-radius:24px;width:88px;height:88px;margin:0 auto 10px;box-shadow:0 16px 34px rgba(14,49,39,.18);">M</div>
+      <div class="logo-name">Ma Commune</div>
+      <div class="logo-sub">Votre commune — Administration</div>
+    </div>
+    <div class="login-intro">Le back-office permet de suivre, prioriser et documenter les réponses apportées aux signalements citoyens.</div>
+    <form>
+      <div class="form-group"><label class="form-label">Adresse email</label><input type="email" class="form-control" value="admin@mairie.fr"></div>
+      <div class="form-group"><label class="form-label">Mot de passe</label><input type="password" class="form-control" value="••••••••"></div>
+      <button type="button" class="btn btn-primary w-100" style="justify-content:center;padding:12px;width:100%;margin-top:10px;">🔐 Se connecter</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>
