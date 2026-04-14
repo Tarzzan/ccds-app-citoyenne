@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, Image,
+  ScrollView, Alert, Image, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import * as ExpoClipboard from 'expo-clipboard';
 import { authApi } from '../services/api';
@@ -122,8 +122,8 @@ export default function TwoFactorScreen() {
   if (loading) {
     return (
       <ScreenLoadingState
-        title="La securite de votre compte se prepare"
-        body="L'agent verifie d abord l etat actuel de la double authentification avant de vous proposer la bonne suite."
+        title="Vérification en cours…"
+        body="L'agent vérifie l'état de la double authentification."
       />
     );
   }
@@ -131,7 +131,8 @@ export default function TwoFactorScreen() {
   // ── Étape 1 : Statut actuel ──────────────────────────────────────────────
   if (step === 'status') {
     return (
-      <ScrollView style={styles.container}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <Text style={styles.shield}>🔐</Text>
           <Text style={styles.title}>Double authentification</Text>
@@ -143,9 +144,9 @@ export default function TwoFactorScreen() {
         <View style={styles.stageWrap}>
           <CivicCompanionStage
             eyebrow="Agent · Protection du compte"
-            title="La securite doit rester simple a comprendre."
-            body="Activez une verification supplementaire pour proteger vos dossiers, vos echanges et vos informations personnelles sans alourdir le reste de l experience."
-            aside="Vous pourrez revenir ici a tout moment pour verifier ou ajuster ce niveau de protection."
+            title="Protégez votre compte simplement."
+            body="Activez une vérification supplémentaire pour sécuriser vos dossiers et vos échanges."
+            aside=""
           />
         </View>
 
@@ -176,6 +177,7 @@ export default function TwoFactorScreen() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </ScrollView>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -186,8 +188,8 @@ export default function TwoFactorScreen() {
         <View style={styles.stageWrap}>
           <CivicCompanionStage
             eyebrow="Agent · Mise en place"
-            title="Associez une application d authentification en quelques etapes."
-            body="Scannez le QR code, saisissez le code temporaire, puis gardez vos codes de secours dans un endroit sur."
+            title="Associez une application d'authentification."
+            body="Scannez le QR code et saisissez le code temporaire."
           />
         </View>
         <Text style={styles.title}>Configurer l'application</Text>
@@ -219,7 +221,8 @@ export default function TwoFactorScreen() {
   // ── Étape 3 : Vérification du code ──────────────────────────────────────
   if (step === 'verify') {
     return (
-      <ScrollView style={styles.container}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Vérifier le code</Text>
         <Text style={styles.instructions}>
           Entrez le code à 6 chiffres affiché dans votre application d'authentification.
@@ -241,6 +244,7 @@ export default function TwoFactorScreen() {
           <Text style={styles.primaryBtnText}>Vérifier et activer</Text>
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
     );
   }
 

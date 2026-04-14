@@ -80,7 +80,7 @@ export default function TwoFactorValidateScreen({ navigation, route }: Props) {
             tone="guide"
             title={`${BRAND.companion.name} vérifie votre identité`}
             body={isTotp
-              ? 'Ouvrez Google Authenticator ou Authy et copiez le code aktuel. Il change toutes les 30 secondes.'
+              ? 'Ouvrez votre app d\'authentification et copiez le code actuel.'
               : 'Vérifiez votre boite mail. Le code expire dans 10 minutes.'}
           />
         </View>

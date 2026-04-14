@@ -250,14 +250,14 @@ export default function ImpactScreen() {
       <View style={styles.companionWrap}>
         <CivicCompanionCard
           tone="status"
-          title={`${BRAND.companion.name} lit votre impact avec vous`}
+          title={`${BRAND.companion.name} analyse votre impact`}
           body={companionBody}
           visualSource={COMPANION_VISUAL_SLOTS.impact.source}
           bullets={[
-            'prioriser les dossiers encore ouverts',
-            'verifier les derniers commentaires et statuts',
+            'dossiers encore ouverts',
+            'derniers statuts et commentaires',
           ]}
-          ctaLabel="Ouvrir mes signalements"
+          ctaLabel="Mes signalements"
           onPress={() => navigation.navigate('Tabs')}
         />
       </View>
@@ -267,7 +267,7 @@ export default function ImpactScreen() {
         <ScreenFeedbackState
           icon="🗂️"
           title="Aucun dossier pour le moment"
-          body="Vos prochains signalements apparaitront ici avec leur statut, leur reference et une lecture plus concrete du suivi."
+          body="Vos signalements apparaîtront ici avec leur statut et leur suivi."
         />
       ) : (
         <View style={styles.incidentList}>
