@@ -36,6 +36,42 @@ $f_dir      = ($_GET['dir'] ?? 'DESC') === 'ASC' ? 'ASC' : 'DESC';
 $export_csv = isset($_GET['export']) && $_GET['export'] === 'csv';
 $purge_message = '';
 $purge_error   = '';
+$quick_delete_msg = '';
+$quick_delete_err = '';
+
+// --- Suppression rapide unitaire (POST) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'quick_delete') {
+    $del_id = (int)($_POST['incident_id'] ?? 0);
+    $del_token = trim($_POST['delete_token'] ?? '');
+    $expected_token = md5('delete_' . $del_id . '_' . ($admin['id'] ?? 0));
+
+    if ($del_id <= 0) {
+        $quick_delete_err = 'ID de signalement invalide.';
+    } elseif ($del_token !== $expected_token) {
+        $quick_delete_err = 'Jeton de securite invalide.';
+    } else {
+        try {
+            $db->beginTransaction();
+            $db->prepare('DELETE FROM photos WHERE incident_id = ?')->execute([$del_id]);
+            $db->prepare('DELETE FROM comments WHERE incident_id = ?')->execute([$del_id]);
+            if (admin_db_has_table($db, 'votes')) {
+                $db->prepare('DELETE FROM votes WHERE incident_id = ?')->execute([$del_id]);
+            }
+            if (admin_db_has_table($db, 'status_history')) {
+                $db->prepare('DELETE FROM status_history WHERE incident_id = ?')->execute([$del_id]);
+            }
+            if (admin_db_has_table($db, 'intervention_plans')) {
+                $db->prepare('DELETE FROM intervention_plans WHERE incident_id = ?')->execute([$del_id]);
+            }
+            $db->prepare('DELETE FROM incidents WHERE id = ?')->execute([$del_id]);
+            $db->commit();
+            $quick_delete_msg = 'Signalement #' . $del_id . ' supprime definitivement.';
+        } catch (Exception $e) {
+            if ($db->inTransaction()) { $db->rollBack(); }
+            $quick_delete_err = 'Erreur : ' . $e->getMessage();
+        }
+    }
+}
 
 // --- Purge en masse (POST) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'bulk_delete') {
@@ -546,6 +582,25 @@ $incidentsHeroPortraits = array_values(array_filter([
     <?php if ($purge_error): ?>
       <div class="alert alert-danger" style="margin-top:12px; padding:10px 14px; border-radius:8px; font-size:13px;">❌ <?= e($purge_error) ?></div>
     <?php endif; ?>
+    <?php if ($quick_delete_msg): ?>
+      <div class="alert alert-success" style="margin-top:12px; padding:10px 14px; border-radius:8px; font-size:13px;">✅ <?= e($quick_delete_msg) ?></div>
+    <?php endif; ?>
+    <?php if ($quick_delete_err): ?>
+      <div class="alert alert-danger" style="margin-top:12px; padding:10px 14px; border-radius:8px; font-size:13px;">❌ <?= e($quick_delete_err) ?></div>
+    <?php endif; ?>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('.js-quick-delete-form').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+          var id = form.querySelector('[name="incident_id"]').value;
+          if (!confirm('Supprimer définitivement le signalement #' + id + ' ?\n\nCette action est irréversible.')) {
+            e.preventDefault();
+          }
+        });
+      });
+    });
+    </script>
 
     <div class="card" style="margin-top:12px; padding:14px 16px; border-radius:10px; border-left: 4px solid #dc3545;">
       <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
@@ -963,7 +1018,17 @@ $incidentsHeroPortraits = array_values(array_filter([
             </div>
           </td>
           <td>
-            <a href="/admin/?page=incident_detail&id=<?= $inc['id'] ?>" class="btn btn-primary btn-sm" data-async-link data-async-scope="admin-main">Traiter</a>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <a href="/admin/?page=incident_detail&id=<?= $inc['id'] ?>" class="btn btn-primary btn-sm" data-async-link data-async-scope="admin-main">Traiter</a>
+              <form method="POST" class="js-quick-delete-form" style="margin:0;">
+                <input type="hidden" name="action" value="quick_delete">
+                <input type="hidden" name="incident_id" value="<?= (int)$inc['id'] ?>">
+                <input type="hidden" name="delete_token" value="<?= md5('delete_' . (int)$inc['id'] . '_' . ($admin['id'] ?? 0)) ?>">
+                <button type="submit" class="btn btn-danger btn-sm btn-quick-delete" title="Supprimer ce signalement">
+                  🗑
+                </button>
+              </form>
+            </div>
           </td>
         </tr>
         <?php endforeach; ?>
