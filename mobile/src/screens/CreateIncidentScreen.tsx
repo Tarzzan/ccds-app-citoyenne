@@ -244,12 +244,11 @@ export default function CreateIncidentScreen() {
         <View style={styles.companionCardWrap}>
           <CivicCompanionCard
             tone="guide"
-            title={`${BRAND.companion.name} vous aide a faire un signalement utile`}
-            body={`Jusqu'à ${MAX_PHOTOS} photos lisibles, un lieu exact et une description courte mais concrete font toute la difference.`}
+            title={`${BRAND.companion.name} vous aide`}
+            body={`${MAX_PHOTOS} photos, un lieu précis et une description courte suffisent.`}
             bullets={[
-              'montrer clairement le probleme sur les photos',
-              'verifier la position avant envoi',
-              'decrire ce qui gene le plus le terrain',
+              'photos claires du problème',
+              'position vérifiée avant envoi',
             ]}
           />
         </View>
@@ -267,7 +266,7 @@ export default function CreateIncidentScreen() {
           <Text style={styles.readinessEyebrow}>Avant envoi</Text>
           <Text style={styles.readinessTitle}>{readinessCount}/4 reperes utiles deja prets</Text>
           <Text style={styles.readinessText}>
-            Des photos claires, une catégorie juste, une description concrète et une position fiable accélèrent la prise en charge.
+            Photos, catégorie, description et position — tout est bon ?
           </Text>
           <View style={styles.readinessRow}>
             <View style={[styles.readinessPill, photos.length > 0 && styles.readinessPillDone]}>

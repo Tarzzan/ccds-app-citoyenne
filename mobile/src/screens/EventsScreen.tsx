@@ -219,15 +219,15 @@ export default function EventsScreen() {
               Rendez-vous communaux
             </Text>
             <Text style={[styles.headerIntro, { color: theme.textSecondary }]}>
-              Rejoignez les temps utiles du territoire sans perdre les informations pratiques.
+              Les prochains rendez-vous du territoire.
             </Text>
 
             <View style={styles.stageWrap}>
               <CivicCompanionStage
                 eyebrow="Agent · Agenda communal"
-                title="Un rendez-vous doit donner envie de venir, pas seulement afficher une date."
-                body="Retrouvez ici les rencontres utiles du quartier, confirmez votre presence ou gardez un repere simple pour y revenir plus tard."
-                aside="La commune doit rendre ses rendez-vous lisibles, concrets et faciles a rejoindre."
+                title="Des rendez-vous concrets et faciles à rejoindre."
+                body="Confirmez votre présence ou gardez un repère pour y revenir."
+                aside=""
               />
             </View>
 
@@ -245,11 +245,11 @@ export default function EventsScreen() {
             <CivicCompanionCard
               compact
               tone="thanks"
-              title={`${BRAND.companion.name} vous aide a choisir le bon niveau d engagement`}
-              body="Confirmez votre presence si vous venez, ou gardez simplement un repere si vous souhaitez suivre ce rendez-vous de plus loin."
+              title={`${BRAND.companion.name} vous guide`}
+              body="Confirmez si vous venez, ou signalez un intérêt."
               bullets={[
-                'participer quand vous etes sur de venir',
-                'signaler un interet sans surcharger la suite',
+                'participer si vous êtes sûr de venir',
+                'signaler un intérêt pour suivre',
               ]}
             />
           </View>

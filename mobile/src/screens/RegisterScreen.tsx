@@ -65,16 +65,16 @@ export default function RegisterScreen({ navigation }: Props) {
           <Text style={styles.appName}>{BRAND.name}</Text>
           <Text style={styles.territory}>{BRAND.territory}</Text>
           <Text style={styles.statement}>
-            Rejoignez une application qui aide les habitants à protéger leur cadre de vie et à mieux dialoguer avec la commune.
+            Protégez votre cadre de vie et dialoguez avec la commune.
           </Text>
         </View>
 
         <View style={styles.stageWrap}>
           <CivicCompanionStage
             eyebrow="Agent · Relais communal"
-            title="Creer un compte pour agir sans perdre le fil."
-            body="Votre compte sert a signaler, suivre, voter et relire les reponses utiles de la commune dans un seul espace."
-            aside="Le but n est pas seulement de declarer un probleme, mais de garder une preuve claire de sa prise en charge."
+            title="Un compte pour agir et suivre."
+            body="Signalez, votez et suivez les réponses de la commune en un seul endroit."
+            aside="Gardez une trace claire de chaque prise en charge."
             visualSource={COMPANION_VISUAL_SLOTS.register.source}
           />
         </View>
@@ -82,7 +82,7 @@ export default function RegisterScreen({ navigation }: Props) {
         <View style={styles.form}>
           <Text style={styles.title}>Créer un compte</Text>
           <Text style={styles.subtitle}>
-            Votre compte vous permet de signaler, suivre, voter et documenter les besoins du territoire.
+            Signaler, suivre et documenter les besoins du territoire.
           </Text>
 
           <Input

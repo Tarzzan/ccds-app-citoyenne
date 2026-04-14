@@ -1,8 +1,4 @@
-/**
- * Ma Commune — Composants UI réutilisables
- */
-
-import React from 'react';
+import React, { useState } from 'react';
 import {
   TouchableOpacity, Text, TextInput, View, ActivityIndicator,
   StyleSheet, TextInputProps, ViewStyle, TextStyle,
@@ -100,7 +96,7 @@ export function Button({ title, onPress, loading, disabled, variant = 'primary',
 }
 
 // ----------------------------------------------------------------
-// Champ de saisie
+// Champ de saisie — avec toggle "afficher le mot de passe"
 // ----------------------------------------------------------------
 interface InputProps extends TextInputProps {
   label?: string;
@@ -108,15 +104,30 @@ interface InputProps extends TextInputProps {
   containerStyle?: ViewStyle;
 }
 
-export function Input({ label, error, containerStyle, ...props }: InputProps) {
+export function Input({ label, error, containerStyle, secureTextEntry, ...props }: InputProps) {
+  const [hidePassword, setHidePassword] = useState(true);
+  const isPassword = secureTextEntry === true;
+
   return (
     <View style={[{ marginBottom: 16 }, containerStyle]}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <TextInput
-        style={[styles.input, error ? { borderColor: COLORS.danger } : {}]}
-        placeholderTextColor={COLORS.gray}
-        {...props}
-      />
+      <View style={{ position: 'relative' }}>
+        <TextInput
+          style={[styles.input, error ? { borderColor: COLORS.danger } : {}, isPassword ? { paddingRight: 48 } : {}]}
+          placeholderTextColor={COLORS.gray}
+          secureTextEntry={isPassword ? hidePassword : false}
+          {...props}
+        />
+        {isPassword && (
+          <TouchableOpacity
+            style={styles.eyeButton}
+            onPress={() => setHidePassword(!hidePassword)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={styles.eyeIcon}>{hidePassword ? '👁' : '🙈'}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
@@ -257,6 +268,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.dark,
     backgroundColor: '#FFFDF8',
+  },
+  eyeButton: {
+    position: 'absolute' as const,
+    right: 12,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    width: 32,
+  },
+  eyeIcon: {
+    fontSize: 18,
   },
   errorText: {
     color: COLORS.danger,

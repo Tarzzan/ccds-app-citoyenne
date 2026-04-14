@@ -378,7 +378,7 @@ export default function IncidentDetailScreen() {
             {incident.title || 'Signalement citoyen en cours de traitement'}
           </Text>
           <Text style={styles.heroText}>
-            Ce dossier documente un besoin concret du territoire, son état d’avancement et les échanges utiles entre habitants et commune.
+            Suivi du dossier et échanges entre habitants et commune.
           </Text>
         </View>
 

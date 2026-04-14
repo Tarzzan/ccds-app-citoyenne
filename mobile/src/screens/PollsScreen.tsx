@@ -190,15 +190,15 @@ export default function PollsScreen() {
               Consultations citoyennes
             </Text>
             <Text style={[styles.headerIntro, { color: theme.textSecondary }]}>
-              Donnez un avis simple, lisible et utile a la decision locale.
+              Votez sur les sujets ouverts par la commune.
             </Text>
 
             <View style={styles.stageWrap}>
               <CivicCompanionStage
                 eyebrow="Agent · Concertation locale"
-                title="Une consultation doit mener a une decision comprenable."
-                body="Retrouvez ici les sujets ouverts par la commune, votez une fois, puis revenez relire la tendance generale sans perdre le fil."
-                aside="Chaque consultation reste volontairement simple : un choix clair, un resultat lisible."
+                title="Un choix clair, un résultat lisible."
+                body="Votez une fois, puis revenez suivre la tendance."
+                aside=""
               />
             </View>
 
@@ -216,11 +216,11 @@ export default function PollsScreen() {
             <CivicCompanionCard
               compact
               tone="guide"
-              title={`${BRAND.companion.name} vous conseille de voter d abord sur un seul sujet utile`}
-              body="L objectif n est pas de multiplier les clics, mais de rendre visible une preference citoyenne claire."
+              title={`${BRAND.companion.name} vous conseille`}
+              body="Votez sur un sujet qui vous concerne."
               bullets={[
-                'une consultation = un choix unique',
-                'les resultats restent relisibles apres votre vote',
+                'un vote par consultation',
+                'résultats visibles après votre vote',
               ]}
             />
           </View>

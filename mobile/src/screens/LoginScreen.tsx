@@ -86,12 +86,12 @@ export default function LoginScreen({ navigation }: Props) {
           <CivicCompanionCard
             compact
             tone="guide"
-            title={`${BRAND.companion.name} vous oriente vers la bonne suite`}
-            body="Connectez-vous pour signaler, suivre un dossier ou relire une mise a jour utile sans perdre le fil de la prise en charge."
+            title={`${BRAND.companion.name} vous guide`}
+            body="Connectez-vous pour signaler, suivre vos dossiers et rester informé."
             visualSource={COMPANION_VISUAL_SLOTS.login.source}
             bullets={[
-              'un point d entree simple',
-              'un suivi clair dossier par dossier',
+              'un accès simple et rapide',
+              'un suivi clair de chaque dossier',
             ]}
           />
         </View>
@@ -100,7 +100,7 @@ export default function LoginScreen({ navigation }: Props) {
         <View style={styles.form}>
           <Text style={styles.title}>Connexion</Text>
           <Text style={styles.formIntro}>
-            Accedez a votre espace citoyen pour declarer un probleme utile, suivre sa prise en charge et garder une preuve claire de l action communale.
+            Accédez à votre espace citoyen.
           </Text>
 
           <Input
