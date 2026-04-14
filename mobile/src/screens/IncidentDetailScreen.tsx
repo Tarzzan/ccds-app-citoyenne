@@ -12,6 +12,7 @@ import {
 import { RouteProp, useRoute } from '@react-navigation/native';
 
 import { incidentsApi, commentsApi, Incident, Comment } from '../services/api';
+import { deletePhoto } from '../services/PhotoUploadService';
 import { StatusBadge, COLORS, STATUS_LABELS, STATUS_COLORS } from '../components/ui';
 import { CategoryMark } from '../components/CategoryMark';
 
@@ -202,6 +203,10 @@ export default function IncidentDetailScreen() {
   const [staffPriority, setStaffPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
   const [assignToMe, setAssignToMe] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [deletingPhoto, setDeletingPhoto] = useState(false);
+
+  const isOwner = !!user && !!incident && incident.user_id === user.id;
+  const canDeletePhoto = isOwner || isStaff;
 
   const load = useCallback(async () => {
     try {
@@ -356,7 +361,45 @@ export default function IncidentDetailScreen() {
 
         {photos.length > 0 && (
           <View style={styles.photoSection}>
-            <Image source={{ uri: photos[activePhoto].url }} style={styles.mainPhoto} />
+            <View>
+              <Image source={{ uri: photos[activePhoto].url }} style={styles.mainPhoto} />
+              {canDeletePhoto && (
+                <TouchableOpacity
+                  style={styles.photoDeleteBtn}
+                  onPress={() => {
+                    const photo = photos[activePhoto];
+                    Alert.alert(
+                      'Supprimer cette photo ?',
+                      'Cette action est irr\u00e9versible.',
+                      [
+                        { text: 'Annuler', style: 'cancel' },
+                        {
+                          text: 'Supprimer',
+                          style: 'destructive',
+                          onPress: async () => {
+                            try {
+                              setDeletingPhoto(true);
+                              await deletePhoto(incident.id, photo.id);
+                              // Refresh incident
+                              const res = await incidentsApi.get(incident.id);
+                              if (res.data) setIncident(res.data);
+                              setActivePhoto(0);
+                            } catch (err: any) {
+                              Alert.alert('Erreur', err?.message ?? 'Impossible de supprimer la photo.');
+                            } finally {
+                              setDeletingPhoto(false);
+                            }
+                          },
+                        },
+                      ]
+                    );
+                  }}
+                  disabled={deletingPhoto}
+                >
+                  <Text style={styles.photoDeleteText}>{deletingPhoto ? '...' : '✕'}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             {photos.length > 1 && (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.thumbRow}>
                 {photos.map((p, i) => (
@@ -1289,4 +1332,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sendBtnText: { color: COLORS.white, fontWeight: '700', fontSize: 15 },
+  photoDeleteBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(200,50,50,0.85)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  photoDeleteText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
 });
