@@ -24,6 +24,7 @@ class Permissions
         'incident:set_priority'  => ['agent', 'admin'],
         'incident:add_note'      => ['agent', 'admin'],
         'incident:delete'        => ['admin'],
+        'incident:delete_own'    => ['citizen'],           // citoyen supprime son propre signalement (statut=submitted)
 
         // --- Commentaires ---
         'comment:list'           => ['citizen', 'agent', 'admin'],

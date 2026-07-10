@@ -485,17 +485,29 @@ class IncidentController extends BaseController
     }
 
     // ----------------------------------------------------------------
-    // DELETE /api/incidents/{id} — Supprimer (admin)
+    // DELETE /api/incidents/{id} — Supprimer (admin ou citoyen sur son propre "submitted")
     // ----------------------------------------------------------------
     public function destroy(int $id): void
     {
         $auth = $this->requireAuth();
-        $this->requirePermission($auth, 'incident:delete');
 
-        $stmt = $this->db->prepare('SELECT id FROM incidents WHERE id = ? LIMIT 1');
+        $stmt = $this->db->prepare('SELECT id, user_id, status FROM incidents WHERE id = ? LIMIT 1');
         $stmt->execute([$id]);
-        if (!$stmt->fetch()) {
+        $incident = $stmt->fetch();
+        
+        if (!$incident) {
             $this->error('Signalement introuvable.', 404);
+        }
+
+        $isAdmin = Permissions::can($auth['role'] ?? '', 'incident:delete');
+        $isOwner = Permissions::can($auth['role'] ?? '', 'incident:delete_own') && ((int)$incident['user_id'] === (int)$auth['sub']);
+
+        if (!$isAdmin && !$isOwner) {
+            $this->error("Accès refusé : vous n'avez pas la permission de supprimer ce signalement.", 403);
+        }
+
+        if ($isOwner && !$isAdmin && $incident['status'] !== 'submitted') {
+            $this->error("Vous ne pouvez supprimer ce signalement que s'il est encore en attente de prise en charge.", 409);
         }
 
         $this->db->prepare('DELETE FROM incidents WHERE id = ?')->execute([$id]);
