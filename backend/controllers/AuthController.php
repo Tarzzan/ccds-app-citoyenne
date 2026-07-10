@@ -187,7 +187,7 @@ class AuthController extends BaseController
         ]);
 
         $platform = strtolower(trim((string)($body['platform'] ?? '')));
-        if (!in_array($platform, ['android', 'ios'], true)) {
+        if (!in_array($platform, ['android', 'ios', 'web'], true)) {
             $this->error('Plateforme Google Auth invalide.', 422);
         }
 

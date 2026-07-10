@@ -13,11 +13,50 @@ if (!empty($_SESSION['admin_user'])) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email    = trim($_POST['email']    ?? '');
-    $password = trim($_POST['password'] ?? '');
+    if (!empty($_POST['google_id_token'])) {
+        $idToken = trim($_POST['google_id_token']);
+        $apiUrl = 'https://api.netetfix.com/api/auth/google';
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $apiUrl);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['id_token' => $idToken, 'platform' => 'web']));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        
+        $res = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode === 200 && $res) {
+            $data = json_decode($res, true);
+            if (!empty($data['data']['user'])) {
+                $apiUser = $data['data']['user'];
+                if (in_array($apiUser['role'], ['admin', 'agent'])) {
+                    $db = Database::getInstance();
+                    $_SESSION['admin_user'] = admin_enrich_user_with_service_scope($db, $apiUser);
+                    try {
+                        $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")->execute([$apiUser['id']]);
+                    } catch (Throwable $e) {}
+                    header('Location: /admin/?page=dashboard');
+                    exit;
+                } else {
+                    $error = 'Votre compte Google n\'est pas autorisé à accéder à l\'administration.';
+                }
+            } else {
+                 $error = 'Échec de la connexion via Google (données utilisateur manquantes).';
+            }
+        } else {
+            $errData = json_decode((string)$res, true);
+            $error = $errData['message'] ?? 'Échec de la validation Google ou compte non autorisé.';
+        }
+    } else {
+        $email    = trim($_POST['email']    ?? '');
+        $password = trim($_POST['password'] ?? '');
 
-    if (empty($email) || empty($password)) {
-        $error = 'Veuillez renseigner votre email et votre mot de passe.';
+        if (empty($email) || empty($password)) {
+            $error = 'Veuillez renseigner votre email et votre mot de passe.';
     } else {
         try {
             $db   = Database::getInstance();
@@ -49,6 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } catch (Exception $e) {
             $error = 'Erreur de connexion à la base de données.';
+        }
         }
     }
 }
@@ -162,6 +202,29 @@ $theme_inline_style = visual_admin_theme_inline_style();
         <button type="submit" class="btn btn-primary w-100 btn-block-center">
           Se connecter
         </button>
+
+        <div style="text-align:center; margin: 16px 0; color: #999;">ou</div>
+        
+        <div id="g_id_onload"
+             data-client_id="<?= e(getenv('GOOGLE_AUTH_WEB_CLIENT_ID') ?: '972738775169-fggq1j35v9uq7h3uorefjopvevp3duva.apps.googleusercontent.com') ?>"
+             data-context="signin"
+             data-ux_mode="popup"
+             data-callback="handleGoogleLogin"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-shape="rectangular"
+             data-theme="outline"
+             data-text="signin_with"
+             data-size="large"
+             data-logo_alignment="center"
+             style="display:flex; justify-content:center;">
+        </div>
+      </form>
+      
+      <form method="POST" action="" id="google-login-form" style="display:none;">
+          <input type="hidden" name="google_id_token" id="google_id_token">
       </form>
 
       <p class="login-footnote">
@@ -170,5 +233,12 @@ $theme_inline_style = visual_admin_theme_inline_style();
     </div>
   </div>
 </div>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+function handleGoogleLogin(response) {
+    document.getElementById('google_id_token').value = response.credential;
+    document.getElementById('google-login-form').submit();
+}
+</script>
 </body>
 </html>

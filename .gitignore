@@ -44,3 +44,11 @@ assets/visual-production/generated/visual-drop-review-*.md
 vendor/
 backend/.phpunit.result.cache
 backend/index.php.bak
+
+# ==============================
+# Fichiers serveur a ne pas versionner
+# ==============================
+*.bak-*
+mobile/credentials/
+storage/
+tmp_admin_fix_stage/
